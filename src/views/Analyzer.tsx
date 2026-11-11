@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { PlayerId, TeamId } from '../data/schema.ts';
 import { useDeadline, useLeague } from '../data/store.tsx';
 import { teamName } from '../engine/league.ts';
@@ -20,17 +20,44 @@ function useTrade() {
   const keep = (list: PlayerId[] | undefined, team: TeamId | null) => (list ?? []).filter((p) => team !== null && idx.owner.get(p) === team);
   const aGives = keep(raw.aGives, a), bGives = keep(raw.bGives, b);
   const dropped = [...(raw.aGives ?? []), ...(raw.bGives ?? [])].filter((p) => !aGives.includes(p) && !bGives.includes(p));
+  const cur = b === null ? `a=${a}` : tradeToQuery({ a, b, aGives, bGives });
   const set = (t: Omit<Partial<Trade>, 'b'> & { b?: TeamId | null }) => {
     const next = { a, b, aGives, bGives, ...t };
-    replace('analyzer', next.b === null ? `a=${next.a}` : tradeToQuery(next as Trade));
+    const q = next.b === null ? `a=${next.a}` : tradeToQuery(next as Trade);
+    if (q === cur) return;
+    edits.past.push(cur); edits.future = []; if (edits.past.length > 100) edits.past.shift();
+    replace('analyzer', q);
   };
-  return { a, b, aGives, bGives, dropped, set };
+  const step = (from: string[], to: string[]) => { const q = from.pop(); if (q === undefined) return; to.push(cur); replace('analyzer', q); };
+  const undo = () => step(edits.past, edits.future);
+  const redo = () => step(edits.future, edits.past);
+  return { a, b, aGives, bGives, dropped, set, undo, redo };
+}
+
+// FEAT-4 / LOGIC-13: every edit (including Clear) can be undone. Edits use replaceState, so the
+// back button stays for leaving the page and Undo/Redo walk the edits. Kept for the visit only.
+const edits = { past: [] as string[], future: [] as string[] };
+
+function useUndoKeys(undo: () => void, redo: () => void) {
+  useEffect(() => {
+    const on = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || el?.closest('input:not([type=checkbox]),textarea,select,[contenteditable=true]')) return;
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+      else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); redo(); }
+    };
+    window.addEventListener('keydown', on);
+    return () => window.removeEventListener('keydown', on);
+  }, [undo, redo]);
 }
 
 export default function Analyzer() {
   const { idx, values: V } = useLeague();
   const T = useTrade();
   const dl = useDeadline();
+  const canUndo = edits.past.length > 0, canRedo = edits.future.length > 0; // read on render: every edit changes the URL
+  useUndoKeys(T.undo, T.redo);
   const ev = useMemo(() => (T.b === null ? null : evaluate(V, { a: T.a, b: T.b, aGives: T.aGives, bGives: T.bGives })), [V, T.a, T.b, T.aGives.join(), T.bGives.join()]);
   const toggle = (side: 'aGives' | 'bGives', p: PlayerId) => {
     const cur = T[side];
@@ -44,6 +71,10 @@ export default function Analyzer() {
           The trade deadline has passed. Anything here is a what-if: it can't be made until the 2027 season.
         </p>
       )}
+      <div className="-mb-6 flex justify-end gap-1" role="group" aria-label="Edit history">
+        <button type="button" className="btn btn-quiet" disabled={!canUndo} onClick={T.undo} title="Ctrl/⌘ Z">Undo</button>
+        <button type="button" className="btn btn-quiet" disabled={!canRedo} onClick={T.redo} title="Ctrl/⌘ Shift Z">Redo</button>
+      </div>
       {T.dropped.length > 0 && (
         <p role="status" className="border border-even bg-even-soft px-4 py-2 text-sm">
           Removed {T.dropped.map((p) => idx.players.get(p)?.name ?? p).join(', ')}: not on that team's roster in the current data.
