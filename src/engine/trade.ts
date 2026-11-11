@@ -109,3 +109,22 @@ export function tradeFromQuery(q: URLSearchParams): Partial<Trade> {
   if (q.has('bg')) out.bGives = list('bg');
   return out;
 }
+
+// "Charts say" and the toss-up badge (old app): the same trade read by each source on its own. A source
+// that doesn't rate a player falls back to his market blend. Toss-up = one source has team A winning by
+// 6%+ and another has him losing by 6%+.
+export type SourceRead = { source: 'Peaked' | 'Menton' | 'FantasyPros' | 'Scoring'; verdict: Verdict };
+export function bySource(V: Values, t: Trade): { reads: SourceRead[]; tossUp: boolean } {
+  const srcs: [SourceRead['source'], (p: PlayerId) => number | null][] = [
+    ['Peaked', (p) => V.chart(p, 'peaked')],
+    ['Menton', (p) => V.chart(p, 'menton')],
+    ['FantasyPros', (p) => V.chart(p, 'fantasypros')],
+    ['Scoring', (p) => V.blend(p).model],
+  ];
+  const reads = srcs.map(([source, f]) => {
+    const T = totals(V, t.aGives, t.bGives, (p) => f(p) ?? V.blend(p).market ?? 0);
+    return { source, verdict: verdict(T.give, T.get) };
+  });
+  const pcts = reads.map((r) => r.verdict.pct);
+  return { reads, tossUp: Math.max(...pcts) >= 6 && Math.min(...pcts) <= -6 };
+}

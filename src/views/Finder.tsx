@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import type { PlayerId, Pos, TeamId } from '../data/schema.ts';
 import { useDebounced, useLeague } from '../data/store.tsx';
-import { finderKey, hasInput, type FinderQuery, type Offer, type TeamOffers } from '../engine/finder.ts';
+import { finderKey, fitsSlot, teamNeeds, type TeamNeed, hasInput, type FinderQuery, type Offer, type TeamOffers } from '../engine/finder.ts';
 import { findTradesAsync } from '../engine/finderClient.ts';
 import { teamName } from '../engine/league.ts';
 import { lineup } from '../engine/model.ts';
@@ -38,6 +38,7 @@ export default function Finder() {
   const pin = (o: Offer, partner: TeamId) => setPins((m) => { const n = new Map(m); const k = offerKey(team, partner, o); n.has(k) ? n.delete(k) : n.set(k, { o, partner, from: team }); PINS = n; return n; });
   const hide = (o: Offer, partner: TeamId) => setHidden((h) => { const n = new Set(h); n.add(offerKey(team, partner, o)); HIDDEN = n; return n; });
   const unhideAll = () => { HIDDEN = new Set(); setHidden(HIDDEN); };
+  const needs = useMemo(() => teamNeeds(V), [V]);
   const [lastTags, setLastTags] = useState<Record<PlayerId, Tag> | null>(null);
 
   const q: FinderQuery = useDebounced(
@@ -137,7 +138,7 @@ export default function Finder() {
         ) : (
           <ol className={`grid transition-opacity duration-[var(--dur-hover)] ${busy ? 'opacity-50' : ''}`}>
             {data.map((g) => (
-              <TeamGroup key={g.team} g={g} from={team} open={open.has(g.team)} showAll={more.has(g.team)} pinned={(o) => pins.has(offerKey(team, g.team, o))} onPin={(o) => pin(o, g.team)} onHide={(o) => hide(o, g.team)}
+              <TeamGroup key={g.team} g={g} from={team} need={needs.get(g.team)} open={open.has(g.team)} showAll={more.has(g.team)} pinned={(o) => pins.has(offerKey(team, g.team, o))} onPin={(o) => pin(o, g.team)} onHide={(o) => hide(o, g.team)}
                 onToggle={() => setOpen((s) => toggle(s, g.team))} onMore={() => setMore((s) => toggle(s, g.team))} />
             ))}
           </ol>
@@ -238,9 +239,12 @@ function WantPicker({ team, want, onChange }: { team: TeamId; want: PlayerId[]; 
 }
 
 type OfferActions = { pinned: (o: Offer) => boolean; onPin: (o: Offer) => void; onHide: (o: Offer) => void };
-function TeamGroup({ g, from, open, showAll, onToggle, onMore, ...act }: { g: TeamOffers; from: TeamId; open: boolean; showAll: boolean; onToggle: () => void; onMore: () => void } & OfferActions) {
+function TeamGroup({ g, from, need, open, showAll, onToggle, onMore, ...act }: { g: TeamOffers; from: TeamId; need?: TeamNeed; open: boolean; showAll: boolean; onToggle: () => void; onMore: () => void } & OfferActions) {
   const { idx } = useLeague();
   const best = g.offers[0]!;
+  // "Fills his hole" (old app): his weakest spot is 8%+ under the league average and the best offer sends a player who plays there.
+  const weak = need && need.pct <= -8 ? need.slot : null;
+  const fills = weak !== null && best.give.some((p) => fitsSlot(idx.players.get(p)!.pos, weak));
   const shown = showAll ? g.offers : g.offers.slice(0, 3);
   const bodyId = useId();
   return (
@@ -249,7 +253,11 @@ function TeamGroup({ g, from, open, showAll, onToggle, onMore, ...act }: { g: Te
         <Mono team={g.team} />
         <span className="min-w-0">
           <span className="block font-medium">{teamName(idx, g.team)}</span>
-          <span className="block text-xs text-ink-3">{g.count} offer{g.count === 1 ? '' : 's'}</span>
+          <span className="block text-xs text-ink-3">
+            {g.count} offer{g.count === 1 ? '' : 's'}
+            {weak && <> · needs {weak}{need?.spare ? `, can spare ${idx.players.get(need.spare)?.name}` : ''}</>}
+          </span>
+          {fills && <span className="tag mt-1 text-gain">Fills his {weak} hole</span>}
         </span>
         <span className="flex items-center gap-3">
           <span className={`num font-semibold ${tone(best.myGain)}`}>{signed(best.myGain)}<span className="text-xs font-normal text-ink-3"> best</span></span>

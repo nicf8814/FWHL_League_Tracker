@@ -1,5 +1,5 @@
 import type { PlayerId, Pos, TeamId } from '../data/schema.ts';
-import type { Values } from './model.ts';
+import { lineup, type Values } from './model.ts';
 import { partnerEdge } from './trade.ts';
 
 // Trade finder, ported from the Sandbox's three modes:
@@ -138,3 +138,29 @@ export function findTrades(V: Values, q: FinderQuery): TeamOffers[] {
   }
   return out.sort((a, b) => b.best - a.best);
 }
+
+// Each team's weakest lineup spot against the league average, and the best bench player it could
+// spare (old app's teamNeed). Groups follow the lineup: QB, RB, WR, WR/TE, FLEX.
+export interface TeamNeed { slot: string; pct: number; spare: PlayerId | null }
+export function teamNeeds(V: Values): Map<TeamId, TeamNeed> {
+  const { base } = V;
+  const { idx } = base;
+  const label = (s: readonly string[]) => (s.length > 2 ? 'FLEX' : s.join('/'));
+  const by = new Map<TeamId, Map<string, number>>();
+  const starters = new Map<TeamId, Set<PlayerId>>();
+  for (const t of idx.teamIds) {
+    const L = lineup(base, (idx.roster.get(t) ?? []).filter((p) => !base.isOut(p)), () => 1);
+    const g = new Map<string, number>();
+    for (const x of L.slots) g.set(label(x.slot), (g.get(label(x.slot)) ?? 0) + x.v);
+    by.set(t, g);
+    starters.set(t, new Set(L.slots.map((x) => x.pid).filter((p): p is PlayerId => !!p)));
+  }
+  const keys = [...by.get(idx.teamIds[0]!)!.keys()];
+  const avg = new Map(keys.map((k) => [k, idx.teamIds.reduce((s, t) => s + by.get(t)!.get(k)!, 0) / idx.teamIds.length]));
+  return new Map(idx.teamIds.map((t) => {
+    const worst = keys.map((k) => ({ slot: k, pct: ((by.get(t)!.get(k)! - avg.get(k)!) / Math.max(avg.get(k)!, 1)) * 100 })).sort((a, b) => a.pct - b.pct)[0]!;
+    const spare = (idx.roster.get(t) ?? []).filter((p) => !starters.get(t)!.has(p) && !base.isOut(p) && idx.players.get(p)?.pos !== 'QB').sort((a, b) => V.bv(b) - V.bv(a))[0] ?? null;
+    return [t, { ...worst, spare }];
+  }));
+}
+export const fitsSlot = (pos: string, slot: string) => (slot === 'FLEX' ? pos !== 'QB' : slot.split('/').includes(pos));

@@ -4,12 +4,12 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { DEFAULT_SETTINGS, type Dataset } from '../data/schema.ts';
 import { coerceSettings, validateDataset } from '../data/validate.ts';
-import { findTrades } from './finder.ts';
+import { findTrades, fitsSlot, teamNeeds } from './finder.ts';
 import { buildIndex, chartAccuracy, dataGaps, freshness, standings, weekOfDate } from './league.ts';
 import { buildBase, buildValues, lineup } from './model.ts';
 import { rank6, seed, simulate, tally, type SimInput } from './sim.ts';
 import { keeperCalls, keeperSet } from './keepers.ts';
-import { evaluate, tradeFromQuery, tradeToQuery, validateTrade } from './trade.ts';
+import { bySource, evaluate, tradeFromQuery, tradeToQuery, validateTrade } from './trade.ts';
 
 const raw = JSON.parse(readFileSync(new URL('../../test/fixtures/fwhl-2026-11-10.json', import.meta.url), 'utf8'));
 const checked = validateDataset(raw);
@@ -173,4 +173,19 @@ test('handcuff insurance counts only for the team holding both (old app, Oct 29)
   assert.ok(idx.roster.get(nic)!.includes(cmc) && idx.roster.get(nic)!.includes(black));
   const lose = (V: typeof on) => V.weekGain(nic, [black], []);
   assert.ok(lose(on) < lose(off) - 0.1, 'trading away the handcuff costs insurance');
+});
+
+test('each source reads a trade on its own; a split is a toss-up', () => {
+  const trade = { a: team('Nic'), b: team('Vince'), aGives: [pid('Josh Allen'), pid('Christian McCaffrey')], bGives: [pid('Dak Prescott')] };
+  const r = bySource(V, trade);
+  assert.deepEqual(r.reads.map((x) => x.source), ['Peaked', 'Menton', 'FantasyPros', 'Scoring']);
+  assert.ok(r.reads.every((x) => x.verdict.kind === 'lose'), 'everyone says Nic loses this one');
+  assert.equal(r.tossUp, false);
+});
+
+test('team needs name the weakest lineup spot', () => {
+  const n = teamNeeds(V);
+  assert.equal(n.size, 12);
+  for (const x of n.values()) assert.ok(['QB', 'RB', 'WR', 'WR/TE', 'FLEX'].includes(x.slot));
+  assert.ok(fitsSlot('TE', 'WR/TE') && fitsSlot('RB', 'FLEX') && !fitsSlot('QB', 'FLEX'));
 });

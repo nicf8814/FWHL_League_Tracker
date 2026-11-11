@@ -3,7 +3,7 @@ import type { PlayerId, TeamId } from '../data/schema.ts';
 import { useDeadline, useLeague } from '../data/store.tsx';
 import { teamName } from '../engine/league.ts';
 import { lineup, type Lineup } from '../engine/model.ts';
-import { evaluate, MAX_PER_SIDE, tradeFromQuery, tradeToQuery, type Evaluation, type Trade } from '../engine/trade.ts';
+import { bySource, evaluate, MAX_PER_SIDE, tradeFromQuery, tradeToQuery, type Evaluation, type Trade } from '../engine/trade.ts';
 import { useRoute } from '../app/router.ts';
 import { Empty, fmt, Mono, PlayerName, PosMark, signed, TeamSelect, tone } from '../ui/components.tsx';
 import { usePlayerSheet } from './PlayerSheet.tsx';
@@ -173,6 +173,7 @@ function VerdictPanel({ ev, a, b, onClear }: { ev: Evaluation | null; a: TeamId;
         ))}
       </dl>
       <p className={`num text-center text-sm ${color}`}>{signed(ev.verdict.diff)} ({signed(ev.verdict.pct, 0)}%) for {A}</p>
+      <SourceChips a={a} b={b} />
       <dl className="grid gap-2 text-sm">
         <Row label={`${A} lineup`} value={<span className={`num ${tone(ev.gainA)}`}>{signed(ev.gainA)} pts/wk</span>} />
         <Row label={`${B} lineup`} value={<span className={`num ${tone(ev.gainB)}`}>{signed(ev.gainB)} pts/wk</span>} />
@@ -190,6 +191,24 @@ function Row({ label, value, hint }: { label: string; value: React.ReactNode; hi
     <div className="border-t border-rule pt-2">
       <div className="flex items-baseline justify-between gap-3"><dt className="text-ink-2">{label}</dt><dd>{value}</dd></div>
       {hint && <p className="text-xs text-ink-3">{hint}</p>}
+    </div>
+  );
+}
+
+// "Charts say" chips and the toss-up badge (old app), read straight from the URL's trade.
+function SourceChips({ a, b }: { a: TeamId; b: TeamId }) {
+  const { values: V } = useLeague();
+  const T = useTrade();
+  const r = bySource(V, { a, b, aGives: T.aGives, bGives: T.bGives });
+  const agree = r.reads.filter((x) => x.verdict.kind === (r.reads.filter((y) => y.verdict.kind === 'win').length >= r.reads.filter((y) => y.verdict.kind === 'lose').length ? 'win' : 'lose')).length;
+  const c = (k: string) => (k === 'win' ? 'text-gain' : k === 'lose' ? 'text-loss' : 'text-even');
+  return (
+    <div className="grid justify-items-center gap-1.5">
+      {r.tossUp && <span className="tag text-even">Toss-up: sources split</span>}
+      <ul className="flex flex-wrap justify-center gap-1.5 text-xs" aria-label="Each source on its own">
+        {r.reads.map((x) => <li key={x.source} className={`tag ${c(x.verdict.kind)}`}>{x.source} {signed(x.verdict.pct, 0)}%</li>)}
+      </ul>
+      {!r.tossUp && <span className="text-xs text-ink-3">{agree} of {r.reads.length} sources agree</span>}
     </div>
   );
 }
