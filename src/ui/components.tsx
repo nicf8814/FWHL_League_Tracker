@@ -96,6 +96,15 @@ export function PosMark({ pos }: { pos: Pos }) {
 }
 
 // Native <dialog>: focus trap, Escape and inert background come from the browser.
+// Run fn once a sheet that owns a history entry has finished closing (its history.back() has landed),
+// so a command that opens the next sheet isn't closed by the previous one's popstate.
+export function afterSheetClose(fn: () => void) {
+  let done = false;
+  const run = () => { if (done) return; done = true; window.removeEventListener('popstate', run); fn(); };
+  window.addEventListener('popstate', run);
+  setTimeout(run, 250); // shortcut: fallback if no popstate comes (storage-less embeds); 250 ms covers a slow back()
+}
+
 export function Sheet({ open, onClose, title, children, ownHistory = true }: { open: boolean; onClose: () => void; title: string; children: ReactNode; ownHistory?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -104,7 +113,7 @@ export function Sheet({ open, onClose, title, children, ownHistory = true }: { o
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
-    if (open && !d.open) d.showModal();
+    if (open && !d.open) { d.showModal(); d.querySelector<HTMLElement>('[data-autofocus]')?.focus(); }
     if (!open && d.open) d.close();
   }, [open]);
   // LOGIC-8: an open sheet owns one history entry, so the back button or gesture closes it instead of leaving the page.

@@ -2,7 +2,8 @@ import { useId, useRef, useState } from 'react';
 import { DEFAULT_SETTINGS, type Settings } from '../data/schema.ts';
 import { useLeague } from '../data/store.tsx';
 import { freshness } from '../engine/league.ts';
-import { Section, TeamSelect } from '../ui/components.tsx';
+import { Section, Seg, TeamSelect } from '../ui/components.tsx';
+import { getTheme, setTheme, type Theme } from '../ui/theme.ts';
 import { ImportChart } from './ImportChart.tsx';
 
 export default function DataSettings() {
@@ -14,6 +15,7 @@ export default function DataSettings() {
       <Section title="Your team">
         <div className="max-w-xs"><TeamSelect label="My team on this device" value={settings.myTeamId} allowEmpty="Not set" onChange={(t) => setSettings({ myTeamId: t })} /></div>
         <p className="text-sm text-ink-3">Stored in this browser only. Each league mate picks their own.</p>
+        <ThemePicker />
       </Section>
 
       <Section title="Data sources" aside={`Week ${idx.currentWeek} · scores through Week ${idx.scoresThrough}`}>
@@ -39,6 +41,16 @@ export default function DataSettings() {
       <EngineSettings settings={settings} onChange={setSettings} />
       <ImportChart />
       <Backup />
+    </div>
+  );
+}
+
+function ThemePicker() {
+  const [t, setT] = useState<Theme>(getTheme);
+  return (
+    <div className="grid gap-1">
+      <span className="text-sm text-ink-3">Theme</span>
+      <Seg label="Theme" value={t} options={[['system', 'Match device'], ['light', 'Light'], ['dark', 'Dark']] as const} onChange={(v) => { setTheme(v); setT(v); }} />
     </div>
   );
 }

@@ -4,6 +4,8 @@ import { freshness } from '../engine/league.ts';
 import { ErrorBoundary, Mono, Sheet } from '../ui/components.tsx';
 import { PlayerSheetProvider } from '../views/PlayerSheet.tsx';
 import { href, useRoute, type Route } from './router.ts';
+import { Shortcuts, type Command } from './Palette.tsx';
+import { getTheme, nextTheme, setTheme } from '../ui/theme.ts';
 
 const Finder = lazy(() => import('../views/Finder.tsx'));
 const Analyzer = lazy(() => import('../views/Analyzer.tsx'));
@@ -24,6 +26,8 @@ const NAV: { route: Route; label: string; short: string }[] = [
 ];
 const SHORT: Record<string, string> = { espn: 'ESPN', peaked: 'Peaked', menton: 'Menton', fantasypros: 'FantasyPros' };
 const VIEWS: Record<Route, React.ComponentType> = { finder: Finder, analyzer: Analyzer, tracker: Tracker, standings: Standings, players: Players, teams: Teams, data: DataSettings };
+
+const EXTRA: Command[] = [{ id: 'theme', label: 'Switch light / dark', group: 'Actions', run: () => setTheme(nextTheme(getTheme())) }];
 
 // FEAT-11: after the deadline the finder is retired and the tracker leads.
 const navFor = (passed: boolean) => (passed ? NAV.filter((n) => n.route !== 'finder') : NAV);
@@ -83,6 +87,7 @@ export function App() {
         </ul>
       </nav>
       <MyTeamGate />
+      <Shortcuts nav={nav} extra={EXTRA} />
     </PlayerSheetProvider>
   );
 }
