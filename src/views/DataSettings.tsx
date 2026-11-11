@@ -41,6 +41,7 @@ export default function DataSettings() {
       <EngineSettings settings={settings} onChange={setSettings} />
       <ImportChart />
       <Backup />
+      <p className="text-sm"><a className="link" href="#/method">How the values, odds and grades are worked out</a></p>
     </div>
   );
 }

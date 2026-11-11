@@ -13,6 +13,7 @@ const Standings = lazy(() => import('../views/Standings.tsx'));
 const Players = lazy(() => import('../views/Players.tsx'));
 const Teams = lazy(() => import('../views/Teams.tsx'));
 const Tracker = lazy(() => import('../views/Tracker.tsx'));
+const Method = lazy(() => import('../views/Method.tsx'));
 const DataSettings = lazy(() => import('../views/DataSettings.tsx'));
 
 const NAV: { route: Route; label: string; short: string }[] = [
@@ -23,9 +24,10 @@ const NAV: { route: Route; label: string; short: string }[] = [
   { route: 'players', label: 'Players', short: 'Players' },
   { route: 'teams', label: 'Teams', short: 'Teams' },
   { route: 'data', label: 'Data & settings', short: 'Data' },
+  { route: 'method', label: 'How it works', short: 'Method' },
 ];
 const SHORT: Record<string, string> = { espn: 'ESPN', peaked: 'Peaked', menton: 'Menton', fantasypros: 'FantasyPros' };
-const VIEWS: Record<Route, React.ComponentType> = { finder: Finder, analyzer: Analyzer, tracker: Tracker, standings: Standings, players: Players, teams: Teams, data: DataSettings };
+const VIEWS: Record<Route, React.ComponentType> = { finder: Finder, analyzer: Analyzer, tracker: Tracker, standings: Standings, players: Players, teams: Teams, data: DataSettings, method: Method };
 
 const EXTRA: Command[] = [{ id: 'theme', label: 'Switch light / dark', group: 'Actions', run: () => setTheme(nextTheme(getTheme())) }];
 
@@ -83,7 +85,7 @@ export function App() {
       </div>
       <nav aria-label="Sections" className="fixed inset-x-0 bottom-0 z-30 border-t border-rule-strong bg-paper pb-[env(safe-area-inset-bottom)] md:hidden">
         <ul className="grid auto-cols-fr grid-flow-col">
-          {nav.filter((n) => n.route !== 'data').map((n) => <li key={n.route}><NavLink item={n} active={route === n.route} variant="bottom" /></li>)}
+          {nav.filter((n) => n.route !== 'data' && n.route !== 'method').map((n) => <li key={n.route}><NavLink item={n} active={route === n.route} variant="bottom" /></li>)}
         </ul>
       </nav>
       <MyTeamGate />
