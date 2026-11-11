@@ -18,11 +18,13 @@ type Sort = { id: string; dir: 1 | -1 };
 const read = <T,>(key: string, d: T): T => { try { const v = localStorage.getItem(key); return v ? (JSON.parse(v) as T) : d; } catch { return d; } };
 const write = (key: string, v: unknown) => { try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* blocked: this visit only */ } };
 
-export function useTable<R>(key: string, cols: Col<R>[], rows: R[], initial: Sort) {
+export function useTable<R>(key: string, cols: Col<R>[], rows: R[], initial: Sort, shown?: string[]) {
   const [sort, setSortState] = useState<Sort>(() => read(`fwhl.table.${key}.sort`, initial));
-  const [hidden, setHiddenState] = useState<string[]>(() => read(`fwhl.table.${key}.hidden`, cols.filter((c) => c.hidden).map((c) => c.id)));
+  const defaults = () => (shown ? cols.filter((c) => !c.fixed && !shown.includes(c.id)) : cols.filter((c) => c.hidden)).map((c) => c.id);
+  // v2 key: the column views (Nov 11) start everyone on Simple instead of the old 14 columns.
+  const [hidden, setHiddenState] = useState<string[]>(() => read(`fwhl.table.${key}.hidden.v2`, defaults()));
   const setSort = (s: Sort) => { setSortState(s); write(`fwhl.table.${key}.sort`, s); };
-  const setHidden = (h: string[]) => { setHiddenState(h); write(`fwhl.table.${key}.hidden`, h); };
+  const setHidden = (h: string[]) => { setHiddenState(h); write(`fwhl.table.${key}.hidden.v2`, h); };
   const col = cols.find((c) => c.id === sort.id) ?? cols.find((c) => c.id === initial.id)!;
   const sorted = [...rows].sort((a, b) => {
     const x = col.value(a), y = col.value(b);
@@ -32,7 +34,7 @@ export function useTable<R>(key: string, cols: Col<R>[], rows: R[], initial: Sor
   });
   const visible = cols.filter((c) => c.fixed || !hidden.includes(c.id));
   const toggleSort = (c: Col<R>) => setSort(sort.id === c.id ? { id: c.id, dir: sort.dir === 1 ? -1 : 1 } : { id: c.id, dir: c.left ? 1 : -1 });
-  return { sorted, visible, sort, toggleSort, hidden, setHidden, cols };
+  return { sorted, visible, sort, toggleSort, hidden, setHidden, cols, defaults };
 }
 
 export function SortHeader<R>({ t, c }: { t: ReturnType<typeof useTable<R>>; c: Col<R> }) {
@@ -69,7 +71,7 @@ export function TableTools<R>({ t, file }: { t: ReturnType<typeof useTable<R>>; 
               {c.label}
             </label>
           ))}
-          <button type="button" className="btn btn-quiet mt-1 justify-self-start text-sm" onClick={() => t.setHidden(t.cols.filter((c) => c.hidden).map((c) => c.id))}>Reset columns</button>
+          <button type="button" className="btn btn-quiet mt-1 justify-self-start text-sm" onClick={() => t.setHidden(t.defaults())}>Reset columns</button>
         </fieldset>
       </details>
       <button type="button" className="btn btn-quiet" onClick={csv}>Export CSV</button>

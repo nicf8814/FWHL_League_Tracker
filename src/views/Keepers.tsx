@@ -27,7 +27,10 @@ export default function Keepers() {
       <Section title="2027 keepers" aside={`${slots} keeper slots per team`}>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="w-full max-w-xs"><TeamSelect label="Team" value={team} onChange={(t) => t !== null && setTeam(t)} /></div>
-          <p className="text-sm text-ink-2">Keep: <b className="text-ink">{set.map((p) => idx.players.get(p)?.name).join(' and ') || 'nobody worth a slot'}</b>{set.length ? <>, <span className="num">{money(set.reduce((s, p) => s + (calls.get(p)?.surplus ?? 0), 0))}</span> under what they'd cost at auction</> : ''}</p>
+          <div className="grid gap-1">
+            <p className="headline-sm">{set.length ? `Keep ${set.map((p) => idx.players.get(p)?.name.split(' ').slice(-1)[0]).join(' and ')}` : 'Nobody worth a slot'}</p>
+            {set.length > 0 && <p className="text-sm text-ink-2"><span className="num">{money(set.reduce((s, p) => s + (calls.get(p)?.surplus ?? 0), 0))}</span> under what they'd cost at auction</p>}
+          </div>
         </div>
         {rows.length ? <KeeperTable rows={rows} keep={new Set(set)} /> : <Empty>No keeper costs on this roster.</Empty>}
         <p className="text-xs text-ink-3">Worth is what this league has paid at auction (non-keepers, 2023-2026) for the player at his current points-per-week rank at his position. Keep = $10+ under; borderline = $0-10 under; pass = over, or he doesn't beat a replacement starter. A locked contract year has to be kept.</p>

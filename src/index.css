@@ -40,6 +40,12 @@
   --loss-soft: #f5e2dd;
   --even: #7a5500;
   --even-soft: #f6ebcf;
+  /* Position colors (Nov 11, item G): chips carry the label too, so color is never the only cue. */
+  --pos-qb: #7a3e8e;
+  --pos-rb: #1f6f78;
+  --pos-wr: #2f5b9a;
+  --pos-te: #9a4a12;
+  --on-pos: #ffffff;
   color-scheme: light;
 }
 
@@ -66,6 +72,11 @@
     --loss-soft: #3a1e19;
     --even: #f2c14e;
     --even-soft: #33290f;
+    --pos-qb: #c9a2d9;
+    --pos-rb: #7cc6cf;
+    --pos-wr: #9db9e8;
+    --pos-te: #f0a878;
+    --on-pos: #0f1411;
     color-scheme: dark;
   }
 }
@@ -91,6 +102,11 @@
   --loss-soft: #3a1e19;
   --even: #f2c14e;
   --even-soft: #33290f;
+  --pos-qb: #c9a2d9;
+  --pos-rb: #7cc6cf;
+  --pos-wr: #9db9e8;
+  --pos-te: #f0a878;
+  --on-pos: #0f1411;
   color-scheme: dark;
 }
 
@@ -156,6 +172,11 @@
   --color-loss-soft: var(--loss-soft);
   --color-even: var(--even);
   --color-even-soft: var(--even-soft);
+  --color-pos-qb: var(--pos-qb);
+  --color-pos-rb: var(--pos-rb);
+  --color-pos-wr: var(--pos-wr);
+  --color-pos-te: var(--pos-te);
+  --color-on-pos: var(--on-pos);
   --color-transparent: transparent;
   --color-current: currentColor;
 }
@@ -270,6 +291,26 @@
   @media (min-width: 48rem) { .sheet { margin: auto; border-bottom: 1px solid var(--rule-strong); border-radius: var(--radius); } }
 
   /* Perforated divider between the two sides of a trade slip */
+  /* Nov 11 (items E, F, H): one headline per screen, tap-through cards, inline bars, gentle motion. */
+  .headline { font-family: var(--font-display); font-weight: 900; font-stretch: 80%; font-size: clamp(3rem, 9vw, 4.75rem); line-height: 0.9; letter-spacing: -0.03em; margin: 0; }
+  .headline-sm { font-family: var(--font-display); font-weight: 900; font-stretch: 82%; font-size: clamp(1.75rem, 5vw, 2.5rem); line-height: 1; letter-spacing: -0.02em; margin: 0; }
+  .card { background: var(--surface); border: 1px solid var(--rule); color: inherit; transition: border-color var(--dur-hover) var(--ease-snap), translate var(--dur-hover) var(--ease-snap); }
+  .card:hover { border-color: var(--rule-strong); }
+  .card:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  .meter { display: block; height: 5px; background: var(--sunk); }
+  .meter > span { display: block; height: 100%; }
+  .bar, .meter > span { transition: flex-grow 500ms var(--ease-snap), width 500ms var(--ease-snap); }
+  @media (prefers-reduced-motion: no-preference) {
+    .enter { animation: enter 220ms var(--ease-snap) both; }
+    .meter > span { animation: grow 600ms var(--ease-snap) both; transform-origin: left; }
+    .stamp { animation: stamp 260ms cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+    .changed { animation: changed 360ms var(--ease-snap) both; }
+  }
+  @keyframes enter { from { opacity: 0; translate: 0 6px; } }
+  @keyframes grow { from { transform: scaleX(0); } }
+  @keyframes stamp { from { opacity: 0; scale: 1.25; } }
+  @keyframes changed { from { opacity: 0.25; translate: 0 -3px; } }
+
   .perf { background-image: radial-gradient(circle, var(--rule-strong) 1.2px, transparent 1.4px); background-size: 8px 8px; background-repeat: repeat-y; background-position: center; }
   .perf-x { background-image: radial-gradient(circle, var(--rule-strong) 1.2px, transparent 1.4px); background-size: 8px 8px; background-repeat: repeat-x; background-position: center; }
 }

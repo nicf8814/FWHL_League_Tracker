@@ -8,6 +8,7 @@ import { useRoute } from '../app/router.ts';
 import { Empty, fmt, Mono, PlayerName, PosMark, signed, TeamSelect, tone } from '../ui/components.tsx';
 import { usePlayerSheet } from './PlayerSheet.tsx';
 import { SavedTrades, SaveTradeButton, ShareTrade } from './SavedTrades.tsx';
+import { useFull } from '../ui/detail.ts';
 
 // The trade lives in the URL, so a trade is a link and the back button undoes a team change.
 function useTrade() {
@@ -58,6 +59,7 @@ export default function Analyzer() {
   const { idx, values: V } = useLeague();
   const T = useTrade();
   const dl = useDeadline();
+  const full = useFull();
   const canUndo = edits.past.length > 0, canRedo = edits.future.length > 0; // read on render: every edit changes the URL
   useUndoKeys(T.undo, T.redo);
   const ev = useMemo(() => (T.b === null ? null : evaluate(V, { a: T.a, b: T.b, aGives: T.aGives, bGives: T.bGives })), [V, T.a, T.b, T.aGives.join(), T.bGives.join()]);
@@ -105,7 +107,7 @@ export default function Analyzer() {
           )}
         </div>
       </div>
-      {ev && !ev.errors.length && T.b !== null && <LineupImpact a={T.a} b={T.b} aGives={T.aGives} bGives={T.bGives} />}
+      {full && ev && !ev.errors.length && T.b !== null && <LineupImpact a={T.a} b={T.b} aGives={T.aGives} bGives={T.bGives} />}
       <SavedTrades />
     </div>
   );
@@ -147,6 +149,7 @@ function Side({ title, team, other, picked, onTeam, onToggle }: { title: string;
 
 function VerdictPanel({ ev, a, b, onClear }: { ev: Evaluation | null; a: TeamId; b: TeamId | null; onClear: () => void }) {
   const { idx, values: V } = useLeague();
+  const full = useFull();
   if (b === null) return <Empty>Tick the players you'd send, then pick a trade partner to see what you could get back.</Empty>;
   if (!ev) return <Empty>Tick the players each team sends. The verdict updates as you go.</Empty>;
   if (ev.errors.length)
@@ -163,7 +166,7 @@ function VerdictPanel({ ev, a, b, onClear }: { ev: Evaluation | null; a: TeamId;
   return (
     <section aria-live="polite" aria-label="Verdict" className="grid gap-4 border-y-2 border-ink py-4">
       <div className="grid justify-items-center gap-1 text-center">
-        <p className={`font-display text-2xl font-extrabold uppercase [font-stretch:75%] ${color}`}>{ev.fairBoth ? 'Fair for both' : ev.verdict.label}</p>
+        <p key={ev.fairBoth ? 'fair' : ev.verdict.label} className={`changed font-display text-2xl font-extrabold uppercase [font-stretch:75%] ${color}`}>{ev.fairBoth ? 'Fair for both' : ev.verdict.label}</p>
         <p className="text-sm text-ink-2">{ev.fairBoth ? `${B} sees it as even by his own values, and ${A}'s lineup doesn't lose ground.` : `On trade value, from ${A}'s side.`}</p>
       </div>
       <dl className="grid grid-cols-2 gap-px bg-rule text-center">
@@ -174,8 +177,8 @@ function VerdictPanel({ ev, a, b, onClear }: { ev: Evaluation | null; a: TeamId;
           </div>
         ))}
       </dl>
-      <p className={`num text-center text-sm ${color}`}>{signed(ev.verdict.diff)} ({signed(ev.verdict.pct, 0)}%) for {A}</p>
-      <SourceChips a={a} b={b} />
+      <p key={ev.verdict.diff.toFixed(1)} className={`changed num text-center text-sm ${color}`}>{signed(ev.verdict.diff)} ({signed(ev.verdict.pct, 0)}%) for {A}</p>
+      {full && <SourceChips a={a} b={b} />}
       <dl className="grid gap-2 text-sm">
         <Row label={`${A} lineup`} value={<span className={`num ${tone(ev.gainA)}`}>{signed(ev.gainA)} pts/wk</span>} />
         <Row label={`${B} lineup`} value={<span className={`num ${tone(ev.gainB)}`}>{signed(ev.gainB)} pts/wk</span>} />

@@ -4,10 +4,12 @@ import { useLeague } from '../data/store.tsx';
 import { dataGaps, freshness } from '../engine/league.ts';
 import { Section, Seg, TeamSelect } from '../ui/components.tsx';
 import { getTheme, setTheme, type Theme } from '../ui/theme.ts';
+import { useFull } from '../ui/detail.ts';
 import { ImportChart } from './ImportChart.tsx';
 
 export default function DataSettings() {
   const { idx, settings, setSettings } = useLeague();
+  const full = useFull();
   const fresh = freshness(idx);
   const ds = idx.ds;
   return (
@@ -38,10 +40,12 @@ export default function DataSettings() {
         </p>
       </Section>
 
-      <ReturnWeeks />
-      <Gaps />
-      <EngineSettings settings={settings} onChange={setSettings} />
-      <ImportChart />
+      {full ? <>
+        <ReturnWeeks />
+        <Gaps />
+        <EngineSettings settings={settings} onChange={setSettings} />
+        <ImportChart />
+      </> : <p className="text-sm text-ink-3">Switch to Full at the top for injury return weeks, data gaps, the value engine and chart import.</p>}
       <Backup />
       <p className="text-sm"><a className="link" href="#/method">How the values, odds and grades are worked out</a></p>
     </div>
