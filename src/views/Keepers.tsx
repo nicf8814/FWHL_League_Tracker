@@ -45,7 +45,7 @@ function KeeperTable({ rows, keep, showOwner }: { rows: KeeperCall[]; keep: Set<
   return (
     <div className="-mx-4 overflow-x-auto md:mx-0">
       <table className="tbl min-w-[40rem]">
-        <thead><tr><th className="l">Player</th>{showOwner && <th className="l">Owner</th>}<th>Pts/wk</th><th>Rank</th><th>Cost</th><th>Worth</th><th>Surplus</th><th className="l">Call</th><th className="l">Contract</th></tr></thead>
+        <thead><tr><th className="l">Player</th>{showOwner && <th className="l">Owner</th>}<th>Surplus</th><th className="l">Call</th><th>Cost</th><th>Worth</th><th>Pts/wk</th><th>Rank</th><th className="l">Contract</th></tr></thead>
         <tbody>
           {rows.map((c) => {
             const pos = idx.players.get(c.pid)!.pos;
@@ -53,12 +53,12 @@ function KeeperTable({ rows, keep, showOwner }: { rows: KeeperCall[]; keep: Set<
               <tr key={c.pid} className={keep.has(c.pid) ? 'bg-primary-soft' : ''}>
                 <td className="l"><span className="flex items-center gap-2"><PosMark pos={pos} /><PlayerName pid={c.pid} onOpen={open} /></span></td>
                 {showOwner && <td className="l text-ink-2">{teamName(idx, idx.owner.get(c.pid))}</td>}
-                <td className="n">{fmt(c.ppw)}</td>
-                <td className="n text-ink-2">{pos}{c.rank}</td>
-                <td className="n">{money(c.cost)}</td>
-                <td className="n">{money(c.worth)}</td>
                 <td className={`n font-semibold ${c.surplus === null ? '' : c.surplus >= 0 ? 'text-gain' : 'text-loss'}`}>{money(c.surplus)}</td>
                 <td className={`l font-medium ${LABEL[c.label][1]}`}>{LABEL[c.label][0]}</td>
+                <td className="n">{money(c.cost)}</td>
+                <td className="n">{money(c.worth)}</td>
+                <td className="n">{fmt(c.ppw)}</td>
+                <td className="n text-ink-2">{pos}{c.rank}</td>
                 <td className="l min-w-[14rem] whitespace-normal text-xs text-ink-2">{c.note}</td>
               </tr>
             );
