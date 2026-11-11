@@ -124,3 +124,21 @@ The values are scaled so the chart's top player is 100. Rows with a `pos` that m
 ### drop-fantasypros (one time)
 
 FantasyPros rest-of-season ranks are no longer used: the market side of trade value is the two trade charts (Peaked 70 / Menton 30), and ESPN's rest-of-season projections drive the scoring side. The Buy & sell volume flags, the only use of FantasyPros usage stats, were dropped too. This command removes the old ranks, the usage list and both sources from the data file. Run it once; it takes no input.
+
+## League history
+
+The History page (League → History) reads `public/seed/history.json`, which covers 2010 to last season. The current season is never in it; the page adds it live from `fwhl-2026.json`, so the weekly tasks need no change.
+
+The file is built from the CSV exports in `data/history/` and never edited by hand:
+
+```bash
+npm run data -- history [--dry-run]
+```
+
+- `championships.csv`, `matchups.csv`, `settings.csv`, `standings.csv`, `teams.csv`: the league export, as downloaded.
+- `owners.csv`: who each owner name is. `team2026` links an owner to their team id in the league seed; `filler` marks a spot someone ran to fill the league (Clint's 2024-25 second team), which counts in that season but in no one's career; `note` shows on the owner's page. Ty Carlson's two ESPN ids merge because the export uses his name.
+- `corrections.csv`: games where the official result differs from the box score (2012 Week 13, Wes over Cooper). Records follow the official result, and scores stay as played.
+
+The build stops if a season's games do not reproduce the official records (unless `corrections.csv` explains it) or if the podium disagrees with the final ranks. `npm run data:check` fails while `history.json` is out of date with the CSVs.
+
+After a season ends: export the new CSVs over the old ones, add any new owner to `owners.csv` (with `team2026` updated for the new season's ids if they change), run the command, then the usual checks. Code changes go through a pull request, the data refresh straight to `main`.

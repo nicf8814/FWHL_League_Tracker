@@ -5,6 +5,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import type { Dataset } from '../src/data/schema.ts';
 import { validateDataset } from '../src/data/validate.ts';
 import { buildIndex, freshness } from '../src/engine/league.ts';
+import { validateHistory } from '../src/data/history.ts';
+import { buildHistory, formatHistory } from './history.ts';
 import {
   applyChart, applyProjections, applyResults, applyRosters, arizonaToday, dropFantasyPros, formatDataset, chartRowsFromCsv,
   type ChartRow, type Report,
@@ -16,6 +18,7 @@ const opt = (f: string) => { const i = args.indexOf(f); if (i < 0) return null; 
 const dry = flag('--dry-run');
 const force = flag('--force');
 const file = opt('--file') ?? 'public/seed/fwhl-2026.json';
+const HISTORY = 'public/seed/history.json';
 const [cmd, ...rest] = args;
 
 function fail(msg: string): never {
@@ -59,12 +62,28 @@ function chartRows(p: string | undefined): ChartRow[] {
   return chartRowsFromCsv(readFileSync(p, 'utf8'));
 }
 
+// history.json must validate and match what the CSVs in data/history build today.
+function checkHistory() {
+  const v = validateHistory(readJson(HISTORY));
+  if (!v.ok) fail(`${HISTORY} is invalid:\n- ${v.errors.join('\n- ')}`);
+  if (readFileSync(HISTORY, 'utf8') !== formatHistory(buildHistory())) fail(`${HISTORY} is out of date with data/history/*.csv. Run: npm run data -- history`);
+  return `${v.value.seasons.length} past seasons, up to date`;
+}
+
 const today = opt('--today') ?? arizonaToday();
 try {
   switch (cmd) {
     case 'check': {
       const ds = load();
-      console.log(JSON.stringify({ valid: true, file, ...summary(ds) }, null, 2));
+      console.log(JSON.stringify({ valid: true, file, ...summary(ds), history: checkHistory() }, null, 2));
+      break;
+    }
+    case 'history': {
+      const h = buildHistory();
+      const v = validateHistory(JSON.parse(formatHistory(h)));
+      if (!v.ok) fail(`the history would be invalid:\n- ${v.errors.join('\n- ')}`);
+      if (!dry) writeFileSync(HISTORY, formatHistory(h));
+      console.log(JSON.stringify({ written: !dry, file: HISTORY, seasons: `${h.seasons[0]?.year}-${h.seasons.at(-1)?.year}`, owners: h.owners.length, games: h.seasons.reduce((n, s) => n + s.games.length, 0), notes: h.seasons.flatMap((s) => s.notes.map((n) => `${s.year} ${n}`)) }, null, 2));
       break;
     }
     case 'results': { const ds = load(); finish(ds, applyResults(ds, readJson(rest[0]) as never, today)); break; }
@@ -78,7 +97,7 @@ try {
     }
     case 'drop-fantasypros': { const ds = load(); finish(ds, dropFantasyPros(ds)); break; }
     default:
-      fail(`unknown command "${cmd ?? ''}". Use: check | results <json> | projections <json> | rosters <json> | chart <peaked|menton> <week> <csv>`);
+      fail(`unknown command "${cmd ?? ''}". Use: check | results <json> | projections <json> | rosters <json> | chart <peaked|menton> <week> <csv> | history`);
   }
 } catch (e) {
   fail(e instanceof Error ? e.message : String(e));
