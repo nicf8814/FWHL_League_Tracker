@@ -15,7 +15,6 @@ export interface Index {
   news: Map<PlayerId, News>;
   keeper: Map<PlayerId, Keeper>;
   chart: { peaked: Map<PlayerId, number>; menton: Map<PlayerId, number> };
-  fpRank: Map<PlayerId, number>;
   weeks: Map<number, Map<PlayerId, PlayerWeek>>;
   games: GameRow[];
   scoresThrough: number; // last week with every game final
@@ -61,7 +60,6 @@ export function buildIndex(ds: Dataset): Index {
     news: new Map(ds.news.map((n) => [n.playerId, n])),
     keeper: new Map(ds.keepers.map((k) => [k.playerId, k])),
     chart: { peaked: chartMap('peaked'), menton: chartMap('menton') },
-    fpRank: new Map(ds.rankings.filter((r) => r.source === 'fantasypros').map((r) => [r.playerId, r.rank])),
     weeks,
     games,
     scoresThrough: currentWeek - 1,
@@ -155,12 +153,11 @@ export function dataGaps(idx: Index): Gap[] {
   const add = (what: string, ids: PlayerId[], fix: string, total = rostered.length) => { if (ids.length) gaps.push({ what, count: ids.length, total, fix, names: ids.map(name).sort() }); };
   add('Rostered players without an ESPN id', rostered.filter((p) => idx.players.get(p)?.espnId == null), 'Filled in by any ESPN task run (results, projections or quick refresh).');
   add('Rostered players without a rest-of-season projection', rostered.filter((p) => idx.stats.get(p)?.projRestOfSeason == null && !idx.injury.get(p)), 'Run the Projections task.');
-  add('Rostered players on no trade chart or rank list', rostered.filter((p) => !idx.chart.peaked.has(p) && !idx.chart.menton.has(p) && !idx.fpRank.has(p)), 'Usually deep bench; check spelling in the next chart if a starter is listed.');
+  add('Rostered players on no trade chart', rostered.filter((p) => !idx.chart.peaked.has(p) && !idx.chart.menton.has(p)), 'Usually deep bench; check spelling in the next chart if a starter is listed.');
   const thin = [...idx.weeks].filter(([w, m]) => w <= idx.scoresThrough && ![...m.values()].some((r) => r.slot === 'fa')).map(([w]) => w).sort((a, b) => a - b);
   if (thin.length) gaps.push({ what: `Weeks with no free-agent scores (${thin.map((w) => `Wk ${w}`).join(', ')})`, count: thin.length, total: idx.scoresThrough, fix: 'Run the "FWHL 5 - Backfill Weeks 1-6" task; trade grades in those weeks use a rougher replacement level.' });
   const missing = Array.from({ length: idx.scoresThrough }, (_, i) => i + 1).filter((w) => !idx.weeks.has(w));
   if (missing.length) gaps.push({ what: `Played weeks with no player scores (${missing.map((w) => `Wk ${w}`).join(', ')})`, count: missing.length, total: idx.scoresThrough, fix: 'Run the Weekly Results task for those weeks.' });
-  if (!idx.ds.usage?.length) gaps.push({ what: 'No volume vs production (usage) data', count: 1, total: 1, fix: 'Runs on its own every Tuesday (FantasyPros Stats task).' });
   return gaps;
 }
 

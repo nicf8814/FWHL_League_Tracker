@@ -3,19 +3,19 @@ import type { Dataset } from '../data/schema.ts';
 import { useLeague } from '../data/store.tsx';
 import { validateDataset } from '../data/validate.ts';
 import { Section, Seg } from '../ui/components.tsx';
-import { applyChart, applyRanks, arizonaToday, chartRowsFromCsv, rankRowsFromCsv, type Report } from '../../scripts/updates.ts';
+import { applyChart, chartRowsFromCsv, type Report } from '../../scripts/updates.ts';
 
-// In-app chart and FantasyPros import (audit FEAT-1). Same code as `npm run data -- chart|ranks`, run on a
+// In-app chart import (audit FEAT-1). Same code as `npm run data -- chart`, run on a
 // copy first so the preview is exactly what Apply will do. It changes the data on this device only; the
 // shared file still goes through the command line (docs/data-updates.md).
 
-type Kind = 'peaked' | 'menton' | 'fantasypros';
+type Kind = 'peaked' | 'menton';
 type Preview = { ds: Dataset; rep: Report } | { error: string };
 
 function run(base: Dataset, kind: Kind, week: number, text: string): Preview {
   const ds: Dataset = structuredClone(base);
   try {
-    const rep = kind === 'fantasypros' ? applyRanks(ds, rankRowsFromCsv(text), arizonaToday()) : applyChart(ds, kind, week, chartRowsFromCsv(text));
+    const rep = applyChart(ds, kind, week, chartRowsFromCsv(text));
     ds.meta.exportedAt = new Date().toISOString(); // newer than the deployed file, so this device keeps it until the next refresh
     const v = validateDataset(JSON.parse(JSON.stringify(ds)));
     return v.ok ? { ds: v.value, rep } : { error: `The import would leave the data invalid: ${v.errors[0]}` };
@@ -33,7 +33,7 @@ export function ImportChart() {
   const [done, setDone] = useState('');
   const ids = { week: useId(), csv: useId(), file: useId() };
   const reset = () => { setPreview(null); setDone(''); };
-  const existing = kind !== 'fantasypros' && idx.ds.valuations.some((v) => v.source === kind && v.week === week);
+  const existing = idx.ds.valuations.some((v) => v.source === kind && v.week === week);
   const apply = async () => {
     if (!preview || 'error' in preview) return;
     await replaceDataset(preview.ds);
@@ -45,16 +45,14 @@ export function ImportChart() {
   return (
     <Section title="Import a chart">
       <p className="max-w-[70ch] text-sm text-ink-2">
-        Paste or pick a CSV. Trade charts use <code className="num">name,value,pos</code> in the chart's order; FantasyPros uses <code className="num">name,pos,rank</code>. You'll see what matches before anything changes. This updates the data on this device only.
+        Paste or pick a CSV. Use <code className="num">name,value,pos</code> in the chart's order. You'll see what matches before anything changes. This updates the data on this device only.
       </p>
       <div className="flex flex-wrap items-end gap-4">
-        <Seg label="Chart" value={kind} options={[['peaked', 'Peaked'], ['menton', 'Menton'], ['fantasypros', 'FantasyPros']] as const} onChange={(k) => { setKind(k); reset(); }} />
-        {kind !== 'fantasypros' && (
-          <div className="grid gap-1">
-            <label htmlFor={ids.week} className="text-sm text-ink-3">Week</label>
-            <input id={ids.week} type="number" min={1} max={18} className="field w-24" value={week} onChange={(e) => { setWeek(Math.min(18, Math.max(1, Number(e.target.value) || 1))); reset(); }} />
-          </div>
-        )}
+        <Seg label="Chart" value={kind} options={[['peaked', 'Peaked'], ['menton', 'Menton']] as const} onChange={(k) => { setKind(k); reset(); }} />
+        <div className="grid gap-1">
+          <label htmlFor={ids.week} className="text-sm text-ink-3">Week</label>
+          <input id={ids.week} type="number" min={1} max={18} className="field w-24" value={week} onChange={(e) => { setWeek(Math.min(18, Math.max(1, Number(e.target.value) || 1))); reset(); }} />
+        </div>
         <div className="grid gap-1">
           <label htmlFor={ids.file} className="text-sm text-ink-3">CSV file</label>
           <input id={ids.file} type="file" accept=".csv,text/csv,text/plain" className="text-sm" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { setText(f.size > 2e6 ? '' : await f.text()); reset(); } e.target.value = ''; }} />
@@ -62,7 +60,7 @@ export function ImportChart() {
       </div>
       <div className="grid gap-1">
         <label htmlFor={ids.csv} className="text-sm text-ink-3">Or paste it</label>
-        <textarea id={ids.csv} rows={5} className="field num min-h-28 text-xs" placeholder={kind === 'fantasypros' ? 'name,pos,rank\nBijan Robinson,RB,1' : 'name,value,pos\nJa\'Marr Chase,100,WR'} value={text} onChange={(e) => { setText(e.target.value); reset(); }} />
+        <textarea id={ids.csv} rows={5} className="field num min-h-28 text-xs" placeholder={'name,value,pos\nJa\'Marr Chase,100,WR'} value={text} onChange={(e) => { setText(e.target.value); reset(); }} />
       </div>
       {existing && <p className="text-sm text-even">{kind === 'peaked' ? 'Peaked' : 'Menton'} Week {week} is already loaded; applying replaces it.</p>}
       <div className="flex flex-wrap gap-2">

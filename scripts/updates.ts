@@ -22,7 +22,7 @@ export interface Report {
 
 export const newReport = (): Report => ({ changes: [], created: [], espnIdsAdded: 0, unmatched: [], warnings: [] });
 
-// Same key the old analyzer used, kept so chart and FantasyPros names keep matching.
+// Same key the old analyzer used, kept so chart names keep matching.
 export const slug = (name: string) => name.toLowerCase().replace(/\b(jr|sr|ii|iii|iv)\b\.?/g, '').replace(/[^a-z]/g, '');
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -306,28 +306,6 @@ export function applyRosters(ds: Dataset, inp: RostersIn, today: string, force =
   return rep;
 }
 
-// ---------- Task 4: FantasyPros usage ----------
-export interface UsageIn {
-  asOf: string; // "Week 9"
-  players: ({ player: PlayerRef } & Omit<NonNullable<Dataset['usage']>[number], 'playerId' | 'pos'>)[];
-}
-
-export function applyUsage(ds: Dataset, inp: UsageIn): Report {
-  const rep = newReport();
-  if (!Array.isArray(inp.players) || inp.players.length < 100) throw new Error(`usage: expected 100+ players, got ${inp.players?.length ?? 0}.`);
-  const P = new Players(ds, rep);
-  const out: NonNullable<Dataset['usage']> = [];
-  for (const { player, ...u } of inp.players) {
-    const id = P.resolve(player, false);
-    if (!id) continue;
-    out.push({ playerId: id, pos: ds.players.find((p) => p.id === id)!.pos, ...u });
-  }
-  ds.usage = out;
-  rep.changes.push(`Usage for ${out.length} players`);
-  setSource(ds, 'fpstats', { asOf: inp.asOf }, 'FantasyPros stats (volume vs production)');
-  return rep;
-}
-
 // ---------- Weekly charts (from Nic's chart images) ----------
 export interface ChartRow { name: string; value: number; pos?: Pos }
 
@@ -360,27 +338,16 @@ export function chartRowsFromCsv(text: string): ChartRow[] {
   return body.map(([name = '', value = '', pos]) => ({ name: name.trim(), value: Number(value), ...(pos?.trim() ? { pos: pos.trim().toUpperCase() as Pos } : {}) }));
 }
 
-// ---------- FantasyPros rest-of-season ranks ----------
-export interface RankRow { name: string; pos: Pos; rank: number }
-
-export function applyRanks(ds: Dataset, rows: RankRow[], asOf: string): Report {
+// ---------- Dropping FantasyPros ----------
+// shortcut: one-time cleanup after FantasyPros ranks and usage were dropped; delete once the shared file has run it.
+export function dropFantasyPros(ds: Dataset): Report {
   const rep = newReport();
-  const good = rows.filter((r) => r.name && isPos(r.pos) && Number.isInteger(r.rank) && r.rank > 0);
-  if (good.length < 100) throw new Error(`ranks: only ${good.length} readable rows (need 100+).`);
-  const P = new Players(ds, rep);
-  const out = new Map<PlayerId, number>();
-  for (const r of good) { const id = P.resolve(r, false); if (id && !out.has(id)) out.set(id, r.rank); }
-  ds.rankings = ds.rankings.filter((r) => r.source !== 'fantasypros').concat([...out].map(([playerId, rank]) => ({ source: 'fantasypros', playerId, rank })));
-  setSource(ds, 'fantasypros', { asOf }, 'FantasyPros rest-of-season ranks (half PPR)');
-  rep.changes.push(`FantasyPros ranks for ${out.size} players`);
+  const before = ds.rankings.length, usage = ds.usage?.length ?? 0;
+  ds.rankings = ds.rankings.filter((r) => r.source !== 'fantasypros');
+  delete ds.usage;
+  ds.meta.sources = ds.meta.sources.filter((s) => s.id !== 'fantasypros' && s.id !== 'fpstats');
+  rep.changes.push(`Removed ${before - ds.rankings.length} FantasyPros ranks and ${usage} usage rows`);
   return rep;
-}
-
-// CSV with columns name,pos,rank (header optional).
-export function rankRowsFromCsv(text: string): RankRow[] {
-  const rows = parseCsv(text);
-  const body = rows[0] && !Number.isFinite(Number(rows[0][2])) ? rows.slice(1) : rows;
-  return body.map(([name = '', pos = '', rank = '']) => ({ name: name.trim(), pos: pos.trim().toUpperCase() as Pos, rank: Number(rank) }));
 }
 
 // ---------- file format ----------

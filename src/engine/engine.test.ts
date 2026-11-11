@@ -85,27 +85,27 @@ test('trades are two teams sending only their own players (LOGIC-4)', () => {
   assert.deepEqual(tradeFromQuery(new URLSearchParams(q)), { a: nic, b: vince, aGives: [allen], bGives: [dak] });
 });
 
-test('regression: the port reproduces the Sandbox engine exactly', () => {
-  // The Sandbox (Nov 10) believed it was Week 9 (the LOGIC-2 bug). Run the port at Week 9 and it must
-  // show the same numbers it did: send 137.8, get 16.2, Nic −24.1 pts/wk, Vince +26.1, Vince sees +121.7.
+test('regression: the Allen + McCaffrey for Dak trade keeps its numbers', () => {
+  // First pinned to the Sandbox (Nov 10), which believed it was Week 9 (the LOGIC-2 bug): send 137.8, get 16.2,
+  // Nic −24.1 pts/wk, Vince +26.1, Vince sees +121.7. Re-pinned when FantasyPros ranks left the market side
+  // (Peaked 70 / Menton 30); the scoring side and the weeks are unchanged.
   const ix9 = { ...idx, currentWeek: 9 };
   const b9 = buildBase(ix9, true);
   const v9 = buildValues(b9, DEFAULT_SETTINGS, simulate({ ...simInput, strength: b9.strength }));
   const trade = { a: team('Nic'), b: team('Vince'), aGives: [pid('Josh Allen'), pid('Christian McCaffrey')], bGives: [pid('Dak Prescott')] };
   const ev = evaluate(v9, trade)!;
   const same = (got: number, want: number, what: string) => assert.equal(got.toFixed(1), want.toFixed(1), what);
-  same(ev.value.aSends, 137.8, 'Nic sends');
-  same(ev.value.bSends, 16.2, 'Vince sends');
+  same(ev.value.aSends, 139.0, 'Nic sends');
+  same(ev.value.bSends, 16.0, 'Vince sends');
   same(ev.gainA, -24.1, 'Nic pts/wk');
-  // The Sandbox showed +26.1; Vince takes 2 for 1, and since LOGIC-5 he cuts his lowest-valued player
-  // to stay at roster size, which costs him 0.2 pts/wk of bye-week depth.
-  same(ev.gainB, 25.9, 'Vince pts/wk');
+  // Vince takes 2 for 1, and since LOGIC-5 he cuts his lowest-valued player to stay at roster size.
+  same(ev.gainB, 26.1, 'Vince pts/wk');
   assert.equal(v9.autoDrops(trade.b, trade.bGives, trade.aGives).length, 1, 'Vince cuts one player');
   assert.deepEqual(v9.autoDrops(trade.a, trade.aGives, trade.bGives), [], 'Nic cuts nobody');
-  same(ev.partnerEdge, 121.7, 'Vince on paper');
+  same(ev.partnerEdge, 122.9, 'Vince on paper');
   assert.equal(ev.verdict.kind, 'lose');
   // At the real current week the value side is unchanged; only the weeks left change.
-  same(evaluate(V, trade)!.value.aSends, 137.8, 'Week 10 value');
+  same(evaluate(V, trade)!.value.aSends, 139.0, 'Week 10 value');
 });
 
 test('finder returns fair offers that help the asking team', () => {
@@ -128,6 +128,8 @@ test('validation rejects broken data and coerces settings', () => {
   assert.equal(s.myTeamId, null);
   assert.equal(s.marketShare, 100);
   assert.equal(s.chartWeights.peaked, 0);
+  assert.deepEqual(coerceSettings({ chartWeights: { peaked: 45, menton: 20, fantasypros: 35 } }, null).chartWeights, { peaked: 70, menton: 30 }, 'old defaults move to the new ones');
+  assert.deepEqual(coerceSettings({ chartWeights: { peaked: 50, menton: 50, fantasypros: 10 } }, null).chartWeights, { peaked: 50, menton: 50 }, 'hand-set weights are kept');
 });
 
 test('exact ties count as ties (LOGIC-17)', () => {
@@ -171,7 +173,7 @@ test('handcuff insurance counts only for the team holding both (old app, Oct 29)
 test('each source reads a trade on its own; a split is a toss-up', () => {
   const trade = { a: team('Nic'), b: team('Vince'), aGives: [pid('Josh Allen'), pid('Christian McCaffrey')], bGives: [pid('Dak Prescott')] };
   const r = bySource(V, trade);
-  assert.deepEqual(r.reads.map((x) => x.source), ['Peaked', 'Menton', 'FantasyPros', 'Scoring']);
+  assert.deepEqual(r.reads.map((x) => x.source), ['Peaked', 'Menton', 'Scoring']);
   assert.ok(r.reads.every((x) => x.verdict.kind === 'lose'), 'everyone says Nic loses this one');
   assert.equal(r.tossUp, false);
 });

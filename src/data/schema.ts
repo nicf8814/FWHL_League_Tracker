@@ -8,7 +8,7 @@ export type TeamId = number; // ESPN league team id (1-12)
 export type PlayerId = string; // opaque, stable ("pl-0001"); never derived from a name at runtime (DATA-1)
 
 export interface Source {
-  id: 'espn' | 'scores' | 'peaked' | 'menton' | 'fantasypros' | (string & {});
+  id: 'espn' | 'scores' | 'peaked' | 'menton' | (string & {});
   label: string;
   asOf: string; // ISO date, or "Week N" for weekly charts
   week?: number;
@@ -113,6 +113,8 @@ export interface Valuation {
   value: number; // 0-100 index, the source's top player = 100
 }
 
+// No source fills this any more: FantasyPros ranks were dropped for ESPN's rest-of-season projections,
+// which already drive the model side. Kept so the data file's format doesn't change.
 export interface Ranking {
   source: string;
   playerId: PlayerId;
@@ -157,7 +159,8 @@ export interface Transaction {
   legs: TransactionLeg[];
 }
 
-// Volume vs production (FantasyPros stats fitted to league scoring), for the coming Buy & sell view.
+// Volume vs production (FantasyPros stats fitted to league scoring). Nothing reads or writes it since the
+// Buy & sell volume flags were dropped; kept so older files and backups still load.
 export interface Usage {
   playerId: PlayerId;
   pos: Pos;
@@ -192,7 +195,7 @@ export interface Dataset {
   news: News[];
   keepers: Keeper[];
   transactions: Transaction[];
-  usage?: Usage[]; // optional: absent until the FantasyPros stats task first runs
+  usage?: Usage[]; // optional and unused (see Usage)
 }
 
 // A trade saved from the analyzer (FEAT-2). Kept on this device and in backups, never in the dataset.
@@ -211,7 +214,7 @@ export interface Settings {
   version: 1;
   myTeamId: TeamId | null;
   marketShare: number; // % of value from what managers will accept (charts) vs what scores (model)
-  chartWeights: { peaked: number; menton: number; fantasypros: number };
+  chartWeights: { peaked: number; menton: number };
   injuryStrength: number; // 0-1
   useNews: boolean;
   productionRamp: boolean;
@@ -224,7 +227,7 @@ export const DEFAULT_SETTINGS: Settings = {
   version: 1,
   myTeamId: null,
   marketShare: 60,
-  chartWeights: { peaked: 45, menton: 20, fantasypros: 35 },
+  chartWeights: { peaked: 70, menton: 30 },
   injuryStrength: 0.6,
   useNews: true,
   productionRamp: true,

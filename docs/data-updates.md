@@ -2,16 +2,15 @@
 
 The site reads one file: `public/seed/fwhl-2026.json`. Nothing edits it by hand. Every update goes through `scripts/data.ts`, which checks the input, applies it, validates the whole dataset and only then writes. If anything is off it exits with code 1 and writes nothing. A push to `main` then runs `data:check`, the tests and the build before it deploys, so bad data never goes live.
 
-There are no APIs. ESPN, FantasyPros and the trade charts are read by a person or by a scheduled task in a browser, turned into one of the input files below, and committed. How Claude gathers each file is in docs/gathering.md; nothing in the repo calls ESPN or FantasyPros.
+There are no APIs. ESPN and the trade charts are read by a person or by a scheduled task in a browser, turned into one of the input files below, and committed. How Claude gathers each file is in docs/gathering.md; nothing in the repo calls ESPN.
 
 ```bash
 npm run data -- check                                     # validate and summarize
 npm run data -- results     input.json  [--dry-run]       # task 1, after Monday Night Football
 npm run data -- projections input.json  [--dry-run]       # task 2, before Thursday Night Football
 npm run data -- rosters     input.json  [--dry-run]       # task 3, any time
-npm run data -- usage       input.json  [--dry-run]       # task 4, Tuesday
 npm run data -- chart peaked|menton <week> chart.csv [--dry-run]
-npm run data -- ranks fantasypros.csv [--dry-run]
+npm run data -- drop-fantasypros [--dry-run]                # one time: remove the old FantasyPros data
 ```
 
 `--dry-run` prints the report without writing. `--force` skips the "too much changed" checks (only when the change is real). Each run prints a JSON report: `changes`, `created` (new players), `espnIdsAdded`, `unmatched` (names it could not place), `warnings`, and a summary of the dataset after the change.
@@ -39,7 +38,7 @@ Every player in an input is a reference:
 
 - `name` and `pos` (QB, RB, WR or TE) are required. `espnId` and `nflTeam` are optional.
 - A reference matches by `espnId` first, then by name (and position). When a name match has no ESPN id yet, the id is filled in. A run never fails because an id is missing; it matches by name as before.
-- A name that matches nobody becomes a new player in `results`, `projections`, `rosters` and `transactions`; in `usage`, `ranks` and `chart` rows without a position it is listed in `unmatched` and skipped.
+- A name that matches nobody becomes a new player in `results`, `projections`, `rosters` and `transactions`; in `chart` rows without a position it is listed in `unmatched` and skipped.
 - A player with the same name but a different ESPN id is treated as a different person.
 
 ## Input formats
@@ -110,14 +109,6 @@ Every player in an input is a reference:
 - Both teams must send at least one player. A transaction whose id already exists is skipped.
 - Each new trade leg is stamped with two snapshots the Trade tracker grades from: `rosAtTrade` (the player's ESPN rest-of-season projection in the data at that moment) and `valueAtTrade` (his Peaked/Menton chart value then). They can't be rebuilt later, so load a trade in the same run as, or right after, that week's projections and charts. Vetoes get no chart value; the tracker values a veto at today's numbers.
 
-### usage (task 4)
-
-```json
-{ "asOf": "Week 9", "players": [{ "player": {"name": "Puka Nacua", "pos": "WR"}, "g": 8, "fpg": 19.4, "xpg": 17.1, "td": 5, "xtd": 4.2, "tgt": 88, "att": 2, "rz": 11, "tp": 31.5, "air": 702, "big": 9, "ca": 70, "dr": 3 }] }
-```
-
-Replaces the whole usage list. Needs 100+ players.
-
 ### chart (weekly trade charts)
 
 A CSV with `name,value` and an optional `pos` column, one row per player, as the chart shows it:
@@ -130,6 +121,6 @@ Ja'Marr Chase,64,WR
 
 The values are scaled so the chart's top player is 100. Rows with a `pos` that match nobody add a new player; rows without one are listed as unmatched. Needs 50+ matched players. Keep the CSV in `data/charts/<source>-week<N>.csv` and commit it with the data change.
 
-### ranks (FantasyPros rest-of-season, half PPR)
+### drop-fantasypros (one time)
 
-A CSV of `name,pos,rank`, where rank is the positional rank (WR12 is 12).
+FantasyPros rest-of-season ranks are no longer used: the market side of trade value is the two trade charts (Peaked 70 / Menton 30), and ESPN's rest-of-season projections drive the scoring side. The Buy & sell volume flags, the only use of FantasyPros usage stats, were dropped too. This command removes the old ranks, the usage list and both sources from the data file. Run it once; it takes no input.
