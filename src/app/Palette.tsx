@@ -9,7 +9,7 @@ import { href, type Route } from './router.ts';
 // Command palette (audit FEAT-5) and keyboard shortcuts (FEAT-6). Ctrl/⌘ K or / opens the palette,
 // ? opens the cheat sheet, g then a letter jumps to a page.
 
-export const GO_KEYS: Partial<Record<Route, string>> = { finder: 'f', analyzer: 'a', tracker: 'r', market: 'b', waivers: 'w', keepers: 'k', standings: 's', players: 'p', charts: 'c', teams: 't', data: 'd', method: 'h' };
+export const GO_KEYS: Partial<Record<Route, string>> = { finder: 'f', analyzer: 'a', tracker: 'r', market: 'b', waivers: 'w', keepers: 'k', standings: 's', players: 'p', teams: 't', data: 'd', method: 'h' };
 export type Command = { id: string; label: string; hint?: string; group: 'Pages' | 'Players' | 'Teams' | 'Actions'; run: () => void; keys?: string };
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[^a-z0-9 ]/g, '');
 const typing = (t: EventTarget | null) => !!(t as HTMLElement | null)?.closest?.('input:not([type=checkbox]):not([type=radio]),textarea,select,[contenteditable=true]');

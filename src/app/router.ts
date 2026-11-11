@@ -1,7 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
 // Hash routing on the native hashchange event: deep links and the back button work, no router library.
-export const ROUTES = ['finder', 'analyzer', 'tracker', 'standings', 'players', 'teams', 'data', 'method', 'keepers', 'market', 'waivers', 'charts', 'more'] as const;
+export const ROUTES = ['finder', 'analyzer', 'tracker', 'standings', 'players', 'teams', 'data', 'method', 'keepers', 'market', 'waivers', 'more'] as const;
 export type Route = (typeof ROUTES)[number];
 
 const subscribe = (cb: () => void) => {

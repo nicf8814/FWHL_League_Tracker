@@ -186,38 +186,3 @@ export function chartAvgAt(h: ReturnType<typeof chartHistory>, p: PlayerId, week
   });
   return vals.length && vals.some((v) => v > 0) ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
 }
-
-// How well each week's chart ranked players by what they scored afterwards: Spearman rank correlation
-// between the chart value that week and points per game played since (2+ games). 1 = perfect order.
-export function chartAccuracy(idx: Index): { source: ChartSource; week: number; n: number; rho: number }[] {
-  const h = chartHistory(idx.ds);
-  const ranks = (xs: number[]) => {
-    const o = xs.map((x, i) => [x, i] as const).sort((a, b) => a[0] - b[0]);
-    const r = new Array<number>(xs.length);
-    for (let i = 0; i < o.length; ) {
-      let j = i;
-      while (j + 1 < o.length && o[j + 1]![0] === o[i]![0]) j++;
-      for (let k = i; k <= j; k++) r[o[k]![1]] = (i + j) / 2;
-      i = j + 1;
-    }
-    return r;
-  };
-  const out: { source: ChartSource; week: number; n: number; rho: number }[] = [];
-  for (const source of ['peaked', 'menton'] as const)
-    for (const [week, vals] of [...h[source]].sort((a, b) => a[0] - b[0])) {
-      if (week >= idx.scoresThrough) continue;
-      const pairs: [number, number][] = [];
-      for (const [p, v] of vals) {
-        const pts: number[] = [];
-        for (let w = week + 1; w <= idx.scoresThrough; w++) { const r = idx.weeks.get(w)?.get(p); if (r && r.points != null && r.opponent !== 'BYE') pts.push(r.points); }
-        if (pts.length >= 2) pairs.push([v, pts.reduce((a, b) => a + b, 0) / pts.length]);
-      }
-      if (pairs.length < 20) continue;
-      const a = ranks(pairs.map((x) => x[0])), b = ranks(pairs.map((x) => x[1]));
-      const m = (a.length - 1) / 2;
-      let num = 0, da = 0, db = 0;
-      for (let i = 0; i < a.length; i++) { num += (a[i]! - m) * (b[i]! - m); da += (a[i]! - m) ** 2; db += (b[i]! - m) ** 2; }
-      out.push({ source, week, n: pairs.length, rho: num / Math.sqrt(da * db) });
-    }
-  return out;
-}
