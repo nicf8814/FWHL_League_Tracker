@@ -61,6 +61,7 @@ Every player in an input is a reference:
 - `rows`: that week's line for every rostered player, plus free agents who scored. `slot` is `start`, `bench`, `ir` or `fa`; `opponent` is the NFL opponent or `"BYE"`. Each team's `start` points must add up to its score within 0.1, or the run stops.
 - `season`: season totals for rostered players.
 - `transactions`: see below. Existing ones are never changed.
+- Backfill (task 5): an earlier `week` replaces only that week's rows and leaves "scores through" alone. Send `"season": []` so today's season totals aren't overwritten with old ones, and `"transactions": []`.
 
 ### projections (task 2)
 

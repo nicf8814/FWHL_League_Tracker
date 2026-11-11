@@ -180,7 +180,10 @@ export function applyResults(ds: Dataset, inp: ResultsIn, today: string): Report
   }
   rep.changes.push(`Season stats for ${n} players`);
   addTransactions(ds, inp.transactions, P, rep);
-  setSource(ds, 'scores', { asOf: today, throughWeek: L }, 'ESPN weekly scores');
+  // A backfill of an earlier week (DATA-10) must not move "scores through" backwards.
+  const through = ds.meta.sources.find((x) => x.id === 'scores')?.throughWeek ?? 0;
+  if (L >= through) setSource(ds, 'scores', { asOf: today, throughWeek: L }, 'ESPN weekly scores');
+  else rep.changes.push(`Backfill: Week ${L} is before the latest (Week ${through}); scores-through left at Week ${through}`);
   return rep;
 }
 

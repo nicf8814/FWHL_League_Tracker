@@ -111,6 +111,13 @@ test('results: starters must add up to the score; trades are added once', () => 
   const bad = rows.map((r) => (r.slot === 'start' && r.teamId === 10 ? { ...r, points: (r.points ?? 0) + 5 } : r));
   assert.throws(() => applyResults(fresh(), { week: 9, games, rows: bad, season: [] }, TODAY), /starters add to/);
   assert.throws(() => applyResults(fresh(), { week: 10, games, rows, season: [] }, TODAY), /not final/);
+  // Backfilling Week 3 replaces that week only and leaves "scores through" at Week 9 (DATA-10).
+  const b = fresh();
+  const rows3 = b.playerWeeks.filter((w) => w.week === 3).map((w) => ({ player: { name: name(b, w.playerId).name, pos: name(b, w.playerId).pos }, teamId: w.teamId, slot: w.slot, points: w.points, projection: w.projection, opponent: w.opponent }));
+  const n9 = b.playerWeeks.filter((w) => w.week === 9).length;
+  applyResults(b, { week: 3, games, rows: rows3, season: [] }, TODAY);
+  assert.equal(b.meta.sources.find((x) => x.id === 'scores')?.throughWeek, 9);
+  assert.equal(b.playerWeeks.filter((w) => w.week === 9).length, n9);
 });
 
 test('the file format round-trips', () => {
