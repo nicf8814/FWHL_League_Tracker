@@ -42,27 +42,39 @@ async function idb<T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBR
 }
 
 async function fetchSeed(): Promise<Dataset> {
-  const res = await fetch(SEED_URL);
+  // no-cache = revalidate with the host, so a data refresh shows up on the next visit.
+  const res = await fetch(SEED_URL, { cache: 'no-cache' });
   if (!res.ok) throw new Error(`Could not load the league seed file (${res.status}).`);
   const v = validateDataset(await res.json());
   if (!v.ok) throw new Error(`The seed file is invalid: ${v.errors[0]}`);
   return v.value;
 }
 
+const stamp = (ds: Dataset) => Date.parse(ds.meta.exportedAt) || 0;
+
 export const localRepository: Repository = {
+  // The deployed file is refreshed by the weekly tasks. A dataset stored in this browser (from an
+  // import) is used only while it is at least as new as the deployed one.
   async loadDataset() {
+    let stored: Dataset | null = null;
     try {
-      const stored = await idb<unknown>('readonly', (s) => s.get(DATASET_KEY));
-      if (stored !== undefined) {
-        const v = validateDataset(stored);
-        if (v.ok) return v.value;
-        console.warn('Stored dataset failed validation, falling back to the seed.', v.errors);
+      const raw = await idb<unknown>('readonly', (s) => s.get(DATASET_KEY));
+      if (raw !== undefined) {
+        const v = validateDataset(raw);
+        if (v.ok) stored = v.value;
+        else console.warn('Stored dataset failed validation; using the deployed data.', v.errors);
       }
     } catch (e) {
-      // Private mode or blocked storage: the app still runs from the seed, it just can't keep imports.
-      console.warn('IndexedDB read failed; using the seed file.', e);
+      // Private mode or blocked storage: the app still runs from the deployed file, it just can't keep imports.
+      console.warn('IndexedDB read failed; using the deployed data.', e);
     }
-    return fetchSeed();
+    try {
+      const seed = await fetchSeed();
+      return stored && stamp(stored) >= stamp(seed) ? stored : seed;
+    } catch (e) {
+      if (stored) return stored; // offline: the copy in this browser is better than nothing
+      throw e;
+    }
   },
   async saveDataset(ds) {
     await idb('readwrite', (s) => s.put(ds, DATASET_KEY));

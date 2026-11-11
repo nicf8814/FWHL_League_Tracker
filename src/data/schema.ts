@@ -155,6 +155,25 @@ export interface Transaction {
   legs: TransactionLeg[];
 }
 
+// Volume vs production (FantasyPros stats fitted to league scoring), for the coming Buy & sell view.
+export interface Usage {
+  playerId: PlayerId;
+  pos: Pos;
+  g: number; // games
+  fpg: number; // league-scoring points per game
+  xpg: number; // points per game that volume usually produces
+  td: number;
+  xtd: number;
+  tgt: number | null;
+  att: number | null;
+  rz: number | null;
+  tp: number | null; // target share %
+  air: number | null;
+  big: number | null;
+  ca: number | null; // catchable targets
+  dr: number | null; // drops
+}
+
 export interface Dataset {
   schemaVersion: 1;
   meta: Meta;
@@ -171,6 +190,7 @@ export interface Dataset {
   news: News[];
   keepers: Keeper[];
   transactions: Transaction[];
+  usage?: Usage[]; // optional: absent until the FantasyPros stats task first runs
 }
 
 // Per-device settings. "My team" lives here, never in the data (DATA-2).

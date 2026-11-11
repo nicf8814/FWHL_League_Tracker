@@ -100,6 +100,13 @@ export function validateDataset(input: unknown): Result<Dataset> {
       team(l.toTeamId, `transactions[${i}].legs[${j}]`);
     });
   });
+  if (ds.usage !== undefined) {
+    if (!Array.isArray(ds.usage)) fail('usage must be a list.');
+    else ds.usage.forEach((u, i) => {
+      player(u.playerId, `usage[${i}]`);
+      if (!isPos(u.pos) || !isNum(u.g) || !isNum(u.fpg) || !isNum(u.xpg)) fail(`usage[${i}] needs pos, g, fpg and xpg.`);
+    });
+  }
   if (teamIds.size < 2) fail('A league needs at least two teams.');
   return errors.length ? { ok: false, errors } : { ok: true, value: ds };
 }

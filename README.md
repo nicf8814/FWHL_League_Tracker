@@ -9,7 +9,8 @@ This is the production rebuild of the "FWHL Trade Analyzer" artifact. The valuat
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # engine checks (Node's built-in test runner)
+npm test           # engine and data-update checks (Node's built-in test runner)
+npm run data:check # validate the league data file
 npm run build      # type-check + production build into dist/
 npm run preview    # serve dist/ locally
 ```
@@ -66,10 +67,11 @@ To add a real backend later, write another `Repository` with the same four metho
 | `valuations` | source + week + playerId | Peaked and Menton chart values (0-100 index) |
 | `rankings` | source + playerId | FantasyPros rest-of-season positional rank |
 | `injuries`, `news`, `keepers`, `transactions` | playerId / id | status and return week, role news, 2027 keeper cost, trades and vetoes |
+| `usage` (optional) | playerId | FantasyPros volume vs production, for Buy & sell |
 
 `meta.sources` carries an as-of stamp per source; the app shows each one and flags it when it gets old.
 
-**Weekly refresh.** Produce a new dataset JSON in this schema (the weekly refresh tasks can write it), then either import it in Data & settings or commit it over `public/seed/fwhl-2026.json` and redeploy. Imports are validated first (shape and every cross-reference); if anything is wrong nothing changes and you get the list of problems.
+**Weekly refresh.** Scheduled tasks read ESPN and FantasyPros in a browser, write an input file, and run `npm run data -- <command>`, which validates everything and refuses bad data. Trade charts come from images transcribed to CSV. Each update is a commit to `main`, and the deploy re-checks the data before publishing. Formats and steps: [docs/data-updates.md](docs/data-updates.md). A browser that imported its own file keeps it only until newer data is deployed.
 
 ## Deploy
 
