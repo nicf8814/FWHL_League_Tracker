@@ -117,7 +117,7 @@ function Backup() {
 
   return (
     <Section title="Backup and restore">
-      <p className="max-w-[70ch] text-sm text-ink-2">Everything lives in this browser. Export a backup to keep a copy or move to another device. Import takes a backup or a refreshed league data file; it is checked first, and nothing changes if it fails.</p>
+      <p className="max-w-[70ch] text-sm text-ink-2">Everything lives in this browser. A backup holds the league data, your settings and your saved trades: export one to keep a copy or move to another device. Import takes a backup or a refreshed league data file; it is checked first, and nothing changes if it fails.</p>
       <div className="flex flex-wrap gap-3">
         <button type="button" className="btn btn-primary" onClick={download}>Export backup</button>
         <button type="button" className="btn" onClick={() => file.current?.click()}>Import JSON</button>
