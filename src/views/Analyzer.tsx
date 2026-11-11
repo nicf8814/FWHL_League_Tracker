@@ -7,6 +7,7 @@ import { evaluate, MAX_PER_SIDE, tradeFromQuery, tradeToQuery, type Evaluation, 
 import { useRoute } from '../app/router.ts';
 import { Empty, fmt, Mono, PlayerName, PosMark, signed, TeamSelect, tone } from '../ui/components.tsx';
 import { usePlayerSheet } from './PlayerSheet.tsx';
+import { SavedTrades, SaveTradeButton } from './SavedTrades.tsx';
 
 // The trade lives in the URL, so a trade is a link and the back button undoes a team change.
 function useTrade() {
@@ -54,7 +55,10 @@ export default function Analyzer() {
         </div>
         <div className="perf order-2 hidden lg:block" aria-hidden="true" />
         <div className="order-1 lg:order-2">
-          <VerdictPanel ev={ev} a={T.a} b={T.b} onClear={() => T.set({ aGives: [], bGives: [] })} />
+          <div className="grid gap-3 lg:sticky lg:top-20">
+            <VerdictPanel ev={ev} a={T.a} b={T.b} onClear={() => T.set({ aGives: [], bGives: [] })} />
+            {ev && !ev.errors.length && <SaveTradeButton trade={T} />}
+          </div>
         </div>
         <div className="perf order-3 hidden lg:block" aria-hidden="true" />
         <div className="order-3 lg:order-4">
@@ -69,6 +73,7 @@ export default function Analyzer() {
         </div>
       </div>
       {ev && !ev.errors.length && T.b !== null && <LineupImpact a={T.a} b={T.b} aGives={T.aGives} bGives={T.bGives} />}
+      <SavedTrades />
     </div>
   );
 }
@@ -122,7 +127,7 @@ function VerdictPanel({ ev, a, b, onClear }: { ev: Evaluation | null; a: TeamId;
   const color = k === 'win' ? 'text-gain' : k === 'lose' ? 'text-loss' : 'text-even';
   const odds = V.teamOdds(b);
   return (
-    <section aria-live="polite" aria-label="Verdict" className="grid gap-4 border-y-2 border-ink py-4 lg:sticky lg:top-20">
+    <section aria-live="polite" aria-label="Verdict" className="grid gap-4 border-y-2 border-ink py-4">
       <div className="grid justify-items-center gap-1 text-center">
         <p className={`font-display text-2xl font-extrabold uppercase [font-stretch:75%] ${color}`}>{ev.fairBoth ? 'Fair for both' : ev.verdict.label}</p>
         <p className="text-sm text-ink-2">{ev.fairBoth ? `${B} sees it as even by his own values, and ${A}'s lineup doesn't lose ground.` : `On trade value, from ${A}'s side.`}</p>

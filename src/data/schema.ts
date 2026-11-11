@@ -195,6 +195,17 @@ export interface Dataset {
   usage?: Usage[]; // optional: absent until the FantasyPros stats task first runs
 }
 
+// A trade saved from the analyzer (FEAT-2). Kept on this device and in backups, never in the dataset.
+export interface SavedTrade {
+  id: string;
+  name: string;
+  savedAt: string; // ISO
+  a: TeamId;
+  b: TeamId;
+  aGives: PlayerId[];
+  bGives: PlayerId[];
+}
+
 // Per-device settings. "My team" lives here, never in the data (DATA-2).
 export interface Settings {
   version: 1;

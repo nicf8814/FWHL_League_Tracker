@@ -4,7 +4,7 @@ import { buildBase, buildValues, type Base, type Values } from '../engine/model.
 import type { SimInput, SimResult } from '../engine/sim.ts';
 import { simulateHistory, simulateOdds } from '../engine/simClient.ts';
 import { localRepository, parseBackup, type BackupFile, type Repository } from './repository.ts';
-import type { Dataset, Settings } from './schema.ts';
+import type { Dataset, SavedTrade, Settings } from './schema.ts';
 
 // The only place components get league data from. Views call useLeague(); nothing imports storage.
 
@@ -20,6 +20,8 @@ interface League {
   exportBackup: () => BackupFile;
   importBackup: (text: string) => Promise<{ ok: true } | { ok: false; errors: string[] }>;
   resetData: () => Promise<void>;
+  savedTrades: SavedTrade[];
+  setSavedTrades: (next: (list: SavedTrade[]) => SavedTrade[]) => void;
 }
 
 const Ctx = createContext<League | null>(null);
@@ -71,6 +73,23 @@ export function LeagueProvider({ children, repo = localRepository }: { children:
   const [load, setLoad] = useState<Load>({ state: 'loading' });
   const [settings, setSettingsState] = useState<Settings>(() => repo.loadSettings(null));
   const [sim, setSim] = useState<SimResult | null>(null);
+  const [savedTrades, setSaved] = useState<SavedTrade[]>([]);
+  useEffect(() => {
+    let live = true;
+    repo.loadSavedTrades().then((l) => live && setSaved(l));
+    return () => {
+      live = false;
+    };
+  }, [repo]);
+  const setSavedTrades = useCallback(
+    (fn: (list: SavedTrade[]) => SavedTrade[]) =>
+      setSaved((cur) => {
+        const next = fn(cur);
+        repo.saveSavedTrades(next).catch((e: unknown) => console.warn('Could not save trades on this device.', e));
+        return next;
+      }),
+    [repo],
+  );
 
   useEffect(() => {
     let live = true;
@@ -130,8 +149,8 @@ export function LeagueProvider({ children, repo = localRepository }: { children:
 
   const exportBackup = useCallback((): BackupFile => {
     if (!ds) throw new Error('No data loaded yet.');
-    return { kind: 'fwhl-backup', exportedAt: new Date().toISOString(), dataset: ds, settings };
-  }, [ds, settings]);
+    return { kind: 'fwhl-backup', exportedAt: new Date().toISOString(), dataset: ds, settings, savedTrades };
+  }, [ds, settings, savedTrades]);
 
   const importBackup = useCallback(
     async (text: string) => {
@@ -144,9 +163,10 @@ export function LeagueProvider({ children, repo = localRepository }: { children:
       const next = r.settings ?? { ...settings, myTeamId: settings.myTeamId !== null && teams.has(settings.myTeamId) ? settings.myTeamId : null };
       repo.saveSettings(next);
       setSettingsState(next);
+      if (r.savedTrades) setSavedTrades(() => r.savedTrades!);
       return { ok: true as const };
     },
-    [repo, settings],
+    [repo, settings, setSavedTrades],
   );
 
   const resetData = useCallback(async () => {
@@ -159,7 +179,7 @@ export function LeagueProvider({ children, repo = localRepository }: { children:
   if (load.state === 'error') return <Splash text={load.message} error />;
   if (!idx || !base || !values || !simInput) return <Splash text="Preparing…" />;
   return (
-    <Ctx.Provider value={{ idx, base, values, valuesVersion: version.current, sim, simInput, settings, setSettings, exportBackup, importBackup, resetData }}>
+    <Ctx.Provider value={{ idx, base, values, valuesVersion: version.current, sim, simInput, settings, setSettings, exportBackup, importBackup, resetData, savedTrades, setSavedTrades }}>
       {children}
     </Ctx.Provider>
   );

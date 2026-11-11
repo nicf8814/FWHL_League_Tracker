@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, POSITIONS, type Dataset, type Settings } from './schema.ts';
+import { DEFAULT_SETTINGS, POSITIONS, type Dataset, type SavedTrade, type Settings } from './schema.ts';
 
 // Trust boundary: everything that enters storage (seed file, imported JSON, saved settings) passes here.
 // Hand-written instead of a schema library: one file, no dependency, and the referential checks a
@@ -131,4 +131,20 @@ export function coerceSettings(input: unknown, teamIds: ReadonlySet<number> | nu
     useNews: typeof s.useNews === 'boolean' ? s.useNews : D.useNews,
     productionRamp: typeof s.productionRamp === 'boolean' ? s.productionRamp : D.productionRamp,
   };
+}
+
+// Saved trades come from storage or a backup file: keep the well-formed ones, drop the rest.
+export function coerceSavedTrades(input: unknown): SavedTrade[] {
+  if (!Array.isArray(input)) return [];
+  const ids = (x: unknown) => Array.isArray(x) && x.length <= 6 && x.every((p) => typeof p === 'string' && /^pl-\d+$/.test(p));
+  const team = (x: unknown) => Number.isInteger(x) && (x as number) > 0;
+  const seen = new Set<string>();
+  return input.filter((t): t is SavedTrade => {
+    if (typeof t !== 'object' || t === null) return false;
+    const o = t as Record<string, unknown>;
+    const ok = typeof o.id === 'string' && !seen.has(o.id) && typeof o.name === 'string' && o.name.length <= 80 && typeof o.savedAt === 'string' &&
+      team(o.a) && team(o.b) && o.a !== o.b && ids(o.aGives) && ids(o.bGives);
+    if (ok) seen.add(o.id as string);
+    return ok;
+  }).slice(0, 200).map((t) => ({ id: t.id, name: t.name.trim() || 'Saved trade', savedAt: t.savedAt, a: t.a, b: t.b, aGives: [...t.aGives], bGives: [...t.bGives] }));
 }
