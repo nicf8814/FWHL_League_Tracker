@@ -20,6 +20,7 @@ const Keepers = lazy(() => import('../views/Keepers.tsx'));
 const Market = lazy(() => import('../views/Market.tsx'));
 const Waivers = lazy(() => import('../views/Waivers.tsx'));
 const Home = lazy(() => import('../views/Home.tsx'));
+const History = lazy(() => import('../views/History.tsx'));
 
 // Four sections (Nov 11, item B), each a few pages shown as tabs. Phones get the sections in the
 // bottom bar; desktops list them in the rail.
@@ -28,7 +29,7 @@ type Section = { id: string; label: string; icon: string; pages: Page[] };
 const SECTIONS: Section[] = [
   { id: 'team', label: 'My Team', icon: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z', pages: [{ route: 'home', label: 'Home' }, { route: 'waivers', label: 'Waivers' }, { route: 'keepers', label: 'Keepers' }] },
   { id: 'trades', label: 'Trades', icon: 'M7 7h13l-3-3M17 17H4l3 3', pages: [{ route: 'finder', label: 'Finder' }, { route: 'analyzer', label: 'Analyzer' }, { route: 'tracker', label: 'Tracker' }, { route: 'market', label: 'Buy & sell' }] },
-  { id: 'league', label: 'League', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2', pages: [{ route: 'standings', label: 'Standings' }, { route: 'players', label: 'Players' }, { route: 'teams', label: 'Teams' }] },
+  { id: 'league', label: 'League', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2', pages: [{ route: 'standings', label: 'Standings' }, { route: 'history', label: 'History' }, { route: 'players', label: 'Players' }, { route: 'teams', label: 'Teams' }] },
   { id: 'settings', label: 'Settings', icon: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1', pages: [{ route: 'data', label: 'Data & settings' }, { route: 'method', label: 'How it works' }] },
 ];
 // FEAT-11: after the deadline the finder is retired.
@@ -36,7 +37,7 @@ const sectionsFor = (passed: boolean) => (passed ? SECTIONS.map((x) => ({ ...x, 
 const sectionOf = (r: Route) => SECTIONS.find((x) => x.pages.some((p) => p.route === r))!;
 export const PAGES = SECTIONS.flatMap((x) => x.pages);
 const SHORT: Record<string, string> = { espn: 'ESPN', peaked: 'Peaked', menton: 'Menton' };
-const VIEWS: Record<Route, React.ComponentType> = { home: Home, finder: Finder, analyzer: Analyzer, tracker: Tracker, standings: Standings, players: Players, teams: Teams, data: DataSettings, method: Method, keepers: Keepers, market: Market, waivers: Waivers };
+const VIEWS: Record<Route, React.ComponentType> = { home: Home, finder: Finder, analyzer: Analyzer, tracker: Tracker, standings: Standings, history: History, players: Players, teams: Teams, data: DataSettings, method: Method, keepers: Keepers, market: Market, waivers: Waivers };
 
 const EXTRA: Command[] = [
   { id: 'theme', label: 'Switch light / dark', group: 'Actions', run: () => setTheme(nextTheme(getTheme())) },

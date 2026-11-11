@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLeague, useSimHistory } from '../data/store.tsx';
 import { bestActual, standings, teamName, type StandingRow } from '../engine/league.ts';
-import { luck } from '../engine/luck.ts';
+import { luck, type Luck } from '../engine/luck.ts';
 import { rank6 } from '../engine/sim.ts';
 import { fmt, Mono, pct, Section, signed, tone } from '../ui/components.tsx';
 import { ThisWeek } from './ThisWeek.tsx';
@@ -173,7 +173,7 @@ function Week() {
   );
 }
 
-function lucky(L: ReturnType<typeof luck>, idx: Parameters<typeof teamName>[0]): string {
+function lucky(L: Map<number, Luck>, idx: Parameters<typeof teamName>[0]): string {
   const rows = [...L].filter(([, x]) => x.games > 0).sort((a, b) => b[1].luck - a[1].luck);
   if (rows.length < 2) return '';
   const [hi, lo] = [rows[0]!, rows[rows.length - 1]!];
