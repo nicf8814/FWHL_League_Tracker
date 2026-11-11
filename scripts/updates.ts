@@ -22,7 +22,7 @@ export interface Report {
 
 export const newReport = (): Report => ({ changes: [], created: [], espnIdsAdded: 0, unmatched: [], warnings: [] });
 
-// Same key the old analyzer used, kept so chart and FantasyPros names keep matching.
+// Same key the old analyzer used, kept so chart and FantasyPros usage names keep matching.
 export const slug = (name: string) => name.toLowerCase().replace(/\b(jr|sr|ii|iii|iv)\b\.?/g, '').replace(/[^a-z]/g, '');
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -360,27 +360,15 @@ export function chartRowsFromCsv(text: string): ChartRow[] {
   return body.map(([name = '', value = '', pos]) => ({ name: name.trim(), value: Number(value), ...(pos?.trim() ? { pos: pos.trim().toUpperCase() as Pos } : {}) }));
 }
 
-// ---------- FantasyPros rest-of-season ranks ----------
-export interface RankRow { name: string; pos: Pos; rank: number }
-
-export function applyRanks(ds: Dataset, rows: RankRow[], asOf: string): Report {
+// ---------- Dropping FantasyPros ranks ----------
+// shortcut: one-time cleanup for the move to ESPN rest-of-season projections; delete once the shared file has run it.
+export function dropFantasyProsRanks(ds: Dataset): Report {
   const rep = newReport();
-  const good = rows.filter((r) => r.name && isPos(r.pos) && Number.isInteger(r.rank) && r.rank > 0);
-  if (good.length < 100) throw new Error(`ranks: only ${good.length} readable rows (need 100+).`);
-  const P = new Players(ds, rep);
-  const out = new Map<PlayerId, number>();
-  for (const r of good) { const id = P.resolve(r, false); if (id && !out.has(id)) out.set(id, r.rank); }
-  ds.rankings = ds.rankings.filter((r) => r.source !== 'fantasypros').concat([...out].map(([playerId, rank]) => ({ source: 'fantasypros', playerId, rank })));
-  setSource(ds, 'fantasypros', { asOf }, 'FantasyPros rest-of-season ranks (half PPR)');
-  rep.changes.push(`FantasyPros ranks for ${out.size} players`);
+  const before = ds.rankings.length;
+  ds.rankings = ds.rankings.filter((r) => r.source !== 'fantasypros');
+  ds.meta.sources = ds.meta.sources.filter((s) => s.id !== 'fantasypros');
+  rep.changes.push(`Removed ${before - ds.rankings.length} FantasyPros ranks`);
   return rep;
-}
-
-// CSV with columns name,pos,rank (header optional).
-export function rankRowsFromCsv(text: string): RankRow[] {
-  const rows = parseCsv(text);
-  const body = rows[0] && !Number.isFinite(Number(rows[0][2])) ? rows.slice(1) : rows;
-  return body.map(([name = '', pos = '', rank = '']) => ({ name: name.trim(), pos: pos.trim().toUpperCase() as Pos, rank: Number(rank) }));
 }
 
 // ---------- file format ----------

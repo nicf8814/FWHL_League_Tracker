@@ -6,8 +6,8 @@ import type { Dataset } from '../src/data/schema.ts';
 import { validateDataset } from '../src/data/validate.ts';
 import { buildIndex, freshness } from '../src/engine/league.ts';
 import {
-  applyChart, applyProjections, applyRanks, applyResults, applyRosters, applyUsage, arizonaToday, formatDataset, chartRowsFromCsv, rankRowsFromCsv,
-  type ChartRow, type RankRow, type Report,
+  applyChart, applyProjections, applyResults, applyRosters, applyUsage, arizonaToday, dropFantasyProsRanks, formatDataset, chartRowsFromCsv,
+  type ChartRow, type Report,
 } from './updates.ts';
 
 const args = process.argv.slice(2);
@@ -59,11 +59,6 @@ function chartRows(p: string | undefined): ChartRow[] {
   return chartRowsFromCsv(readFileSync(p, 'utf8'));
 }
 
-function rankRows(p: string | undefined): RankRow[] {
-  if (!p) fail('missing CSV file.');
-  return rankRowsFromCsv(readFileSync(p, 'utf8'));
-}
-
 const today = opt('--today') ?? arizonaToday();
 try {
   switch (cmd) {
@@ -82,9 +77,9 @@ try {
       finish(ds, applyChart(ds, source as 'peaked' | 'menton', Number(week), chartRows(csv)));
       break;
     }
-    case 'ranks': { const ds = load(); finish(ds, applyRanks(ds, rankRows(rest[0]), today)); break; }
+    case 'drop-fantasypros': { const ds = load(); finish(ds, dropFantasyProsRanks(ds)); break; }
     default:
-      fail(`unknown command "${cmd ?? ''}". Use: check | results <json> | projections <json> | rosters <json> | usage <json> | chart <peaked|menton> <week> <csv> | ranks <csv>`);
+      fail(`unknown command "${cmd ?? ''}". Use: check | results <json> | projections <json> | rosters <json> | usage <json> | chart <peaked|menton> <week> <csv>`);
   }
 } catch (e) {
   fail(e instanceof Error ? e.message : String(e));

@@ -58,7 +58,6 @@ export default function Players() {
       { id: 'repl', label: 'Above repl.', value: (p) => V.aboveReplacement(p.id), cell: (p) => signed(V.aboveReplacement(p.id)) },
       { id: 'peaked', label: 'Peaked', value: (p) => V.chart(p.id, 'peaked') },
       { id: 'menton', label: 'Menton', value: (p) => V.chart(p.id, 'menton') },
-      { id: 'fpros', label: 'FPros', value: (p) => V.chart(p.id, 'fantasypros') },
       { id: 'keep', label: "Keep '27", value: (p) => { const k = idx.keeper.get(p.id); return k ? k.cost ?? 'No' : null; }, cell: (p) => { const k = idx.keeper.get(p.id); return k ? (k.cost === null ? 'No' : `$${k.cost}`) : '–'; } },
       { id: 'move', label: `Charts since Wk ${since}`, value: (p) => { const a = chartAvgAt(hist, p.id, latest), b = chartAvgAt(hist, p.id, since); return a === null || b === null ? null : a - b; }, cell: (p) => { const a = chartAvgAt(hist, p.id, latest), b = chartAvgAt(hist, p.id, since); if (a === null || b === null) return '–'; const d = a - b; return <span className={Math.abs(d) < 0.5 ? 'text-ink-3' : d > 0 ? 'text-gain' : 'text-loss'}>{signed(d)}</span>; } },
       { id: 'bye', label: 'Bye', hidden: true, value: (p) => p.bye },

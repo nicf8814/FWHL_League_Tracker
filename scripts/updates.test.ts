@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import type { Dataset } from '../src/data/schema.ts';
 import { validateDataset } from '../src/data/validate.ts';
-import { applyChart, applyProjections, applyResults, applyRosters, formatDataset, newReport, Players, slug, type ResultsIn, type RostersIn } from './updates.ts';
+import { applyChart, applyProjections, applyResults, applyRosters, dropFantasyProsRanks, formatDataset, newReport, Players, slug, type ResultsIn, type RostersIn } from './updates.ts';
 
 const fixture = readFileSync(new URL('../test/fixtures/fwhl-2026-11-10.json', import.meta.url), 'utf8');
 const fresh = (): Dataset => JSON.parse(fixture);
@@ -123,4 +123,15 @@ test('results: starters must add up to the score; trades are added once', () => 
 test('the file format round-trips', () => {
   const ds = fresh();
   assert.deepEqual(JSON.parse(formatDataset(ds)), ds);
+});
+
+test('dropping FantasyPros ranks clears them and their source, and leaves a valid file', () => {
+  const ds = fresh();
+  const n = ds.rankings.filter((r) => r.source === 'fantasypros').length;
+  assert.ok(n > 0, 'the fixture has FantasyPros ranks');
+  const rep = dropFantasyProsRanks(ds);
+  assert.equal(ds.rankings.length, 0);
+  assert.equal(ds.meta.sources.some((s) => s.id === 'fantasypros'), false);
+  assert.deepEqual(rep.changes, [`Removed ${n} FantasyPros ranks`]);
+  assert.ok(validateDataset(JSON.parse(formatDataset(ds))).ok);
 });

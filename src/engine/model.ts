@@ -147,7 +147,7 @@ export interface Values {
   keepWeight: (t: TeamId) => number;
   blend: (p: PlayerId) => Blend;
   bv: (p: PlayerId) => number;
-  chart: (p: PlayerId, source: 'peaked' | 'menton' | 'fantasypros') => number | null;
+  chart: (p: PlayerId, source: 'peaked' | 'menton') => number | null;
   aboveReplacement: (p: PlayerId) => number | null;
   replacement: Record<Pos, number>;
   replacementHealthy: Record<Pos, number>; // same ranks, Out/IR players left out
@@ -201,9 +201,8 @@ export function buildValues(base: Base, settings: Settings, sim: SimResult | nul
     }));
   }
   const at = (c: number[], i: number) => (!c.length ? 0 : i < c.length ? c[i]! : c[c.length - 1]! * Math.pow(0.95, i - c.length + 1));
-  const chart = (p: PlayerId, src: 'peaked' | 'menton' | 'fantasypros'): number | null => {
+  const chart = (p: PlayerId, src: 'peaked' | 'menton'): number | null => {
     const c = cons.get(posOf(p)) ?? [];
-    if (src === 'fantasypros') { const r = idx.fpRank.get(p); return r === undefined ? null : at(c, r - 1); }
     const r = rankIn[src].get(p);
     return r === undefined ? null : at(c, r);
   };
@@ -212,7 +211,7 @@ export function buildValues(base: Base, settings: Settings, sim: SimResult | nul
   const market = new Map<PlayerId, { raw: number; n: number }>();
   for (const p of ids) {
     let s = 0, w = 0, n = 0;
-    for (const src of ['peaked', 'menton', 'fantasypros'] as const) {
+    for (const src of ['peaked', 'menton'] as const) {
       const v = chart(p, src), wt = W[src];
       if (v !== null && wt > 0) { s += v * wt; w += wt; n++; }
     }

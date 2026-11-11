@@ -115,7 +115,9 @@ export function validateDataset(input: unknown): Result<Dataset> {
 export function coerceSettings(input: unknown, teamIds: ReadonlySet<number> | null): Settings {
   const s = isObj(input) ? input : {};
   const clamp = (x: unknown, lo: number, hi: number, d: number) => (isNum(x) ? Math.min(hi, Math.max(lo, x)) : d);
-  const cw = isObj(s.chartWeights) ? s.chartWeights : {};
+  const cw0 = isObj(s.chartWeights) ? s.chartWeights : {};
+  // Settings saved before FantasyPros ranks were dropped carry the old default 45/20/35: move those to today's default.
+  const cw = cw0.peaked === 45 && cw0.menton === 20 && cw0.fantasypros === 35 ? {} : cw0;
   const D = DEFAULT_SETTINGS;
   const my = Number.isInteger(s.myTeamId) && (!teamIds || teamIds.has(s.myTeamId as number)) ? (s.myTeamId as number) : null;
   return {
@@ -125,7 +127,6 @@ export function coerceSettings(input: unknown, teamIds: ReadonlySet<number> | nu
     chartWeights: {
       peaked: clamp(cw.peaked, 0, 100, D.chartWeights.peaked),
       menton: clamp(cw.menton, 0, 100, D.chartWeights.menton),
-      fantasypros: clamp(cw.fantasypros, 0, 100, D.chartWeights.fantasypros),
     },
     injuryStrength: clamp(s.injuryStrength, 0, 1, D.injuryStrength),
     useNews: typeof s.useNews === 'boolean' ? s.useNews : D.useNews,

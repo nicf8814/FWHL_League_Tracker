@@ -13,7 +13,7 @@ export default function Method() {
     <article className="grid max-w-[70ch] gap-10 text-ink-2 [&_b]:text-ink [&_h2]:text-ink">
       <Section title="Player value">
         <p>Every player gets one number on a 0 to 100+ scale. It blends two views: what league mates will accept (the market) and what actually scores in this league (the model). Right now it's {s.marketShare}% market and {100 - s.marketShare}% model; change it in <a className="link" href={href('data')}>Data & settings</a>.</p>
-        <p><b>Market.</b> The Peaked in High Skool and Kyle Menton trade charts plus FantasyPros rest-of-season ranks, weighted {cw.peaked} / {cw.menton} / {cw.fantasypros}. Each source's position rank is read off one shared curve per position, so a WR5 is worth the same whichever chart calls him that.</p>
+        <p><b>Market.</b> The Peaked in High Skool and Kyle Menton trade charts, weighted {cw.peaked} / {cw.menton}. Each chart's position rank is read off one shared curve per position, so a WR5 is worth the same whichever chart calls him that.</p>
         <p><b>Model.</b> ESPN projections in this league's scoring, blended with what each player has actually scored as games pile up (none at 0 games, half by 7, 70% by 12){s.productionRamp ? '' : ' (the blend is off right now)'}. Value is points per week above a replacement starter ({repl}), over the weeks left, with the stretch weeks {S.top6Weeks.join(', ')} counting 1.25× and the playoffs 1.5× times the team's playoff odds.</p>
         <p><b>Injuries.</b> Out and IR players lose the weeks they'll miss; IR is at least 4 weeks from when it started. A player who scores 0 with no projection in back-to-back games is treated as out until he plays. Injury discounts run at {Math.round(s.injuryStrength * 100)}% strength.</p>
         <p><b>Keepers.</b> A player's 2027 keeper surplus (projected auction price minus keeper cost) is added to his value for his owner, weighted by how much that owner should care about next year: 12% for a lock to make the playoffs, up to 60% for a team out of it.</p>
@@ -36,7 +36,7 @@ export default function Method() {
       </Section>
 
       <Section title="Data">
-        <p>No live connections. The app reads one league file that the weekly tasks refresh from ESPN, the trade charts and FantasyPros, and the site redeploys when it changes. What you import or change stays in this browser; export a backup to keep it. Every source's date is in <a className="link" href={href('data')}>Data & settings</a>.</p>
+        <p>No live connections. The app reads one league file that the weekly tasks refresh from ESPN, the trade charts and FantasyPros usage stats, and the site redeploys when it changes. What you import or change stays in this browser; export a backup to keep it. Every source's date is in <a className="link" href={href('data')}>Data & settings</a>.</p>
       </Section>
     </article>
   );

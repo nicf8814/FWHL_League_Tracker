@@ -30,7 +30,7 @@ Requires Node 22.18 or newer (the tests run TypeScript directly).
 | Standings | This week for your team, records, PF, PA, max PF, efficiency, playoff odds (10,000 simulated seasons) by record path and the points-for seed, odds trend, weekly results with the Weeks 12-14 top-6 rule. |
 | Players | Every valued player with total points; search, sort any column, choose columns, export CSV, chart moves since any week. Each player's sheet has his chart-value trend. |
 | Teams | Any roster by position with role, pts/wk and value. |
-| Data & settings | Your team, theme, data sources and gaps, injury return weeks, value engine presets, chart and FantasyPros import, backup export / import / reset. |
+| Data & settings | Your team, theme, data sources and gaps, injury return weeks, value engine presets, chart import, backup export / import / reset. |
 | How it works | The methodology in plain words. |
 
 Ctrl/⌘ K (or /) opens a palette for pages, players, teams and actions; `?` lists the keyboard shortcuts. The app installs to a home screen and works offline.
@@ -74,7 +74,7 @@ To add a real backend later, write another `Repository` with the same methods (d
 | `playerWeeks` | playerId + week | team, slot, points, projection, opponent, rostered/started % |
 | `playerStats` | playerId | ESPN projections and season production |
 | `valuations` | source + week + playerId | Peaked and Menton chart values (0-100 index) |
-| `rankings` | source + playerId | FantasyPros rest-of-season positional rank |
+| `rankings` | source + playerId | empty; held FantasyPros rest-of-season ranks until trade value moved to the charts plus ESPN projections |
 | `injuries`, `news`, `keepers`, `transactions` | playerId / id | status and return week, role news, 2027 keeper cost, trades and vetoes |
 | `usage` (optional) | playerId | FantasyPros volume vs production, for Buy & sell |
 

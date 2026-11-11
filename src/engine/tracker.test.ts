@@ -1,5 +1,5 @@
-// Golden checks for the Trade tracker and What if (audit LOGIC-11): the port must reproduce the
-// Sandbox engine's results for every trade and vetoed trade. Run with `npm test`.
+// Golden checks for the Trade tracker and What if (audit LOGIC-11): every trade and vetoed trade must keep
+// its results. First pinned to the Sandbox engine, re-pinned when FantasyPros ranks were dropped. Run with `npm test`.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
@@ -24,7 +24,7 @@ const near = (a: number | null, b: number | null, tol: number, what: string) => 
 
 for (const tx of ds.transactions) {
   const g = tx.type === 'veto' ? G.whatif[tx.id] : G.trades[tx.id];
-  test(`${tx.type} ${tx.id.slice(0, 11)} matches the Sandbox`, () => {
+  test(`${tx.type} ${tx.id.slice(0, 11)} keeps its results`, () => {
     assert.ok(g, 'golden result exists');
     const s = scenarioOf(tx);
     const ev = evaluate(V, s);

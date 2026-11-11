@@ -130,7 +130,6 @@ const PRESETS: [string, string, Partial<Settings>][] = [
   ['default', 'Default', {}],
   ['market', 'What managers pay', { marketShare: 85 }],
   ['scoring', 'What scores', { marketShare: 25 }],
-  ['charts', 'Trade charts only', { chartWeights: { peaked: 65, menton: 35, fantasypros: 0 } }],
 ];
 const ENGINE_KEYS = ['marketShare', 'chartWeights', 'injuryStrength', 'useNews', 'productionRamp', 'rampMedian', 'handcuff'] as const;
 const engineOf = (s: Settings) => JSON.stringify(ENGINE_KEYS.map((k) => s[k]));
@@ -151,9 +150,8 @@ function EngineSettings({ settings: s, onChange }: { settings: Settings; onChang
         <Range label="Injury discount strength" value={Math.round(s.injuryStrength * 100)} def={D.injuryStrength * 100} min={0} max={100} step={5} display={`${Math.round(s.injuryStrength * 100)}%`} onChange={(v) => onChange({ injuryStrength: v / 100 })} />
         <Range label="Peaked weight" value={cw.peaked} def={dw.peaked} min={0} max={100} step={5} display={String(cw.peaked)} onChange={(v) => onChange({ chartWeights: { ...cw, peaked: v } })} />
         <Range label="Menton weight" value={cw.menton} def={dw.menton} min={0} max={100} step={5} display={String(cw.menton)} onChange={(v) => onChange({ chartWeights: { ...cw, menton: v } })} />
-        <Range label="FantasyPros weight" value={cw.fantasypros} def={dw.fantasypros} min={0} max={100} step={5} display={String(cw.fantasypros)} onChange={(v) => onChange({ chartWeights: { ...cw, fantasypros: v } })} />
       </div>
-      {cw.peaked + cw.menton + cw.fantasypros === 0 && <p role="alert" className="text-sm text-loss">All chart weights are 0, so the market side is empty and values come from scoring only.</p>}
+      {cw.peaked + cw.menton === 0 && <p role="alert" className="text-sm text-loss">All chart weights are 0, so the market side is empty and values come from scoring only.</p>}
       <div className="grid gap-2">
         <Check label="Production ramp: blend each player's season average into his projection as games are played" checked={s.productionRamp} changed={s.productionRamp !== D.productionRamp} onChange={(v) => onChange({ productionRamp: v })} />
         <Check label="Ramp toward each player's median game instead of his average (needs 3+ games), so one big game or dud doesn't move him" checked={s.rampMedian} changed={s.rampMedian !== D.rampMedian} onChange={(v) => onChange({ rampMedian: v })} />
