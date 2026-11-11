@@ -45,12 +45,16 @@ export function TeamSelect({ value, onChange, label, exclude, allowEmpty }: { va
   return (
     <div className="grid gap-1">
       <label htmlFor={id} className="text-sm text-ink-3">{label}</label>
-      <select id={id} className="field" value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}>
-        {allowEmpty !== undefined && <option value="">{allowEmpty}</option>}
-        {idx.ds.teams.filter((t) => t.id !== exclude).map((t) => (
-          <option key={t.id} value={t.id}>{t.name}{t.id === settings.myTeamId ? ' (mine)' : ''}</option>
-        ))}
-      </select>
+      {/* UI-13: the team's monogram sits inside the native select, so it keeps the platform picker and its a11y */}
+      <div className="relative">
+        {value !== null && <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"><Mono team={value} /></span>}
+        <select id={id} className={`field ${value !== null ? 'pl-12' : ''}`} value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}>
+          {allowEmpty !== undefined && <option value="">{allowEmpty}</option>}
+          {idx.ds.teams.filter((t) => t.id !== exclude).map((t) => (
+            <option key={t.id} value={t.id}>{t.name}{t.id === settings.myTeamId ? ' (mine)' : ''}</option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 }
