@@ -9,6 +9,7 @@ import { buildIndex, dataGaps, freshness, standings, weekOfDate } from './league
 import { buildBase, buildValues, lineup } from './model.ts';
 import { rank6, seed, simulate, tally, type SimInput } from './sim.ts';
 import { keeperCalls, keeperSet } from './keepers.ts';
+import { luck } from './luck.ts';
 import { bySource, evaluate, tradeFromQuery, tradeToQuery, validateTrade } from './trade.ts';
 
 const raw = JSON.parse(readFileSync(new URL('../../test/fixtures/fwhl-2026-11-10.json', import.meta.url), 'utf8'));
@@ -50,6 +51,22 @@ test('standings match the league table through Week 9', () => {
   const nic = rows.find((r) => r.teamId === team('Nic'))!;
   assert.equal(`${nic.w}-${nic.l}`, '8-1');
   assert.equal(nic.pf.toFixed(1), '1295.4');
+});
+
+test('luck: expected wins from all-play, zero-sum across the league', () => {
+  const L = luck(idx.teamIds, idx.games, ds.season.top6Weeks);
+  const rows = standings(idx);
+  for (const r of rows) assert.equal(L.get(r.teamId)!.wins, r.w + r.t / 2, 'actual wins match the table');
+  const sum = [...L.values()].reduce((s, x) => s + x.luck, 0);
+  assert.ok(Math.abs(sum) < 1e-9, `luck sums to ${sum}`);
+  const nic = L.get(team('Nic'))!;
+  assert.equal(nic.allPlay.w + nic.allPlay.l + nic.allPlay.t, 9 * 11);
+  // Hand case: 4 teams, one week. Team 2 has the 2nd-best score but plays the best and loses.
+  const hand = luck([1, 2, 3, 4], [[1, 1, 2, 100, 90, true], [1, 3, 4, 80, 70, true]], []);
+  assert.deepEqual([1, 2, 3, 4].map((t) => +hand.get(t)!.luck.toFixed(3)), [0, -0.667, 0.667, 0]);
+  // Top 6 weeks carry no luck.
+  const t6 = luck([1, 2, 3, 4], [[1, 1, 2, 100, 90, true], [1, 3, 4, 80, 70, true]], [1]);
+  assert.ok([...t6.values()].every((x) => x.luck === 0));
 });
 
 test('top-6 weeks and tiebreaks', () => {
