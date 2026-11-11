@@ -77,42 +77,67 @@ function ThemePicker() {
   );
 }
 
+// FEAT-13: presets, a reset for this section, and a mark on anything changed from the default.
+const PRESETS: [string, string, Partial<Settings>][] = [
+  ['default', 'Default', {}],
+  ['market', 'What managers pay', { marketShare: 85 }],
+  ['scoring', 'What scores', { marketShare: 25 }],
+  ['charts', 'Trade charts only', { chartWeights: { peaked: 65, menton: 35, fantasypros: 0 } }],
+];
+const ENGINE_KEYS = ['marketShare', 'chartWeights', 'injuryStrength', 'useNews', 'productionRamp'] as const;
+const engineOf = (s: Settings) => JSON.stringify(ENGINE_KEYS.map((k) => s[k]));
+
 function EngineSettings({ settings: s, onChange }: { settings: Settings; onChange: (p: Partial<Settings>) => void }) {
-  const cw = s.chartWeights;
+  const cw = s.chartWeights, D = DEFAULT_SETTINGS, dw = D.chartWeights;
+  const defaults = Object.fromEntries(ENGINE_KEYS.map((k) => [k, D[k]])) as Partial<Settings>;
+  const preset = PRESETS.find(([, , p]) => engineOf({ ...s, ...defaults, ...p }) === engineOf(s))?.[0] ?? 'custom';
   return (
-    <Section title="Value engine" aside={<button type="button" className="btn btn-quiet" onClick={() => onChange({ ...DEFAULT_SETTINGS, myTeamId: s.myTeamId })}>Reset to defaults</button>}>
-      <p className="max-w-[70ch] text-sm text-ink-2">Trade value blends what league mates will accept (the charts) with what actually scores (ESPN projections in your scoring, blended with season production). Changes apply as you drag; the playoff simulation doesn't rerun for these.</p>
+    <Section title="Value engine" aside={<button type="button" className="btn btn-quiet" disabled={preset === 'default'} onClick={() => onChange(defaults)}>Reset this section</button>}>
+      <p className="max-w-[70ch] text-sm text-ink-2">Trade value blends what league mates will accept (the charts) with what actually scores (ESPN projections in your scoring, blended with season production). Changes apply as you drag; the playoff simulation doesn't rerun for these. A gold mark means a setting differs from the default.</p>
+      <div className="grid gap-1">
+        <span className="text-sm text-ink-3">Preset{preset === 'custom' ? ' (custom)' : ''}</span>
+        <Seg label="Preset" value={preset} options={PRESETS.map(([id, label]) => [id, label] as const)} onChange={(id) => onChange({ ...defaults, ...PRESETS.find((p) => p[0] === id)![2] })} />
+      </div>
       <div className="grid gap-x-10 gap-y-5 md:grid-cols-2">
-        <Range label="Market vs scoring" value={s.marketShare} min={0} max={100} step={5} display={`${s.marketShare} / ${100 - s.marketShare}`} onChange={(v) => onChange({ marketShare: v })} />
-        <Range label="Injury discount strength" value={Math.round(s.injuryStrength * 100)} min={0} max={100} step={5} display={`${Math.round(s.injuryStrength * 100)}%`} onChange={(v) => onChange({ injuryStrength: v / 100 })} />
-        <Range label="Peaked weight" value={cw.peaked} min={0} max={100} step={5} display={String(cw.peaked)} onChange={(v) => onChange({ chartWeights: { ...cw, peaked: v } })} />
-        <Range label="Menton weight" value={cw.menton} min={0} max={100} step={5} display={String(cw.menton)} onChange={(v) => onChange({ chartWeights: { ...cw, menton: v } })} />
-        <Range label="FantasyPros weight" value={cw.fantasypros} min={0} max={100} step={5} display={String(cw.fantasypros)} onChange={(v) => onChange({ chartWeights: { ...cw, fantasypros: v } })} />
+        <Range label="Market vs scoring" value={s.marketShare} def={D.marketShare} min={0} max={100} step={5} display={`${s.marketShare} / ${100 - s.marketShare}`} onChange={(v) => onChange({ marketShare: v })} />
+        <Range label="Injury discount strength" value={Math.round(s.injuryStrength * 100)} def={D.injuryStrength * 100} min={0} max={100} step={5} display={`${Math.round(s.injuryStrength * 100)}%`} onChange={(v) => onChange({ injuryStrength: v / 100 })} />
+        <Range label="Peaked weight" value={cw.peaked} def={dw.peaked} min={0} max={100} step={5} display={String(cw.peaked)} onChange={(v) => onChange({ chartWeights: { ...cw, peaked: v } })} />
+        <Range label="Menton weight" value={cw.menton} def={dw.menton} min={0} max={100} step={5} display={String(cw.menton)} onChange={(v) => onChange({ chartWeights: { ...cw, menton: v } })} />
+        <Range label="FantasyPros weight" value={cw.fantasypros} def={dw.fantasypros} min={0} max={100} step={5} display={String(cw.fantasypros)} onChange={(v) => onChange({ chartWeights: { ...cw, fantasypros: v } })} />
       </div>
       {cw.peaked + cw.menton + cw.fantasypros === 0 && <p role="alert" className="text-sm text-loss">All chart weights are 0, so the market side is empty and values come from scoring only.</p>}
       <div className="grid gap-2">
-        <Check label="Production ramp: blend each player's season average into his projection as games are played" checked={s.productionRamp} onChange={(v) => onChange({ productionRamp: v })} />
-        <Check label="Apply role and news adjustments" checked={s.useNews} onChange={(v) => onChange({ useNews: v })} />
+        <Check label="Production ramp: blend each player's season average into his projection as games are played" checked={s.productionRamp} changed={s.productionRamp !== D.productionRamp} onChange={(v) => onChange({ productionRamp: v })} />
+        <Check label="Apply role and news adjustments" checked={s.useNews} changed={s.useNews !== D.useNews} onChange={(v) => onChange({ useNews: v })} />
       </div>
     </Section>
   );
 }
 
-function Range({ label, value, min, max, step, display, onChange }: { label: string; value: number; min: number; max: number; step: number; display: string; onChange: (v: number) => void }) {
+const Changed = () => <><span className="ml-1.5 inline-block size-2 rounded-full bg-accent align-middle" aria-hidden="true" /><span className="sr-only"> (changed from default)</span></>;
+
+function Range({ label, value, def, min, max, step, display, onChange }: { label: string; value: number; def: number; min: number; max: number; step: number; display: string; onChange: (v: number) => void }) {
   const id = useId();
+  const changed = Math.abs(value - def) > 1e-9;
   return (
     <div>
-      <div className="flex items-baseline justify-between"><label htmlFor={id} className="text-sm text-ink-3">{label}</label><span className="num text-sm">{display}</span></div>
+      <div className="flex items-baseline justify-between gap-2">
+        <label htmlFor={id} className="text-sm text-ink-3">{label}{changed && <Changed />}</label>
+        <span className="flex items-baseline gap-2">
+          {changed && <button type="button" className="link text-xs text-ink-3" onClick={() => onChange(def)} aria-label={`Reset ${label} to ${def}`}>Reset</button>}
+          <span className="num text-sm">{display}</span>
+        </span>
+      </div>
       <input id={id} type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} />
     </div>
   );
 }
 
-function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+function Check({ label, checked, changed, onChange }: { label: string; checked: boolean; changed?: boolean; onChange: (v: boolean) => void }) {
   return (
     <label className="flex min-h-11 items-start gap-3 pt-2.5 text-sm">
       <input type="checkbox" className="mt-0.5" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      <span>{label}</span>
+      <span>{label}{changed && <Changed />}</span>
     </label>
   );
 }
