@@ -2,7 +2,7 @@
 
 The site reads one file: `public/seed/fwhl-2026.json`. Nothing edits it by hand. Every update goes through `scripts/data.ts`, which checks the input, applies it, validates the whole dataset and only then writes. If anything is off it exits with code 1 and writes nothing. A push to `main` then runs `data:check`, the tests and the build before it deploys, so bad data never goes live.
 
-There are no APIs. ESPN, FantasyPros and the trade charts are read by a person or by a scheduled task in a browser, turned into one of the input files below, and committed.
+There are no APIs. ESPN, FantasyPros and the trade charts are read by a person or by a scheduled task in a browser, turned into one of the input files below, and committed. How Claude gathers each file is in docs/gathering.md; nothing in the repo calls ESPN or FantasyPros.
 
 ```bash
 npm run data -- check                                     # validate and summarize
