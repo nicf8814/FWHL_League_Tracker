@@ -1,0 +1,253 @@
+@import 'tailwindcss';
+
+/* ==========================================================================
+   FWHL design tokens. Deterministic: every color, size, radius and timing the
+   app uses is declared here and nowhere else. See DESIGN.md for the rationale
+   and the hover census.
+   ========================================================================== */
+
+@font-face { font-family: 'Archivo'; src: url('/fonts/archivo-latin-wdth.woff2') format('woff2-variations'); font-weight: 100 900; font-stretch: 62% 125%; font-display: swap; }
+@font-face { font-family: 'IBM Plex Sans'; src: url('/fonts/plex-sans-400.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'IBM Plex Sans'; src: url('/fonts/plex-sans-500.woff2') format('woff2'); font-weight: 500; font-display: swap; }
+@font-face { font-family: 'IBM Plex Sans'; src: url('/fonts/plex-sans-600.woff2') format('woff2'); font-weight: 600; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url('/fonts/plex-mono-400.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url('/fonts/plex-mono-500.woff2') format('woff2'); font-weight: 500; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url('/fonts/plex-mono-600.woff2') format('woff2'); font-weight: 600; font-display: swap; }
+
+:root {
+  /* Surfaces: warm paper, a lighter sheet, a sunk well */
+  --paper: #f4f1e8;
+  --surface: #fbfaf5;
+  --sunk: #ece8dc;
+  /* Ink: primary, secondary, muted (all AA on paper and surface) */
+  --ink: #151a17;
+  --ink-2: #3f4943;
+  --ink-3: #5e6862;
+  /* Structure: hairline and strong rule */
+  --rule: #d6d0c0;
+  --rule-strong: #a9a290;
+  /* Brand: field green primary, slate secondary, gold accent */
+  --primary: #1e3a2f;
+  --primary-ink: #f4f1e8;
+  --primary-soft: #e1e8e2;
+  --secondary: #4a5550;
+  --accent: #e0a100; /* marks and fills only */
+  --accent-ink: #7a5500; /* gold as text */
+  /* Signal */
+  --gain: #1d6b3a;
+  --gain-soft: #e2efe4;
+  --loss: #a8321f;
+  --loss-soft: #f5e2dd;
+  --even: #7a5500;
+  --even-soft: #f6ebcf;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0f1411;
+    --surface: #151c18;
+    --sunk: #1b241f;
+    --ink: #e9e6dc;
+    --ink-2: #c4c7bf;
+    --ink-3: #959d96;
+    --rule: #2a332e;
+    --rule-strong: #46524b;
+    --primary: #8cc4a5;
+    --primary-ink: #0f1411;
+    --primary-soft: #1c2b23;
+    --secondary: #a9b3ad;
+    --accent: #f2b92b;
+    --accent-ink: #f2c14e;
+    --gain: #5bc183;
+    --gain-soft: #173022;
+    --loss: #f07a66;
+    --loss-soft: #3a1e19;
+    --even: #f2c14e;
+    --even-soft: #33290f;
+    color-scheme: dark;
+  }
+}
+
+@theme {
+  /* Reset Tailwind's defaults so only these tokens exist */
+  --color-*: initial;
+  --text-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --font-*: initial;
+  --ease-*: initial;
+
+  --font-display: 'Archivo', 'Arial Narrow', system-ui, sans-serif;
+  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  /* Six-step type scale (rem / line-height) */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.75rem;
+  --text-xl--line-height: 2rem;
+  --text-2xl: 2.5rem;
+  --text-2xl--line-height: 2.5rem;
+
+  /* Spacing stays on Tailwind's 4px base (--spacing: 0.25rem) */
+
+  /* Two radii, both sharp */
+  --radius-sm: 2px;
+  --radius: 4px;
+
+  --ease-snap: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --breakpoint-md: 48rem; /* 768: tablet, top tabs */
+  --breakpoint-lg: 64rem; /* 1024: desktop, left rail */
+  --breakpoint-xl: 80rem;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-sunk: var(--sunk);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-gain: var(--gain);
+  --color-gain-soft: var(--gain-soft);
+  --color-loss: var(--loss);
+  --color-loss-soft: var(--loss-soft);
+  --color-even: var(--even);
+  --color-even-soft: var(--even-soft);
+  --color-transparent: transparent;
+  --color-current: currentColor;
+}
+
+/* Motion tokens (hover census in DESIGN.md) */
+:root {
+  --dur-hover: 120ms;
+  --dur-press: 80ms;
+  --dur-enter: 180ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-hover: 0ms; --dur-press: 0ms; --dur-enter: 0ms; }
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'ss02';
+  }
+  h1, h2, h3 { font-family: var(--font-display); font-stretch: 85%; font-weight: 700; letter-spacing: -0.005em; text-wrap: balance; }
+  :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  ::selection { background: var(--accent); color: #151a17; }
+  button, select, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; opacity: 0.5; }
+  [hidden] { display: none !important; }
+}
+
+@layer components {
+  /* Numbers: every stat is mono with tabular figures so columns line up */
+  .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-feature-settings: 'zero' 0; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    min-height: 2.75rem; padding: 0 1rem; border-radius: var(--radius);
+    border: 1px solid var(--rule-strong); background: var(--surface); color: var(--ink);
+    font-weight: 500; font-size: var(--text-sm);
+    transition: background-color var(--dur-hover) var(--ease-snap), border-color var(--dur-hover) var(--ease-snap), translate var(--dur-press) var(--ease-snap);
+  }
+  .btn:hover:not(:disabled) { background: var(--sunk); border-color: var(--ink-3); }
+  .btn:active:not(:disabled) { translate: 0 1px; }
+  .btn-primary { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); }
+  .btn-primary:hover:not(:disabled) { background: color-mix(in oklab, var(--primary) 88%, var(--ink)); border-color: color-mix(in oklab, var(--primary) 88%, var(--ink)); }
+  .btn-quiet { border-color: transparent; background: transparent; }
+
+  .field {
+    min-height: 2.75rem; width: 100%; padding: 0 0.75rem; border-radius: var(--radius);
+    border: 1px solid var(--rule-strong); background: var(--surface);
+    transition: border-color var(--dur-hover) var(--ease-snap);
+  }
+  .field:hover { border-color: var(--ink-3); }
+
+  /* Segmented control: one hairline box, the active segment inks in */
+  .seg { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: var(--radius); overflow: hidden; }
+  .seg > button {
+    min-height: 2.75rem; min-width: 2.75rem; padding: 0 0.875rem; font-size: var(--text-sm); font-weight: 500;
+    color: var(--ink-2); background: var(--surface); border-left: 1px solid var(--rule);
+    transition: background-color var(--dur-hover) var(--ease-snap), color var(--dur-hover) var(--ease-snap);
+  }
+  .seg > button:first-child { border-left: 0; }
+  .seg > button:hover { background: var(--sunk); color: var(--ink); }
+  .seg > button[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
+
+  /* Status tags: small, square, mono. Not pills. */
+  .tag {
+    display: inline-block; padding: 0 0.3rem; border-radius: var(--radius-sm); border: 1px solid currentColor;
+    font-family: var(--font-mono); font-size: var(--text-xs); line-height: 1.1rem; font-weight: 500; letter-spacing: 0.02em; white-space: nowrap;
+  }
+
+  /* Data tables: hairlines, dense rows, sticky header, tabular numbers */
+  .tbl { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--text-sm); }
+  .tbl th {
+    position: sticky; top: 0; z-index: 1; background: var(--paper); text-align: right; font-weight: 500;
+    color: var(--ink-3); font-size: var(--text-xs); padding: 0.5rem 0.625rem; border-bottom: 1px solid var(--rule-strong); white-space: nowrap;
+  }
+  .tbl td { padding: 0 0.625rem; height: 2.5rem; border-bottom: 1px solid var(--rule); text-align: right; white-space: nowrap; }
+  .tbl td.l, .tbl th.l { text-align: left; }
+  .tbl td.n { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .tbl tbody tr { transition: background-color var(--dur-hover) var(--ease-snap); }
+  .tbl tbody tr:hover { background: var(--sunk); }
+  /* First column sticks while the table scrolls sideways on small screens */
+  .tbl .stick { position: sticky; left: 0; z-index: 2; background: var(--paper); box-shadow: inset -1px 0 0 var(--rule); }
+  .tbl tbody tr:hover .stick { background: var(--sunk); }
+  .tbl th.stick { z-index: 3; }
+
+  .link {
+    text-decoration: underline; text-decoration-color: var(--rule-strong); text-underline-offset: 3px; text-align: left;
+    transition: color var(--dur-hover) var(--ease-snap), text-decoration-color var(--dur-hover) var(--ease-snap);
+  }
+  .link:hover { color: var(--primary); text-decoration-color: currentColor; }
+
+  .rowbtn { transition: background-color var(--dur-hover) var(--ease-snap); }
+  .rowbtn:hover { background: var(--sunk); }
+
+  /* Native <dialog> as a bottom sheet on phones, centered panel above. Enters with @starting-style. */
+  .sheet {
+    margin: auto auto 0; width: 100%; max-width: 40rem; max-height: 88dvh; padding: 0; border: 1px solid var(--rule-strong);
+    border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; background: var(--surface); color: var(--ink);
+    opacity: 1; translate: 0 0;
+    transition: opacity var(--dur-enter) var(--ease-out), translate var(--dur-enter) var(--ease-out), display var(--dur-enter) allow-discrete, overlay var(--dur-enter) allow-discrete;
+  }
+  .sheet:not([open]) { opacity: 0; translate: 0 0.5rem; }
+  @starting-style { .sheet[open] { opacity: 0; translate: 0 0.5rem; } }
+  .sheet::backdrop { background: rgb(15 20 17 / 0.5); transition: opacity var(--dur-enter) var(--ease-out); }
+  @starting-style { .sheet[open]::backdrop { opacity: 0; } }
+  @media (min-width: 48rem) { .sheet { margin: auto; border-bottom: 1px solid var(--rule-strong); border-radius: var(--radius); } }
+
+  /* Perforated divider between the two sides of a trade slip */
+  .perf { background-image: radial-gradient(circle, var(--rule-strong) 1.2px, transparent 1.4px); background-size: 8px 8px; background-repeat: repeat-y; background-position: center; }
+  .perf-x { background-image: radial-gradient(circle, var(--rule-strong) 1.2px, transparent 1.4px); background-size: 8px 8px; background-repeat: repeat-x; background-position: center; }
+}
+
+input[type='range'] { accent-color: var(--primary); width: 100%; min-height: 2.75rem; }
+input[type='checkbox'] { accent-color: var(--primary); width: 1.125rem; height: 1.125rem; }
