@@ -19,9 +19,11 @@ export default function Waivers() {
     return fas.map((p) => ({ p, gain: V.weekGain(me, [], [p]), drop: V.autoDrops(me, [], [p])[0] ?? null })).sort((a, b) => b.gain - a.gain || V.bv(b.p) - V.bv(a.p));
   }, [idx, V, me]);
   if (me === null) return <Empty>Pick your team in Data & settings to rank free agents for your lineup.</Empty>;
+  const best = rows[0];
   const shown = rows.filter((r) => pos === 'ANY' || idx.players.get(r.p)!.pos === pos);
   return (
     <Section title="Best pickups for your lineup" aside={`Top ${POOL} free agents by value`}>
+      <p className="headline-sm">{best && best.gain >= 0.1 ? `Add ${idx.players.get(best.p)?.name}, +${best.gain.toFixed(1)} a week` : 'Nobody beats your bench right now'}</p>
       <p className="max-w-[70ch] text-sm text-ink-2">Pts/wk is how much your best lineup gains through the rest of the season and playoffs if you add him and cut the player shown. It counts byes and injury returns, so a stash can rank high with no points this week.</p>
       <Seg label="Position" value={pos} options={POS_OPTIONS} onChange={setPos} />
       <div className="-mx-4 overflow-x-auto md:mx-0">

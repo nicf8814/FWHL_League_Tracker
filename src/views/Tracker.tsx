@@ -8,6 +8,7 @@ import type { SimResult } from '../engine/sim.ts';
 import { useRoute } from '../app/router.ts';
 import { Empty, fmt, Mono, pct, PlayerName, Seg, Sheet, signed, tone } from '../ui/components.tsx';
 import { usePlayerSheet } from './PlayerSheet.tsx';
+import { useFull } from '../ui/detail.ts';
 
 type Tab = 'all' | 'mine' | 'whatif';
 const dateLabel = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -15,10 +16,11 @@ const wl = (r: { w: number; l: number; t: number }) => `${r.w}-${r.l}${r.t ? `-$
 
 // Grades are stamped, not pilled: a square ink mark, tilted a few degrees (audit UI-9).
 export function Stamp({ grade, size = 'md' }: { grade: string; size?: 'sm' | 'md' | 'lg' }) {
-  const c = grade[0] === 'A' || grade[0] === 'B' ? 'text-gain' : grade[0] === 'C' ? 'text-even' : 'text-loss';
-  const s = size === 'lg' ? 'size-14 text-2xl' : size === 'sm' ? 'size-7 text-sm' : 'size-11 text-xl';
+  // Filled ink (Nov 11, item G): green for A/B, gold for C, red for D/F; the letter carries the meaning.
+  const c = grade[0] === 'A' || grade[0] === 'B' ? 'bg-gain text-paper' : grade[0] === 'C' ? 'bg-accent text-[#151a17]' : 'bg-loss text-paper';
+  const s = size === 'lg' ? 'size-14 text-2xl' : size === 'sm' ? 'size-8 text-sm' : 'size-11 text-xl';
   return (
-    <span aria-label={`Grade ${grade}`} className={`inline-grid shrink-0 place-items-center border-2 border-current font-display font-extrabold leading-none [font-stretch:75%] ${s} ${c} -rotate-3`}>
+    <span aria-label={`Grade ${grade}`} className={`stamp inline-grid shrink-0 place-items-center font-display font-extrabold leading-none [font-stretch:75%] ${s} ${c} -rotate-3`}>
       {grade}
     </span>
   );
@@ -30,7 +32,7 @@ function useEvaluations(list: Transaction[]) {
 }
 
 export default function Tracker() {
-  const { idx, settings } = useLeague();
+  const { idx, settings, values: V } = useLeague();
   const { query, replace, go } = useRoute();
   const tab: Tab = (['all', 'mine', 'whatif'] as const).find((t) => t === query.get('tab')) ?? 'all';
   // The open trade is in the URL, so it can be shared, and back closes it (LOGIC-8).
@@ -50,8 +52,13 @@ export default function Tracker() {
   const evals = useEvaluations(tab === 'whatif' ? [...vetoes, ...trades] : shown);
   const sel = open ? evals.get(open) : undefined;
 
+  const myGrades = mine === null ? [] : trades.filter((t) => t.legs.some((l) => l.toTeamId === mine)).map((t) => evaluate(V, scenarioOf(t)).res.get(mine)!.grade);
   return (
     <div className="grid grid-cols-1 gap-6">
+      <section aria-label="Headline" className="grid gap-1">
+        <p className="headline-sm">{trades.length} trade{trades.length === 1 ? '' : 's'}, {vetoes.length} vetoed</p>
+        {myGrades.length > 0 && <p className="text-ink-2">Yours: {myGrades.join(', ')}.</p>}
+      </section>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Seg label="Trades to show" value={tab} options={[['all', 'All trades'], ['mine', 'My trades'], ['whatif', 'What if']] as const} onChange={(t) => replace('tracker', `tab=${t}`)} />
         <p className="text-sm text-ink-3">Through Week {idx.scoresThrough}</p>
@@ -169,6 +176,7 @@ function Analysis({ s, ev }: { s: Scenario; ev: Evaluation }) {
   const teams = teamsOf(s.tx);
   const [tab, setTab] = useState<TeamId>(teams.includes(settings.myTeamId as TeamId) ? settings.myTeamId! : teams[0]);
   const [sub, setSub] = useState<'sum' | 'wk' | 'pl'>('sum');
+  const full = useFull();
   const path = useMemo(() => gradePath(V, s, ev), [V, s, ev]);
   const r = ev.res.get(tab)!;
   return (
@@ -186,18 +194,19 @@ function Analysis({ s, ev }: { s: Scenario; ev: Evaluation }) {
           </button>
         ))}
       </div>
-      <Seg label="Section" value={sub} options={[['sum', 'Summary'], ['wk', 'Weeks'], ['pl', 'Players']] as const} onChange={setSub} />
-      {sub === 'sum' && <Summary s={s} ev={ev} tm={tab} path={path.get(tab)!} />}
-      {sub === 'wk' && <Weeks rows={r.rows} veto={s.veto} />}
-      {sub === 'pl' && <Players s={s} tm={tab} />}
-      <details className="text-sm text-ink-2">
+      {full && <Seg label="Section" value={sub} options={[['sum', 'Summary'], ['wk', 'Weeks'], ['pl', 'Players']] as const} onChange={setSub} />}
+      {(sub === 'sum' || !full) && <Summary s={s} ev={ev} tm={tab} path={path.get(tab)!} />}
+      {full && sub === 'wk' && <Weeks rows={r.rows} veto={s.veto} />}
+      {full && sub === 'pl' && <Players s={s} tm={tab} />}
+      {!full && <p className="text-xs text-ink-3">Switch to Full at the top for week-by-week results, player splits and the league ripple.</p>}
+      {full && <details className="text-sm text-ink-2">
         <summary className="min-h-11 cursor-pointer py-2 font-medium text-ink">How this is figured</summary>
         <div className="grid gap-2">
           <p><b>Grade.</b> Starts from the trade itself (value received and projected points per week above replacement), then moves toward production as weeks are played: weeks ÷ (weeks + 4) of the grade. Production is each player's points above a replacement starter at his position that week (QB12, RB31, WR34, TE7); out weeks count as 0. Keeper value for 2027 is added on top, weighted 12% for contenders up to 60% for teams out of the race. Lineups and wins don't enter the grade. C is even.</p>
           <p><b>{s.veto ? 'If it went through' : 'No trade'}.</b> Each week is the team's real score plus the difference between its best possible lineup {s.veto ? 'with the trade' : 'with the trade undone'} and its best possible lineup as it really was, so the manager's real start/sit choices still count. Any later trade that moved one of the same players is undone too, down the chain. An empty slot takes the average of the top three free agents at that position that week.</p>
           <p><b>League ripple.</b> When a result flips, the opponent's flips the other way. Weeks {idx.ds.season.top6Weeks.join(', ')} go by the top-6 rule, so a changed score can move another team across the line. Playoff odds rerun the season simulation in both worlds with today's rosters.</p>
         </div>
-      </details>
+      </details>}
     </div>
   );
 }
@@ -247,6 +256,7 @@ function CopySummary({ s, ev }: { s: Scenario; ev: Evaluation }) {
 
 function Summary({ s, ev, tm, path }: { s: Scenario; ev: Evaluation; tm: TeamId; path: string[] }) {
   const { values: V } = useLeague();
+  const full = useFull();
   const r = ev.res.get(tm)!;
   const got = s.tx.legs.filter((l) => l.toTeamId === tm).map((l) => l.playerId);
   const vNow = got.reduce((a, p) => a + V.bv(p), 0);
@@ -269,7 +279,7 @@ function Summary({ s, ev, tm, path }: { s: Scenario; ev: Evaluation; tm: TeamId;
         {stat('Value', s.veto ? fmt(vNow, 0) : `${fmt(r.val, 0)} → ${fmt(vNow, 0)}`, s.veto ? 'received, today' : 'then → now')}
         {stat('Keepers 2027', Math.abs(r.keep) < 0.5 ? 'No change' : <span className={tone(r.keep)}>{r.keep >= 0 ? '+' : '−'}${Math.abs(r.keep).toFixed(0)}</span>, `counts ${Math.round(r.kw * 100)}% (${kwLabel})`)}
       </dl>
-      <Ripple s={s} ev={ev} />
+      {full && <Ripple s={s} ev={ev} />}
     </div>
   );
 }

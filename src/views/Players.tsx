@@ -2,11 +2,19 @@ import { useDeferredValue, useMemo, useState } from 'react';
 import type { Player, Pos, TeamId } from '../data/schema.ts';
 import { useLeague } from '../data/store.tsx';
 import { chartAvgAt, chartHistory, teamName } from '../engine/league.ts';
-import { fmt, PlayerName, POS_OPTIONS, Seg, signed } from '../ui/components.tsx';
+import { fmt, PlayerName, POS_OPTIONS, PosMark, Seg, signed } from '../ui/components.tsx';
 import { SortHeader, TableTools, useTable, type Col } from '../ui/table.tsx';
 import { usePlayerSheet } from './PlayerSheet.tsx';
+import { useFull } from '../ui/detail.ts';
 
 const PAGE = 100;
+// Ready-made column sets (Nov 11, item D). The column chooser still makes a custom one.
+const PLAYER_VIEWS = {
+  simple: ['name', 'pos', 'owner', 'season', 'proj', 'value'],
+  charts: ['name', 'pos', 'owner', 'value', 'market', 'model', 'peaked', 'menton', 'fpros', 'move'],
+  keepers: ['name', 'pos', 'owner', 'value', 'season', 'keep'],
+};
+const sameCols = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x));
 
 export default function Players() {
   const { idx, values: V, base, settings } = useLeague();
@@ -16,6 +24,7 @@ export default function Players() {
   const [who, setWho] = useState<'all' | 'rostered' | 'fa' | `${TeamId}`>('all');
   const [limit, setLimit] = useState(PAGE);
   const term = useDeferredValue(q.trim().toLowerCase());
+  const full = useFull();
   // FEAT-14: compare chart values with an earlier week.
   const hist = useMemo(() => chartHistory(idx.ds), [idx]);
   const chartWeeks = useMemo(() => [...new Set([...hist.peaked.keys(), ...hist.menton.keys()])].sort((a, b) => a - b), [hist]);
@@ -35,16 +44,17 @@ export default function Players() {
 
   const cols = useMemo<Col<Player>[]>(() => {
     const owner = (p: Player) => idx.owner.get(p.id);
+    const maxPts = Math.max(1, ...[...idx.stats.values()].map((x) => x.seasonPoints ?? 0));
     return [
-      { id: 'name', label: 'Player', left: true, fixed: true, className: 'stick min-w-[11rem]', value: (p) => p.name, cell: (p) => <PlayerName pid={p.id} onOpen={open} /> },
-      { id: 'pos', label: 'Pos', left: true, value: (p) => p.pos, cell: (p) => <span className="num text-ink-3">{p.pos}</span> },
+      { id: 'name', label: 'Player', left: true, fixed: true, className: 'stick min-w-[9rem]', value: (p) => p.name, cell: (p) => <PlayerName pid={p.id} onOpen={open} /> },
+      { id: 'pos', label: 'Pos', left: true, value: (p) => p.pos, cell: (p) => <PosMark pos={p.pos} /> },
       { id: 'owner', label: 'Owner', left: true, value: (p) => (owner(p) === undefined ? 'FA' : teamName(idx, owner(p))), cell: (p) => <span className="text-ink-2">{owner(p) === undefined ? 'FA' : teamName(idx, owner(p))}</span> },
+      { id: 'season', label: 'Total pts', value: (p) => idx.stats.get(p.id)?.seasonPoints, cell: (p) => { const v = idx.stats.get(p.id)?.seasonPoints; return v == null ? '–' : <span className="inline-grid min-w-20 justify-items-end gap-1">{fmt(v)}<span className="meter w-full" aria-hidden="true"><span className="bg-primary" style={{ width: `${Math.max(2, (v / maxPts) * 100)}%` }} /></span></span>; } },
       { id: 'nfl', label: 'NFL', left: true, hidden: true, value: (p) => p.nflTeam },
       { id: 'value', label: 'Value', value: (p) => V.blend(p.id).v, cell: (p) => <b className="font-semibold">{fmt(V.blend(p.id).v)}</b> },
       { id: 'market', label: 'Market', value: (p) => V.blend(p.id).market },
       { id: 'model', label: 'Model', value: (p) => V.blend(p.id).model },
       { id: 'proj', label: 'Pts/wk', value: (p) => base.proj.get(p.id) },
-      { id: 'season', label: 'Total pts', value: (p) => idx.stats.get(p.id)?.seasonPoints },
       { id: 'repl', label: 'Above repl.', value: (p) => V.aboveReplacement(p.id), cell: (p) => signed(V.aboveReplacement(p.id)) },
       { id: 'peaked', label: 'Peaked', value: (p) => V.chart(p.id, 'peaked') },
       { id: 'menton', label: 'Menton', value: (p) => V.chart(p.id, 'menton') },
@@ -57,10 +67,12 @@ export default function Players() {
       { id: 'rank', label: 'ESPN rank', left: true, hidden: true, value: (p) => idx.stats.get(p.id)?.posRank },
     ];
   }, [idx, V, base, open, hist, since, latest]);
-  const t = useTable('players', cols, rows, { id: 'value', dir: -1 });
+  const t = useTable('players', cols, rows, { id: 'value', dir: -1 }, PLAYER_VIEWS.simple);
+  const view = (Object.keys(PLAYER_VIEWS) as (keyof typeof PLAYER_VIEWS)[]).find((v) => sameCols(PLAYER_VIEWS[v], cols.filter((c) => !t.hidden.includes(c.id)).map((c) => c.id))) ?? 'custom';
 
   return (
     <div className="grid grid-cols-1 gap-4">
+      <Seg label="Columns" value={view} options={[['simple', 'Simple'], ['charts', 'Charts'], ['keepers', 'Keepers'], ...(view === 'custom' ? [['custom', 'Custom'] as const] : [])] as const} onChange={(v) => v !== 'custom' && t.setHidden(cols.filter((c) => !PLAYER_VIEWS[v].includes(c.id)).map((c) => c.id))} />
       <div className="flex flex-wrap items-end gap-3">
         <Seg label="Position" value={pos} options={POS_OPTIONS} onChange={(v) => { setPos(v); setLimit(PAGE); }} />
         <label className="grid gap-1 text-sm text-ink-3">
@@ -76,19 +88,21 @@ export default function Players() {
           Search
           <input className="field" type="search" value={q} onChange={(e) => { setQ(e.target.value); setLimit(PAGE); }} placeholder="Player name" />
         </label>
+        {view === 'charts' && (
         <label className="grid gap-1 text-sm text-ink-3">
           Chart moves since
           <select className="field w-auto" value={since} onChange={(e) => setSince(Number(e.target.value))}>
             {chartWeeks.filter((w) => w < latest).map((w) => <option key={w} value={w}>Week {w}</option>)}
           </select>
         </label>
+        )}
         <div className="ml-auto flex items-center gap-3">
           <p className="num text-sm text-ink-3" role="status">{rows.length} players</p>
-          <TableTools t={t} file={`fwhl-players-wk${idx.currentWeek}`} />
+          {full && <TableTools t={t} file={`fwhl-players-wk${idx.currentWeek}`} />}
         </div>
       </div>
       <div className="-mx-4 overflow-x-auto md:mx-0">
-        <table className="tbl min-w-[60rem]">
+        <table className={`tbl ${view === 'simple' ? '' : 'min-w-[60rem]'}`}>
           <thead>
             <tr>
               <th className="l w-10">#</th>

@@ -96,8 +96,9 @@ export function PlayerName({ pid, onOpen }: { pid: PlayerId; onOpen?: (p: Player
   );
 }
 
+const POS_BG: Record<Pos, string> = { QB: 'bg-pos-qb', RB: 'bg-pos-rb', WR: 'bg-pos-wr', TE: 'bg-pos-te' };
 export function PosMark({ pos }: { pos: Pos }) {
-  return <span className="num inline-block w-7 text-xs font-medium text-ink-3">{pos}</span>;
+  return <span className={`num inline-grid w-7 shrink-0 place-items-center py-px text-[11px] font-semibold text-on-pos ${POS_BG[pos]}`}>{pos}</span>;
 }
 
 // Native <dialog>: focus trap, Escape and inert background come from the browser.

@@ -6,9 +6,9 @@ import { fmt, Mono, pct, Section } from '../ui/components.tsx';
 import { usePlayerSheet } from './PlayerSheet.tsx';
 
 // "This week" for my team (audit FEAT-15): matchup, ESPN-projected best lineups, who's out or on bye.
-export function ThisWeek() {
-  const { idx, base, sim, settings } = useLeague();
-  const open = usePlayerSheet();
+// Shared with Home: this week's matchup for my team on ESPN's projections.
+export function useThisWeek() {
+  const { idx, base, settings } = useLeague();
   const me = settings.myTeamId;
   const w = idx.currentWeek;
   if (me === null || w > idx.ds.season.regularSeasonWeeks) return null;
@@ -29,6 +29,15 @@ export function ThisWeek() {
   const roster = idx.roster.get(me) ?? [];
   const out = roster.filter((p) => base.isOut(p));
   const byes = roster.filter((p) => !base.isOut(p) && bye(p));
+  return { me, w, top6, opp, mine, oppPts: opp !== null ? best(opp).start : null, all, myRank, out, byes };
+}
+
+export function ThisWeek() {
+  const { idx, sim } = useLeague();
+  const open = usePlayerSheet();
+  const t = useThisWeek();
+  if (!t) return null;
+  const { me, w, top6, opp, mine, oppPts, all, myRank, out, byes } = t;
   const names = (ps: PlayerId[]) => ps.map((p, i) => <span key={p}>{i ? ', ' : ''}<button type="button" className="link" onClick={() => open(p)}>{idx.players.get(p)?.name}</button></span>);
   return (
     <Section title={`This week · Week ${w}`} aside={sim ? `Your playoff odds ${pct(sim.odds[me])}` : undefined}>
@@ -39,7 +48,7 @@ export function ThisWeek() {
           ) : opp !== null ? (
             <>
               <p className="flex items-center justify-between gap-3"><span className="flex items-center gap-2"><Mono team={me} size="sm" />{teamName(idx, me)}</span><b className="num">{fmt(mine.start)}</b></p>
-              <p className="flex items-center justify-between gap-3"><span className="flex items-center gap-2"><Mono team={opp} size="sm" />{teamName(idx, opp)}</span><b className="num">{fmt(best(opp).start)}</b></p>
+              <p className="flex items-center justify-between gap-3"><span className="flex items-center gap-2"><Mono team={opp} size="sm" />{teamName(idx, opp)}</span><b className="num">{fmt(oppPts)}</b></p>
               <p className="text-xs text-ink-3">Best possible lineups on ESPN's Week {w} projections, without out and bye players.</p>
             </>
           ) : <p>No game this week.</p>}

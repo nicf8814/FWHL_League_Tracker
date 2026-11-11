@@ -4,6 +4,7 @@ import { bestActual, standings, teamName, type StandingRow } from '../engine/lea
 import { rank6 } from '../engine/sim.ts';
 import { fmt, Mono, pct, Section } from '../ui/components.tsx';
 import { ThisWeek } from './ThisWeek.tsx';
+import { useFull } from '../ui/detail.ts';
 
 type Key = 'seed' | 'pf' | 'pa' | 'maxPf' | 'odds';
 const COLS: [Key, string][] = [['seed', 'Seed'], ['pf', 'PF'], ['pa', 'PA'], ['maxPf', 'Max PF'], ['odds', 'Playoffs']];
@@ -24,27 +25,40 @@ export default function Standings() {
     </th>
   );
 
+  const full = useFull();
+  // Headline (Nov 11, item E): who's in, and the bubble.
+  const locks = sim ? rows.filter((r) => sim.odds[r.teamId]! >= 0.99).sort((a, b) => a.seed - b.seed) : [];
+  const bubble = sim ? rows.filter((r) => sim.odds[r.teamId]! < 0.99 && sim.odds[r.teamId]! >= 0.25).sort((a, b) => sim.odds[b.teamId]! - sim.odds[a.teamId]!) : [];
+  const names = (rs: StandingRow[]) => rs.map((r) => teamName(idx, r.teamId)).join(', ').replace(/, ([^,]*)$/, ' and $1');
+  const words = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'];
+  const pctTone = (o: number) => (o >= 0.9 ? 'bg-gain' : o >= 0.3 ? 'bg-accent' : 'bg-loss');
   return (
     <div className="grid grid-cols-1 gap-10">
-      <ThisWeek />
+      {sim && (
+        <section aria-label="Headline" className="grid gap-2">
+          <p className="headline-sm">{locks.length >= byRecord + 1 ? 'The field is set' : `${words[locks.length] ?? locks.length} team${locks.length === 1 ? ' is' : 's are'} in`}</p>
+          <p className="max-w-[70ch] text-ink-2">{locks.length ? `${names(locks)} ${locks.length === 1 ? 'is' : 'are'} 99% or better.` : ''}{bubble.length ? ` On the bubble: ${bubble.map((r) => `${teamName(idx, r.teamId)} ${pct(sim.odds[r.teamId])}`).join(', ')}.` : ''}</p>
+        </section>
+      )}
+      {full && <ThisWeek />}
       <Section title={`Through Week ${idx.scoresThrough}`} aside={sim ? `Playoff odds from ${idx.ds.season.sim.runs.toLocaleString()} simulated seasons` : 'Simulating the rest of the season…'}>
-        <p className="max-w-[70ch] text-sm text-ink-2">
+        {full && <p className="max-w-[70ch] text-sm text-ink-2">
           Seeds 1 to {byRecord} go by record (ties broken head to head, then points for). Seed {byRecord + 1} is the most points for among everyone else.
           Weeks {idx.ds.season.top6Weeks.join(', ')} are not head to head: the top 6 scores get a win.
-        </p>
+        </p>}
         <div className="-mx-4 overflow-x-auto md:mx-0">
-          <table className="tbl min-w-[46rem]">
+          <table className={`tbl ${full ? 'min-w-[46rem]' : 'max-w-3xl'}`}>
             <thead>
               <tr>
                 {th('seed', '#', 'l w-10')}
                 <th className="l stick">Team</th>
                 <th>W-L</th>
-                {COLS.slice(1, 4).map(([k, l]) => th(k, l))}
-                <th>Eff</th>
+                {COLS.slice(1, full ? 4 : 2).map(([k, l]) => th(k, l))}
+                {full && <th>Eff</th>}
                 {th('odds', 'Playoffs')}
-                <th>Top {byRecord} by record</th>
+                {full && <><th>Top {byRecord} by record</th>
                 <th>Seed {byRecord + 1} by PF</th>
-                <th className="l">Odds by week</th>
+                <th className="l">Odds by week</th></>}
               </tr>
             </thead>
             <tbody>
@@ -59,13 +73,15 @@ export default function Standings() {
                     </td>
                     <td className="n">{r.w}-{r.l}{r.t ? `-${r.t}` : ''}</td>
                     <td className="n">{fmt(r.pf)}</td>
-                    <td className="n">{fmt(r.pa)}</td>
+                    {full && <><td className="n">{fmt(r.pa)}</td>
                     <td className="n">{fmt(r.maxPf)}</td>
-                    <td className="n">{r.efficiency === null ? '–' : `${Math.round(r.efficiency * 100)}%`}</td>
-                    <td className="n font-semibold">{sim ? pct(sim.odds[r.teamId]) : '…'}</td>
-                    <td className="n text-ink-2">{sim ? pct(sim.byRecord[r.teamId]) : '…'}</td>
+                    <td className="n">{r.efficiency === null ? '–' : `${Math.round(r.efficiency * 100)}%`}</td></>}
+                    <td className="n font-semibold">
+                      {sim ? <span className="inline-flex items-center justify-end gap-2"><span className="meter w-16 sm:w-24" aria-hidden="true"><span className={pctTone(sim.odds[r.teamId]!)} style={{ width: `${Math.max(2, sim.odds[r.teamId]! * 100)}%` }} /></span><span className="w-11">{pct(sim.odds[r.teamId])}</span></span> : '…'}
+                    </td>
+                    {full && <><td className="n text-ink-2">{sim ? pct(sim.byRecord[r.teamId]) : '…'}</td>
                     <td className="n text-ink-2">{sim ? pct(sim.byPf[r.teamId]) : '…'}</td>
-                    <td className="l"><Spark values={history ? Array.from({ length: idx.scoresThrough }, (_, i) => history[i + 1]?.[r.teamId] ?? null) : []} /></td>
+                    <td className="l"><Spark values={history ? Array.from({ length: idx.scoresThrough }, (_, i) => history[i + 1]?.[r.teamId] ?? null) : []} /></td></>}
                   </tr>
                 );
               })}
