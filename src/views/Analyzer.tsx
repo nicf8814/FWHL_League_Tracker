@@ -197,7 +197,9 @@ function LineupImpact({ a, b, aGives, bGives }: { a: TeamId; b: TeamId; aGives: 
   const { idx, base, values: V } = useLeague();
   const one = (team: TeamId, out: PlayerId[], inn: PlayerId[]) => {
     const now = (keys: PlayerId[]) => lineup(base, keys.filter((k) => !base.isOut(k)), () => 1);
-    return { before: now(idx.roster.get(team) ?? []), after: now(V.rosterAfter(team, out, inn)), gain: V.weekGain(team, out, inn) };
+    const r = idx.roster.get(team) ?? [];
+    const fills = r.length - out.length + inn.length < r.length ? V.rosterAfter(team, out, inn).filter((k) => !r.includes(k) && !inn.includes(k)) : [];
+    return { before: now(r), after: now(V.rosterAfter(team, out, inn)), gain: V.weekGain(team, out, inn), drops: V.autoDrops(team, out, inn), fills };
   };
   return (
     <details className="group border-t-2 border-ink pt-3" open>
@@ -217,7 +219,7 @@ function LineupImpact({ a, b, aGives, bGives }: { a: TeamId; b: TeamId; aGives: 
   );
 }
 
-function LineupCol({ team, before, after, gain }: { team: TeamId; before: Lineup; after: Lineup; gain: number }) {
+function LineupCol({ team, before, after, gain, drops, fills }: { team: TeamId; before: Lineup; after: Lineup; gain: number; drops: PlayerId[]; fills: PlayerId[] }) {
   const { idx } = useLeague();
   return (
     <div className="grid gap-2">
@@ -244,6 +246,8 @@ function LineupCol({ team, before, after, gain }: { team: TeamId; before: Lineup
         </tbody>
       </table>
       <p className="num text-xs text-ink-3">Starters this week {fmt(before.start)} → {fmt(after.start)}</p>
+      {drops.length > 0 && <p className="text-sm text-even">To stay at {idx.roster.get(team)?.length} players, cuts {drops.map((p) => idx.players.get(p)?.name ?? p).join(', ')} (lowest value). Counted in pts/wk.</p>}
+      {fills.length > 0 && <p className="text-sm text-ink-2">Open roster spot{fills.length > 1 ? 's' : ''} filled from free agents: {fills.map((p) => idx.players.get(p)?.name ?? p).join(', ')}.</p>}
     </div>
   );
 }

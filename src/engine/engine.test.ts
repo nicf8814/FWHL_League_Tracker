@@ -96,7 +96,11 @@ test('regression: the port reproduces the Sandbox engine exactly', () => {
   same(ev.value.aSends, 137.8, 'Nic sends');
   same(ev.value.bSends, 16.2, 'Vince sends');
   same(ev.gainA, -24.1, 'Nic pts/wk');
-  same(ev.gainB, 26.1, 'Vince pts/wk');
+  // The Sandbox showed +26.1; Vince takes 2 for 1, and since LOGIC-5 he cuts his lowest-valued player
+  // to stay at roster size, which costs him 0.2 pts/wk of bye-week depth.
+  same(ev.gainB, 25.9, 'Vince pts/wk');
+  assert.equal(v9.autoDrops(trade.b, trade.bGives, trade.aGives).length, 1, 'Vince cuts one player');
+  assert.deepEqual(v9.autoDrops(trade.a, trade.aGives, trade.bGives), [], 'Nic cuts nobody');
   same(ev.partnerEdge, 121.7, 'Vince on paper');
   assert.equal(ev.verdict.kind, 'lose');
   // At the real current week the value side is unchanged; only the weeks left change.

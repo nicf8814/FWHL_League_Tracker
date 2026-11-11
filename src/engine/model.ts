@@ -138,6 +138,7 @@ export interface Values {
   availFor: (p: PlayerId, team: TeamId | undefined) => number;
   weekGain: (team: TeamId, out: PlayerId[], inn: PlayerId[]) => number;
   rosterAfter: (team: TeamId, out: PlayerId[], inn: PlayerId[]) => PlayerId[];
+  autoDrops: (team: TeamId, out: PlayerId[], inn: PlayerId[]) => PlayerId[];
   FAIR_RANGE: number;
   WEEKLY_LOSS_OK: number;
 }
@@ -348,9 +349,19 @@ export function buildValues(base: Base, settings: Settings, sim: SimResult | nul
     if (v === undefined) baseCache.set(key, (v = weekLineup(idx.roster.get(team) ?? [], w)));
     return v;
   };
+  // LOGIC-5: rosters stay the same size. Short: the best free agents fill in. Long: the team cuts its
+  // lowest-valued players it already had (never one it just got).
+  const autoDrops = (team: TeamId, out: PlayerId[], inn: PlayerId[]): PlayerId[] => {
+    const r = idx.roster.get(team) ?? [];
+    const kept = r.filter((k) => !out.includes(k));
+    const extra = kept.length + inn.filter((k) => !r.includes(k)).length - r.length;
+    if (extra <= 0) return [];
+    return [...kept].sort((x, y) => bv(x) - bv(y) || x.localeCompare(y)).slice(0, extra);
+  };
   const rosterAfter = (team: TeamId, out: PlayerId[], inn: PlayerId[]) => {
     const r = idx.roster.get(team) ?? [];
-    const a = r.filter((k) => !out.includes(k)).concat(inn.filter((k) => !r.includes(k)));
+    const drop = autoDrops(team, out, inn);
+    const a = r.filter((k) => !out.includes(k) && !drop.includes(k)).concat(inn.filter((k) => !r.includes(k)));
     return a.length >= r.length ? a : a.concat(faFill.filter((k) => !a.includes(k)).slice(0, r.length - a.length));
   };
   const weekGain = (team: TeamId, out: PlayerId[], inn: PlayerId[]) => {
@@ -369,6 +380,6 @@ export function buildValues(base: Base, settings: Settings, sim: SimResult | nul
 
   return {
     base, settings, sim, oddsReady: !!sim, teamOdds, keepWeight, blend, bv, chart, aboveReplacement, replacement, replacementHealthy: replPlay, faReplacement, faFill,
-    keeperValue, keepConv, studPremium, injuryCorrection, availFor, weekGain, rosterAfter, FAIR_RANGE, WEEKLY_LOSS_OK,
+    keeperValue, keepConv, studPremium, injuryCorrection, availFor, weekGain, rosterAfter, autoDrops, FAIR_RANGE, WEEKLY_LOSS_OK,
   };
 }
