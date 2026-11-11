@@ -107,6 +107,7 @@ Every player in an input is a reference:
 
 - `id`: `"t"` + the ESPN transaction id for an accepted trade; `"wi"` + the first 8 characters of the vetoed proposal's id for a veto (`"type": "veto"`).
 - Both teams must send at least one player. A transaction whose id already exists is skipped.
+- Each new trade leg is stamped with two snapshots the Trade tracker grades from: `rosAtTrade` (the player's ESPN rest-of-season projection in the data at that moment) and `valueAtTrade` (his Peaked/Menton chart value then). They can't be rebuilt later, so load a trade in the same run as, or right after, that week's projections and charts. Vetoes get no chart value; the tracker values a veto at today's numbers.
 
 ### usage (task 4)
 

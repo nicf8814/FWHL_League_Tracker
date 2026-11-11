@@ -144,6 +144,8 @@ export interface TransactionLeg {
   playerId: PlayerId;
   fromTeamId: TeamId;
   toTeamId: TeamId;
+  rosAtTrade?: number | null; // ESPN rest-of-season points when the trade happened (a snapshot; can't be rebuilt later)
+  valueAtTrade?: number | null; // chart value (Peaked/Menton average) when the trade happened
 }
 
 export interface Transaction {

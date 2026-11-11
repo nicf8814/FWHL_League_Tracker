@@ -101,6 +101,15 @@ export interface TxIn {
   legs: { player: PlayerRef; from: TeamId; to: TeamId }[];
 }
 
+// Chart value when the trade is logged: Peaked and Menton averaged at the latest chart week on or before it.
+function chartValueNow(ds: Dataset, id: PlayerId, week: number): number | null {
+  const weeks = [...new Set(ds.valuations.map((v) => v.week))].filter((w) => w <= week);
+  if (!weeks.length) return null;
+  const wk = Math.max(...weeks);
+  const vals = ds.valuations.filter((v) => v.playerId === id && v.week === wk && (v.source === 'peaked' || v.source === 'menton')).map((v) => v.value);
+  return vals.length ? Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10 : null;
+}
+
 function addTransactions(ds: Dataset, list: TxIn[] | undefined, P: Players, rep: Report) {
   if (!list) return;
   const have = new Set(ds.transactions.map((t) => t.id));
@@ -108,7 +117,8 @@ function addTransactions(ds: Dataset, list: TxIn[] | undefined, P: Players, rep:
   for (const t of list) {
     if (!t?.id || have.has(t.id)) continue; // never edit an existing transaction
     if (t.type !== 'trade' && t.type !== 'veto') { rep.warnings.push(`Transaction ${t.id}: unknown type ${String(t.type)}, skipped.`); continue; }
-    const legs = (t.legs ?? []).map((l) => ({ playerId: P.resolve(l.player, true), fromTeamId: l.from, toTeamId: l.to }));
+    const ros = (id: PlayerId | null) => (t.type === 'trade' && id ? ds.playerStats.find((s) => s.playerId === id)?.projRestOfSeason ?? null : null);
+    const legs = (t.legs ?? []).map((l) => { const id = P.resolve(l.player, true); return { playerId: id, fromTeamId: l.from, toTeamId: l.to, rosAtTrade: ros(id), valueAtTrade: t.type === 'trade' && id ? chartValueNow(ds, id, t.week) : null }; });
     const sides = new Set(legs.map((l) => l.fromTeamId));
     if (legs.some((l) => !l.playerId || !teams.has(l.fromTeamId) || !teams.has(l.toTeamId)) || sides.size !== 2) {
       rep.warnings.push(`Transaction ${t.id}: needs two known teams each sending a known player; skipped.`);

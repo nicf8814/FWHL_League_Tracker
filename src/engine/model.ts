@@ -126,6 +126,7 @@ export interface Values {
   chart: (p: PlayerId, source: 'peaked' | 'menton' | 'fantasypros') => number | null;
   aboveReplacement: (p: PlayerId) => number | null;
   replacement: Record<Pos, number>;
+  replacementHealthy: Record<Pos, number>; // same ranks, Out/IR players left out
   faReplacement: Record<Pos, number>;
   faFill: PlayerId[];
   keeperValue: (keys: PlayerId[]) => number;
@@ -365,7 +366,7 @@ export function buildValues(base: Base, settings: Settings, sim: SimResult | nul
   };
 
   return {
-    base, settings, oddsReady: !!sim, teamOdds, keepWeight, blend, bv, chart, aboveReplacement, replacement, faReplacement, faFill,
+    base, settings, oddsReady: !!sim, teamOdds, keepWeight, blend, bv, chart, aboveReplacement, replacement, replacementHealthy: replPlay, faReplacement, faFill,
     keeperValue, keepConv, studPremium, injuryCorrection, availFor, weekGain, rosterAfter, FAIR_RANGE, WEEKLY_LOSS_OK,
   };
 }

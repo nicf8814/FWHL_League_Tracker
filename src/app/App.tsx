@@ -10,18 +10,20 @@ const Analyzer = lazy(() => import('../views/Analyzer.tsx'));
 const Standings = lazy(() => import('../views/Standings.tsx'));
 const Players = lazy(() => import('../views/Players.tsx'));
 const Teams = lazy(() => import('../views/Teams.tsx'));
+const Tracker = lazy(() => import('../views/Tracker.tsx'));
 const DataSettings = lazy(() => import('../views/DataSettings.tsx'));
 
 const NAV: { route: Route; label: string; short: string }[] = [
   { route: 'finder', label: 'Trade finder', short: 'Find' },
   { route: 'analyzer', label: 'Analyzer', short: 'Trade' },
+  { route: 'tracker', label: 'Trade tracker', short: 'Tracker' },
   { route: 'standings', label: 'Standings', short: 'Table' },
   { route: 'players', label: 'Players', short: 'Players' },
   { route: 'teams', label: 'Teams', short: 'Teams' },
   { route: 'data', label: 'Data & settings', short: 'Data' },
 ];
 const SHORT: Record<string, string> = { espn: 'ESPN', peaked: 'Peaked', menton: 'Menton', fantasypros: 'FantasyPros' };
-const VIEWS: Record<Route, React.ComponentType> = { finder: Finder, analyzer: Analyzer, standings: Standings, players: Players, teams: Teams, data: DataSettings };
+const VIEWS: Record<Route, React.ComponentType> = { finder: Finder, analyzer: Analyzer, tracker: Tracker, standings: Standings, players: Players, teams: Teams, data: DataSettings };
 
 export function App() {
   const { route } = useRoute();
@@ -58,7 +60,7 @@ export function App() {
         </div>
       </div>
       <nav aria-label="Sections" className="fixed inset-x-0 bottom-0 z-30 border-t border-rule-strong bg-paper pb-[env(safe-area-inset-bottom)] md:hidden">
-        <ul className="grid grid-cols-5">
+        <ul className="grid auto-cols-fr grid-flow-col">
           {NAV.filter((n) => n.route !== 'data').map((n) => <li key={n.route}><NavLink item={n} active={route === n.route} variant="bottom" /></li>)}
         </ul>
       </nav>
@@ -80,7 +82,7 @@ function NavLink({ item, active, variant }: { item: (typeof NAV)[number]; active
   const common = { href: href(item.route), 'aria-current': active ? ('page' as const) : undefined };
   if (variant === 'bottom')
     return (
-      <a {...common} className={`rowbtn relative flex h-14 items-center justify-center text-sm font-medium ${active ? 'text-ink' : 'text-ink-3'}`}>
+      <a {...common} className={`rowbtn relative flex h-14 items-center justify-center text-[13px] font-medium ${active ? 'text-ink' : 'text-ink-3'}`}>
         {active && <span className="absolute inset-x-3 top-0 h-[3px] bg-accent" aria-hidden="true" />}
         {item.short}
       </a>
