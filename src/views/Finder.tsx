@@ -4,6 +4,7 @@ import { useDebounced, useLeague } from '../data/store.tsx';
 import { finderKey, hasInput, type FinderQuery, type Offer, type TeamOffers } from '../engine/finder.ts';
 import { findTradesAsync } from '../engine/finderClient.ts';
 import { teamName } from '../engine/league.ts';
+import { lineup } from '../engine/model.ts';
 import { tradeToQuery } from '../engine/trade.ts';
 import { href } from '../app/router.ts';
 import { Empty, fmt, Mono, PlayerName, POS_OPTIONS, PosMark, Seg, signed, TeamSelect, tone } from '../ui/components.tsx';
@@ -12,6 +13,9 @@ import { usePlayerSheet } from './PlayerSheet.tsx';
 // Results are cached by the full query + values version (audit PERF-2). Opening a team, showing more
 // offers and scrolling are view state only and never rerun the search.
 const RESULTS = new Map<string, TeamOffers[]>();
+let PINS = new Map<string, { o: Offer; partner: TeamId; from: TeamId }>();
+let HIDDEN = new Set<string>();
+const offerKey = (from: TeamId, partner: TeamId, o: Offer) => `${from}|${partner}|${o.give.join(',')}|${o.get.join(',')}`;
 const MAX_CACHED = 24;
 
 type Tag = 'sell' | 'open' | 'keep';
@@ -28,6 +32,13 @@ export default function Finder() {
   const [sort, setSort] = useState<'me' | 'winwin'>('me');
   const [open, setOpen] = useState<Set<TeamId>>(new Set());
   const [more, setMore] = useState<Set<TeamId>>(new Set());
+  // FEAT-12: pin offers to keep them in view, hide ones you've ruled out. Kept for the visit.
+  const [pins, setPins] = useState<Map<string, { o: Offer; partner: TeamId; from: TeamId }>>(() => PINS);
+  const [hidden, setHidden] = useState<Set<string>>(() => HIDDEN);
+  const pin = (o: Offer, partner: TeamId) => setPins((m) => { const n = new Map(m); const k = offerKey(team, partner, o); n.has(k) ? n.delete(k) : n.set(k, { o, partner, from: team }); PINS = n; return n; });
+  const hide = (o: Offer, partner: TeamId) => setHidden((h) => { const n = new Set(h); n.add(offerKey(team, partner, o)); HIDDEN = n; return n; });
+  const unhideAll = () => { HIDDEN = new Set(); setHidden(HIDDEN); };
+  const [lastTags, setLastTags] = useState<Record<PlayerId, Tag> | null>(null);
 
   const q: FinderQuery = useDebounced(
     useMemo(
@@ -66,7 +77,10 @@ export default function Finder() {
     if (partner === t) setPartner('all');
   };
   const toggle = (set: Set<TeamId>, t: TeamId) => { const n = new Set(set); n.has(t) ? n.delete(t) : n.add(t); return n; };
-  const data = result?.key === key ? result.data : result?.data ?? [];
+  const raw = result?.key === key ? result.data : result?.data ?? [];
+  const data = raw.map((g) => ({ ...g, offers: g.offers.filter((o) => !hidden.has(offerKey(team, g.team, o))) })).filter((g) => g.offers.length).map((g) => ({ ...g, count: g.offers.length }));
+  const hiddenHere = raw.reduce((n, g) => n + g.offers.filter((o) => hidden.has(offerKey(team, g.team, o))).length, 0);
+  const myPins = [...pins.entries()].filter(([, v]) => v.from === team);
   const sells = Object.values(tags).filter((t) => t === 'sell').length, keeps = Object.values(tags).filter((t) => t === 'keep').length;
 
   return (
@@ -82,7 +96,8 @@ export default function Finder() {
             <span className="font-medium">Tag {teamName(idx, team)}'s players</span>
             <span className="num text-ink-3">{sells} sell · {keeps} keep</span>
           </summary>
-          <TagList team={team} tags={tags} onTag={(p, t) => setTags((s) => ({ ...s, [p]: t }))} />
+          <BulkTags team={team} tags={tags} last={lastTags} onSet={(next) => { setLastTags(tags); setTags(next); }} onUndo={() => { if (lastTags) { setTags(lastTags); setLastTags(null); } }} />
+          <TagList team={team} tags={tags} onTag={(p, t) => { setLastTags(null); setTags((s) => ({ ...s, [p]: t })); }} />
         </details>
         <WantPicker team={team} want={want} onChange={setWant} />
         <fieldset className="grid gap-4 border-t border-rule pt-4">
@@ -104,8 +119,15 @@ export default function Finder() {
           <h2 className="text-lg">Offers</h2>
           <p className="text-sm text-ink-3" role="status">
             {!hasInput(q) ? '' : busy ? 'Finding trades…' : `${data.reduce((s, g) => s + g.count, 0)} fair offers from ${data.length} team${data.length === 1 ? '' : 's'}`}
+            {hiddenHere > 0 && <> · {hiddenHere} hidden <button type="button" className="link" onClick={unhideAll}>Show</button></>}
           </p>
         </div>
+        {myPins.length > 0 && (
+          <div className="grid border-l-[3px] border-accent bg-surface px-3">
+            <h3 className="pt-2 text-sm">Pinned</h3>
+            {myPins.map(([k, v]) => <OfferRow key={k} o={v.o} partner={v.partner} from={v.from} pinned onPin={() => pin(v.o, v.partner)} />)}
+          </div>
+        )}
         {!hasInput(q) ? (
           <Empty>Pick the position you need, tag players to sell, or add a player you want.</Empty>
         ) : !busy && result?.error ? (
@@ -115,7 +137,7 @@ export default function Finder() {
         ) : (
           <ol className={`grid transition-opacity duration-[var(--dur-hover)] ${busy ? 'opacity-50' : ''}`}>
             {data.map((g) => (
-              <TeamGroup key={g.team} g={g} from={team} open={open.has(g.team)} showAll={more.has(g.team)}
+              <TeamGroup key={g.team} g={g} from={team} open={open.has(g.team)} showAll={more.has(g.team)} pinned={(o) => pins.has(offerKey(team, g.team, o))} onPin={(o) => pin(o, g.team)} onHide={(o) => hide(o, g.team)}
                 onToggle={() => setOpen((s) => toggle(s, g.team))} onMore={() => setMore((s) => toggle(s, g.team))} />
             ))}
           </ol>
@@ -132,6 +154,21 @@ function Slider({ label, min, max, step, value, onChange, display, hint }: { lab
       <div className="flex items-baseline justify-between"><label htmlFor={id} className="text-sm text-ink-3">{label}</label><span className="num text-sm">{display}</span></div>
       <input id={id} type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} />
       <p className="text-xs text-ink-3">{hint}</p>
+    </div>
+  );
+}
+
+function BulkTags({ team, tags, last, onSet, onUndo }: { team: TeamId; tags: Record<PlayerId, Tag>; last: Record<PlayerId, Tag> | null; onSet: (t: Record<PlayerId, Tag>) => void; onUndo: () => void }) {
+  const { idx, base } = useLeague();
+  const roster = idx.roster.get(team) ?? [];
+  const starters = new Set(lineup(base, roster.filter((p) => !base.isOut(p)), () => 1).slots.map((x) => x.pid).filter((p): p is PlayerId => !!p));
+  const any = Object.values(tags).some((t) => t !== 'open');
+  return (
+    <div className="mt-2 flex flex-wrap gap-1 text-sm" role="group" aria-label="Tag several players">
+      <button type="button" className="btn btn-quiet" onClick={() => onSet({ ...tags, ...Object.fromEntries([...starters].map((p) => [p, 'keep' as const])) })}>Keep starters</button>
+      <button type="button" className="btn btn-quiet" onClick={() => onSet({ ...tags, ...Object.fromEntries(roster.filter((p) => !starters.has(p)).map((p) => [p, 'sell' as const])) })}>Sell bench</button>
+      <button type="button" className="btn btn-quiet" disabled={!any} onClick={() => onSet({})}>Clear all</button>
+      {last && <button type="button" className="btn btn-quiet text-primary" onClick={onUndo}>Undo</button>}
     </div>
   );
 }
@@ -200,7 +237,8 @@ function WantPicker({ team, want, onChange }: { team: TeamId; want: PlayerId[]; 
   );
 }
 
-function TeamGroup({ g, from, open, showAll, onToggle, onMore }: { g: TeamOffers; from: TeamId; open: boolean; showAll: boolean; onToggle: () => void; onMore: () => void }) {
+type OfferActions = { pinned: (o: Offer) => boolean; onPin: (o: Offer) => void; onHide: (o: Offer) => void };
+function TeamGroup({ g, from, open, showAll, onToggle, onMore, ...act }: { g: TeamOffers; from: TeamId; open: boolean; showAll: boolean; onToggle: () => void; onMore: () => void } & OfferActions) {
   const { idx } = useLeague();
   const best = g.offers[0]!;
   const shown = showAll ? g.offers : g.offers.slice(0, 3);
@@ -220,7 +258,7 @@ function TeamGroup({ g, from, open, showAll, onToggle, onMore }: { g: TeamOffers
       </button>
       {open && (
         <div id={bodyId} className="grid gap-0 pb-3 pl-2 md:pl-11">
-          {shown.map((o) => <OfferRow key={o.give.join() + o.get.join()} o={o} partner={g.team} from={from} />)}
+          {shown.map((o) => <OfferRow key={o.give.join() + o.get.join()} o={o} partner={g.team} from={from} pinned={act.pinned(o)} onPin={() => act.onPin(o)} onHide={() => act.onHide(o)} />)}
           {g.offers.length > 3 && <button type="button" className="btn btn-quiet justify-self-start" onClick={onMore}>{showAll ? 'Show fewer' : `Show ${g.offers.length - 3} more`}</button>}
         </div>
       )}
@@ -228,7 +266,7 @@ function TeamGroup({ g, from, open, showAll, onToggle, onMore }: { g: TeamOffers
   );
 }
 
-function OfferRow({ o, partner, from }: { o: Offer; partner: TeamId; from: TeamId }) {
+function OfferRow({ o, partner, from, pinned, onPin, onHide }: { o: Offer; partner: TeamId; from: TeamId; pinned: boolean; onPin: () => void; onHide?: () => void }) {
   const { idx, values: V } = useLeague();
   const open = usePlayerSheet();
   const list = (ks: PlayerId[]) => (
@@ -251,7 +289,11 @@ function OfferRow({ o, partner, from }: { o: Offer; partner: TeamId; from: TeamI
         <div><p className="text-xs text-ink-3">{teamName(idx, from)} sends</p>{list(o.give)}</div>
         <div><p className="text-xs text-ink-3">{teamName(idx, partner)} sends</p>{list(o.get)}</div>
       </div>
-      <a className="link -my-1 justify-self-start py-3 text-sm" href={href('analyzer', tradeToQuery({ a: from, b: partner, aGives: o.give, bGives: o.get }))}>Open in analyzer</a>
+      <div className="flex flex-wrap items-center gap-1">
+        <a className="link -my-1 mr-auto py-3 text-sm" href={href('analyzer', tradeToQuery({ a: from, b: partner, aGives: o.give, bGives: o.get }))}>Open in analyzer</a>
+        <button type="button" className="btn btn-quiet text-sm" aria-pressed={pinned} onClick={onPin}>{pinned ? 'Unpin' : 'Pin'}</button>
+        {onHide && <button type="button" className="btn btn-quiet text-sm" onClick={onHide}>Hide</button>}
+      </div>
     </article>
   );
 }
