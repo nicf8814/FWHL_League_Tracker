@@ -137,6 +137,7 @@ npm run data -- history [--dry-run]
 
 - `championships.csv`, `matchups.csv`, `settings.csv`, `standings.csv`, `teams.csv`: the league export, as downloaded.
 - `owners.csv`: who each owner name is. `team2026` links an owner to their team id in the league seed; `filler` marks a spot someone ran to fill the league (Clint's 2024-25 second team), which counts in that season but in no one's career; `note` shows on the owner's page. Ty Carlson's two ESPN ids merge because the export uses his name.
+- `aliases.csv`: seasons where an export name belongs to someone else. From 2012, "Alex Teves" is Tommy Teves. Applied before anything else, so the export CSVs stay as downloaded.
 - `corrections.csv`: games where the official result differs from the box score (2012 Week 13, Wes over Cooper). Records follow the official result, and scores stay as played.
 
 The build stops if a season's games do not reproduce the official records (unless `corrections.csv` explains it) or if the podium disagrees with the final ranks. `npm run data:check` fails while `history.json` is out of date with the CSVs.
