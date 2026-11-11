@@ -20,10 +20,12 @@ function useTrade() {
   const keep = (list: PlayerId[] | undefined, team: TeamId | null) => (list ?? []).filter((p) => team !== null && idx.owner.get(p) === team);
   const aGives = keep(raw.aGives, a), bGives = keep(raw.bGives, b);
   const dropped = [...(raw.aGives ?? []), ...(raw.bGives ?? [])].filter((p) => !aGives.includes(p) && !bGives.includes(p));
-  const cur = b === null ? `a=${a}` : tradeToQuery({ a, b, aGives, bGives });
+  // Your side can be filled before a partner is picked: the half-trade lives in the URL too.
+  const half = (t: { a: TeamId; aGives: PlayerId[] }) => `a=${t.a}${t.aGives.length ? `&ag=${t.aGives.join(',')}` : ''}`;
+  const cur = b === null ? half({ a, aGives }) : tradeToQuery({ a, b, aGives, bGives });
   const set = (t: Omit<Partial<Trade>, 'b'> & { b?: TeamId | null }) => {
     const next = { a, b, aGives, bGives, ...t };
-    const q = next.b === null ? `a=${next.a}` : tradeToQuery(next as Trade);
+    const q = next.b === null ? half(next) : tradeToQuery(next as Trade);
     if (q === cur) return;
     edits.past.push(cur); edits.future = []; if (edits.past.length > 100) edits.past.shift();
     replace('analyzer', q);
@@ -145,7 +147,7 @@ function Side({ title, team, other, picked, onTeam, onToggle }: { title: string;
 
 function VerdictPanel({ ev, a, b, onClear }: { ev: Evaluation | null; a: TeamId; b: TeamId | null; onClear: () => void }) {
   const { idx, values: V } = useLeague();
-  if (b === null) return <Empty>Pick a trade partner, then tick players on both sides.</Empty>;
+  if (b === null) return <Empty>Tick the players you'd send, then pick a trade partner to see what you could get back.</Empty>;
   if (!ev) return <Empty>Tick the players each team sends. The verdict updates as you go.</Empty>;
   if (ev.errors.length)
     return (

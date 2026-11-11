@@ -28,8 +28,7 @@ Requires Node 22.18 or newer (the tests run TypeScript directly).
 | Waivers | Free agents ranked by what they add to your lineup after the cut. |
 | Keepers | 2027 keeper calls: auction worth at the player's points rank vs his keeper cost, best set per team, league bargains. |
 | Standings | This week for your team, records, PF, PA, max PF, efficiency, playoff odds (10,000 simulated seasons) by record path and the points-for seed, odds trend, weekly results with the Weeks 12-14 top-6 rule. |
-| Players | Every valued player; sort any column, choose columns, export CSV, chart moves since any week. |
-| Chart history | A player's Peaked and Menton values by week, and how well each week's chart ranked players by later scoring. |
+| Players | Every valued player with total points; search, sort any column, choose columns, export CSV, chart moves since any week. Each player's sheet has his chart-value trend. |
 | Teams | Any roster by position with role, pts/wk and value. |
 | Data & settings | Your team, theme, data sources and gaps, injury return weeks, value engine presets, chart and FantasyPros import, backup export / import / reset. |
 | How it works | The methodology in plain words. |

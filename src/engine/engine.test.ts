@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import { DEFAULT_SETTINGS, type Dataset } from '../data/schema.ts';
 import { coerceSettings, validateDataset } from '../data/validate.ts';
 import { findTrades, fitsSlot, teamNeeds } from './finder.ts';
-import { buildIndex, chartAccuracy, dataGaps, freshness, standings, weekOfDate } from './league.ts';
+import { buildIndex, dataGaps, freshness, standings, weekOfDate } from './league.ts';
 import { buildBase, buildValues, lineup } from './model.ts';
 import { rank6, seed, simulate, tally, type SimInput } from './sim.ts';
 import { keeperCalls, keeperSet } from './keepers.ts';
@@ -143,13 +143,6 @@ test('data gaps name what is missing (LOGIC-14)', () => {
   assert.ok(g.some((x) => x.what.startsWith('Rostered players without an ESPN id')));
   assert.ok(g.some((x) => x.what.includes('Wk 1') && x.what.includes('no free-agent scores')), 'Weeks 1-6 only have rostered players');
   assert.ok(!g.some((x) => x.what.includes('no free-agent scores') && x.what.includes('Wk 7')));
-});
-
-test('chart accuracy is a rank correlation per chart week', () => {
-  const acc = chartAccuracy(idx);
-  assert.ok(acc.length >= 6);
-  for (const a of acc) { assert.ok(a.rho > -1 && a.rho < 1); assert.ok(a.week < idx.scoresThrough); }
-  assert.ok(acc.every((a) => a.rho > 0.2), 'charts should rank players better than chance');
 });
 
 test('keeper calls follow the old kEval rules', () => {

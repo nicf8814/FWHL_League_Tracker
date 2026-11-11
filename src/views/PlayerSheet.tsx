@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import type { PlayerId } from '../data/schema.ts';
 import { useLeague } from '../data/store.tsx';
-import { teamName } from '../engine/league.ts';
+import { chartAvgAt, chartHistory, teamName } from '../engine/league.ts';
+import { useMemo } from 'react';
 import { tradeToQuery } from '../engine/trade.ts';
 import { href } from '../app/router.ts';
 import { fmt, signed, Sheet, Status, TeamLabel } from '../ui/components.tsx';
@@ -62,23 +63,16 @@ function Body({ pid, onClose }: { pid: PlayerId; onClose: () => void }) {
         <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
           {stat('Trade value', fmt(b.v))}
           {stat('Pts/wk', fmt(base.proj.get(pid)))}
-          {stat('Season avg', fmt(s?.seasonAvg))}
+          {stat('Total pts', fmt(s?.seasonPoints))}
           {stat('Pos rank', s?.posRank ?? '–')}
-          {stat('Market', fmt(b.market))}
-          {stat('Model', fmt(b.model))}
-          {stat('Above repl.', signed(V.aboveReplacement(pid)))}
-          {stat('Keeper 2027', k ? (k.cost === null ? 'No' : `$${k.cost}`) : '–')}
         </dl>
-        <p className="text-sm text-ink-2">
-          Charts: Peaked <span className="num">{fmt(V.chart(pid, 'peaked'))}</span> · Menton <span className="num">{fmt(V.chart(pid, 'menton'))}</span> · FantasyPros <span className="num">{fmt(V.chart(pid, 'fantasypros'))}</span>
-          {b.keeper > 0.05 && <> · keeper premium <span className="num">{signed(b.keeper)}</span> for {teamName(idx, owner)}</>}
-        </p>
+        <ValueTrend pid={pid} />
         {inj && <p className="text-sm"><b>Status.</b> {inj.note || inj.status}{base.isOut(pid) && base.returnWeek(pid) < 18 ? `, back around Week ${base.returnWeek(pid)}` : base.returnWeek(pid) >= 18 ? ', out for the season' : ''}.</p>}
         {!inj && base.stale.has(pid) && <p className="text-sm"><b>Status.</b> Scored 0 with no projection in his last {base.stale.get(pid)} games, so he's treated as out until he plays again.</p>}
         {(() => { const h = V.handcuffOf(pid); if (!h) return null; const other = h.backup === pid ? h.starter : h.backup; const both = idx.owner.get(h.starter) !== undefined && idx.owner.get(h.starter) === idx.owner.get(h.backup);
           return <p className="text-sm"><b>Handcuff.</b> {h.backup === pid ? 'Backup to' : 'Backed up by'} {idx.players.get(other)?.name}. Worth about +{h.gain.toFixed(1)} pts/wk of insurance to a team holding both{both ? ` (${teamName(idx, idx.owner.get(pid))} does)` : ''}{V.settings.handcuff ? '' : '; turn on handcuff insurance in Data & settings to count it'}.</p>; })()}
         {news && <p className="text-sm"><b>News.</b> {news.note} (<span className="num">{signed(news.pct, 0)}%</span>).</p>}
-        {k?.note && <p className="text-sm text-ink-2"><b>Keeper.</b> {k.note}.</p>}
+        {k && <p className="text-sm text-ink-2"><b>Keeper 2027.</b> {k.cost === null ? "Can't be kept" : `$${k.cost}`}{k.note ? `. ${k.note}` : ''}.</p>}
         {weeks.length > 0 && (
           <div className="overflow-x-auto">
             <table className="tbl">
@@ -102,4 +96,30 @@ function Body({ pid, onClose }: { pid: PlayerId; onClose: () => void }) {
         {toAnalyzer && <a className="btn btn-primary justify-self-start" href={toAnalyzer} onClick={onClose}>Open in analyzer</a>}
       </div>
     );
+}
+
+// Value trend: the player's trade-chart value (Peaked/Menton average) at each chart week.
+function ValueTrend({ pid }: { pid: PlayerId }) {
+  const { idx } = useLeague();
+  const hist = useMemo(() => chartHistory(idx.ds), [idx]);
+  const weeks = [...new Set([...hist.peaked.keys(), ...hist.menton.keys()])].sort((a, b) => a - b);
+  const pts = weeks.map((w) => [w, chartAvgAt(hist, pid, w)] as const).filter((x): x is readonly [number, number] => x[1] !== null);
+  if (pts.length < 2) return <p className="text-sm text-ink-3">Not on enough trade charts for a trend yet.</p>;
+  const W = 280, H = 56, P = 4;
+  const vals = pts.map((x) => x[1]);
+  const hi = Math.max(...vals), span = Math.max(hi - Math.min(...vals), 20), lo = Math.min(...vals) - (span - (hi - Math.min(...vals))) / 2; // at least 20 points of height so small wiggles stay small
+  const x = (i: number) => P + (i / (pts.length - 1)) * (W - 2 * P);
+  const y = (v: number) => P + (1 - (v - lo) / span) * (H - 2 * P);
+  const first = vals[0]!, last = vals[vals.length - 1]!, d = last - first;
+  return (
+    <figure className="grid gap-1">
+      <figcaption className="flex items-baseline justify-between text-xs text-ink-3">
+        <span>Trade chart value, Week {pts[0]![0]} to {pts[pts.length - 1]![0]}</span>
+        <span className="num"><span className="text-ink">{fmt(first, 0)} → {fmt(last, 0)}</span> <span className={Math.abs(d) < 1 ? '' : d > 0 ? 'text-gain' : 'text-loss'}>({signed(d, 0)})</span></span>
+      </figcaption>
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-14 w-full" role="img" aria-label={`Chart value from ${fmt(first, 0)} in Week ${pts[0]![0]} to ${fmt(last, 0)} in Week ${pts[pts.length - 1]![0]}`} preserveAspectRatio="none">
+        <polyline fill="none" stroke="var(--primary)" strokeWidth="2" vectorEffect="non-scaling-stroke" points={pts.map(([, v], i) => `${x(i)},${y(v)}`).join(' ')} />
+      </svg>
+    </figure>
+  );
 }

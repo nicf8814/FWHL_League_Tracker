@@ -18,7 +18,6 @@ const DataSettings = lazy(() => import('../views/DataSettings.tsx'));
 const Keepers = lazy(() => import('../views/Keepers.tsx'));
 const Market = lazy(() => import('../views/Market.tsx'));
 const Waivers = lazy(() => import('../views/Waivers.tsx'));
-const Charts = lazy(() => import('../views/Charts.tsx'));
 
 const NAV: { route: Route; label: string; short: string }[] = [
   { route: 'finder', label: 'Trade finder', short: 'Find' },
@@ -29,13 +28,12 @@ const NAV: { route: Route; label: string; short: string }[] = [
   { route: 'keepers', label: 'Keepers', short: 'Keepers' },
   { route: 'standings', label: 'Standings', short: 'Table' },
   { route: 'players', label: 'Players', short: 'Players' },
-  { route: 'charts', label: 'Chart history', short: 'Charts' },
   { route: 'teams', label: 'Teams', short: 'Teams' },
   { route: 'data', label: 'Data & settings', short: 'Data' },
   { route: 'method', label: 'How it works', short: 'Method' },
 ];
 const SHORT: Record<string, string> = { espn: 'ESPN', peaked: 'Peaked', menton: 'Menton', fantasypros: 'FantasyPros' };
-const VIEWS: Record<Route, React.ComponentType> = { finder: Finder, analyzer: Analyzer, tracker: Tracker, standings: Standings, players: Players, teams: Teams, data: DataSettings, method: Method, keepers: Keepers, market: Market, waivers: Waivers, charts: Charts, more: More };
+const VIEWS: Record<Route, React.ComponentType> = { finder: Finder, analyzer: Analyzer, tracker: Tracker, standings: Standings, players: Players, teams: Teams, data: DataSettings, method: Method, keepers: Keepers, market: Market, waivers: Waivers, more: More };
 
 const EXTRA: Command[] = [{ id: 'theme', label: 'Switch light / dark', group: 'Actions', run: () => setTheme(nextTheme(getTheme())) }];
 

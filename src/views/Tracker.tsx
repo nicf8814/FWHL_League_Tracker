@@ -263,16 +263,42 @@ function Summary({ s, ev, tm, path }: { s: Scenario; ev: Evaluation; tm: TeamId;
           <li key={i} className="grid justify-items-center gap-1"><Stamp grade={g} size="sm" /><span className="text-xs text-ink-3">{i ? `Wk ${s.tx.effectiveWeek + i - 1}` : 'Trade'}</span></li>
         ))}
       </ol>
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
-        {stat('Record', `${wl(mine)}`, wl(mine) === wl(other) ? (s.veto ? 'same as real life' : 'same without the trade') : `${wl(other)} ${s.veto ? 'in real life' : 'without the trade'}`)}
-        {stat(s.veto ? 'Pts/wk if it went through' : 'Pts/wk vs no trade', r.act == null ? '–' : <span className={tone(r.act)}>{signed(r.act)}</span>, 'best possible lineups, both worlds')}
-        {stat('Production', r.par == null ? 'No games yet' : <span className={tone(r.par)}>{signed(r.par)}/wk</span>, 'above replacement, got vs gave')}
-        {stat('Value', s.veto ? fmt(vNow, 0) : `${fmt(r.val, 0)} → ${fmt(vNow, 0)}`, s.veto ? 'received, today' : 'at trade → now')}
-        {stat('Proj pts/wk then', r.pGain == null ? 'Not saved' : <span className={tone(r.pGain)}>{signed(r.pGain)}</span>, 'above replacement')}
-        {stat('Keepers (2027)', Math.abs(r.keep) < 0.5 ? 'No change' : <span className={tone(r.keep)}>{r.keep >= 0 ? '+' : '−'}${Math.abs(r.keep).toFixed(1)}</span>, `counts ${Math.round(r.kw * 100)}% (${kwLabel})`)}
+      <PointsImpact s={s} tm={tm} r={r} />
+      <dl className="grid grid-cols-3 gap-x-6 gap-y-3">
+        {stat('Record', `${wl(mine)}`, wl(mine) === wl(other) ? (s.veto ? 'same as real life' : 'same without it') : `${wl(other)} ${s.veto ? 'in real life' : 'without it'}`)}
+        {stat('Value', s.veto ? fmt(vNow, 0) : `${fmt(r.val, 0)} → ${fmt(vNow, 0)}`, s.veto ? 'received, today' : 'then → now')}
+        {stat('Keepers 2027', Math.abs(r.keep) < 0.5 ? 'No change' : <span className={tone(r.keep)}>{r.keep >= 0 ? '+' : '−'}${Math.abs(r.keep).toFixed(0)}</span>, `counts ${Math.round(r.kw * 100)}% (${kwLabel})`)}
       </dl>
       <Ripple s={s} ev={ev} />
     </div>
+  );
+}
+
+// The three point numbers in plain words (Nov 11): what the trade was expected to add, what the players
+// actually did, and what it meant for the lineup. One number and one sentence each.
+function PointsImpact({ s, tm, r }: { s: Scenario; tm: TeamId; r: Evaluation['res'] extends Map<TeamId, infer R> ? R : never }) {
+  const { idx } = useLeague();
+  const T = teamName(idx, tm);
+  const pts = (n: number) => `${Math.abs(n).toFixed(1)} point${Math.abs(n) >= 0.95 && Math.abs(n) < 1.05 ? '' : 's'} a week`;
+  const rows: [string, number | null, string][] = [
+    ['Expected', r.pGain, r.pGain == null ? 'No projection was saved when this trade was made.'
+      : `When it was made, the trade projected to ${r.pGain >= 0 ? 'add' : 'cost'} ${T} ${pts(r.pGain)}.`],
+    ['Players', r.par, r.par == null ? 'No games played since the trade yet.'
+      : `Since then, the players ${T} ${s.veto ? 'would have gotten' : 'got'} ${r.par >= 0 ? 'outscored' : 'scored less than'} the ones ${s.veto ? 'it would have' : 'it'} gave up by ${pts(r.par)}.`],
+    ['Lineup', r.act, r.act == null ? 'No games played since the trade yet.'
+      : s.veto ? `${T}'s best lineup would have scored ${pts(r.act)} ${r.act >= 0 ? 'more' : 'less'}.` : `${T}'s best lineup scored ${pts(r.act)} ${r.act >= 0 ? 'more' : 'less'} than it would have without the trade.`],
+  ];
+  return (
+    <section aria-label="Impact in points" className="grid">
+      {rows.map(([label, n, text]) => (
+        <div key={label} className="grid grid-cols-[4.5rem_5rem_minmax(0,1fr)] items-baseline gap-3 border-t border-rule py-2">
+          <span className="text-xs text-ink-3">{label}</span>
+          <span className={`num text-lg ${n == null ? 'text-ink-3' : tone(n)}`}>{n == null ? '–' : signed(n)}</span>
+          <span className="text-sm text-ink-2">{text}</span>
+        </div>
+      ))}
+      <p className="border-t border-rule pt-2 text-xs text-ink-3">All three are points per week. "Players" counts what the players themselves scored above a replacement starter; "Lineup" is what actually changed in the best lineup each week, so bench depth that never starts counts for nothing.</p>
+    </section>
   );
 }
 
