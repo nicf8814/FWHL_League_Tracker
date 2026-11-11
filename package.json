@@ -3,6 +3,8 @@
   "private": true,
   "version": "2.0.0",
   "description": "Trade analyzer, trade finder and standings for the Favre's Waffle House fantasy league. Runs fully in the browser.",
+  "homepage": "https://nicf8814.github.io/FWHL_League_Tracker/",
+  "repository": "github:nicf8814/FWHL_League_Tracker",
   "type": "module",
   "engines": {
     "node": ">=22.18"
