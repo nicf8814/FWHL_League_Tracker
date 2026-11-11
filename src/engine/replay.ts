@@ -28,7 +28,7 @@ export interface Record3 { w: number; l: number; t: number; pf: number; seed: nu
 
 export function seedsFrom(idx: Index, games: readonly GameRow[]): Map<TeamId, Record3> {
   const T = tally(idx.teamIds, games, idx.ds.season.top6Weeks);
-  const order = seed(idx.teamIds, (i) => T.get(i)!.w, (i) => T.get(i)!.pf, (i, j) => T.get(i)!.h2h.get(j) ?? 0, idx.ds.season.seedsByRecord);
+  const order = seed(idx.teamIds, (i) => T.get(i)!.w + T.get(i)!.t / 2, (i) => T.get(i)!.pf, (i, j) => T.get(i)!.h2h.get(j) ?? 0, idx.ds.season.seedsByRecord);
   return new Map(order.map((id, k) => { const r = T.get(id)!; return [id, { w: r.w, l: r.l, t: r.t, pf: r.pf, seed: k + 1 }]; }));
 }
 

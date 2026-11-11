@@ -7,7 +7,7 @@ import { coerceSettings, validateDataset } from '../data/validate.ts';
 import { findTrades } from './finder.ts';
 import { buildIndex, freshness, standings, weekOfDate } from './league.ts';
 import { buildBase, buildValues, lineup } from './model.ts';
-import { rank6, seed, simulate, type SimInput } from './sim.ts';
+import { rank6, seed, simulate, tally, type SimInput } from './sim.ts';
 import { evaluate, tradeFromQuery, tradeToQuery, validateTrade } from './trade.ts';
 
 const raw = JSON.parse(readFileSync(new URL('../../test/fixtures/fwhl-2026-11-10.json', import.meta.url), 'utf8'));
@@ -127,4 +127,12 @@ test('validation rejects broken data and coerces settings', () => {
   assert.equal(s.myTeamId, null);
   assert.equal(s.marketShare, 100);
   assert.equal(s.chartWeights.peaked, 0);
+});
+
+test('exact ties count as ties (LOGIC-17)', () => {
+  const T = tally([1, 2], [[1, 1, 2, 100, 100, true]], []);
+  assert.deepEqual([T.get(1)!.w, T.get(1)!.t, T.get(2)!.t], [0, 1, 1]);
+  assert.equal(rank6(100, [120, 110, 105, 104, 103, 100, 90, 80, 70, 60, 50]), 'T'); // 5 above, 1 level: straddles 6th
+  // A team 1 game up on a tie keeps the edge: 1.5 wins beats 1.
+  assert.deepEqual(seed([1, 2], (i) => (i === 1 ? 1.5 : 1), () => 0, () => 0, 1), [1, 2]);
 });

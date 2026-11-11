@@ -111,7 +111,7 @@ export function standings(idx: Index): StandingRow[] {
       max.set(t, { mx: cur.mx + Math.max(m, sc), pf: cur.pf + sc, n: cur.n + 1 });
     }
   }
-  const order = seed(idx.teamIds, (i) => T.get(i)!.w, (i) => T.get(i)!.pf, (i, j) => T.get(i)!.h2h.get(j) ?? 0, season.seedsByRecord);
+  const order = seed(idx.teamIds, (i) => T.get(i)!.w + T.get(i)!.t / 2, (i) => T.get(i)!.pf, (i, j) => T.get(i)!.h2h.get(j) ?? 0, season.seedsByRecord);
   return order.map((teamId, k) => {
     const m = max.get(teamId);
     return { ...T.get(teamId)!, teamId, seed: k + 1, maxPf: m ? m.mx : null, efficiency: m && m.mx ? m.pf / m.mx : null };
