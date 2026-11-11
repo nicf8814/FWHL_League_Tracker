@@ -24,6 +24,17 @@ export function buildHistory(dir = 'data/history'): History {
   const champs = table(dir, 'championships.csv');
   const ownerRows = table(dir, 'owners.csv');
   const corrections = table(dir, 'corrections.csv');
+  // aliases.csv: seasons where an export name belongs to someone else (from/to inclusive, to blank = on).
+  const aliases = table(dir, 'aliases.csv');
+  const who = (name: string, year: number): string => {
+    const a = aliases.find((r) => r.owner === name && year >= Number(r.from) && (!r.to || year <= Number(r.to)));
+    return a ? a.becomes! : name;
+  };
+  const yearOf = (r: Record<string, string>) => Number(r['Season Year']);
+  for (const r of standings) r['Owner Name'] = who(r['Owner Name']!, yearOf(r));
+  for (const r of matchups) { r['Home Owner'] = who(r['Home Owner']!, yearOf(r)); r['Away Owner'] = who(r['Away Owner']!, yearOf(r)); }
+  for (const r of champs) for (const p of ['1st', '2nd', '3rd']) if (r[`${p} Place Owner`]) r[`${p} Place Owner`] = who(r[`${p} Place Owner`]!, yearOf(r));
+  for (const r of corrections) { r.winner = who(r.winner!, Number(r.season)); r.loser = who(r.loser!, Number(r.season)); }
 
   const owners = new Map<OwnerKey, HistOwner>();
   const extra = new Map(ownerRows.map((r) => [r.owner!, r]));
