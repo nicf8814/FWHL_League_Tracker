@@ -163,3 +163,14 @@ test('keeper calls follow the old kEval rules', () => {
   const roster = idx.roster.get(team('Nic'))!;
   assert.ok(keeperSet(calls, roster, 2).length <= 2 || keeperSet(calls, roster, 2).every((p) => calls.get(p)!.label === 'lock'));
 });
+
+test('handcuff insurance counts only for the team holding both (old app, Oct 29)', () => {
+  const on = buildValues(base, { ...DEFAULT_SETTINGS, handcuff: true }, sim);
+  const off = buildValues(base, DEFAULT_SETTINGS, sim);
+  const cmc = pid('Christian McCaffrey'), black = pid('Kaelon Black');
+  assert.ok(on.handcuffOf(black));
+  const nic = team('Nic'); // holds both
+  assert.ok(idx.roster.get(nic)!.includes(cmc) && idx.roster.get(nic)!.includes(black));
+  const lose = (V: typeof on) => V.weekGain(nic, [black], []);
+  assert.ok(lose(on) < lose(off) - 0.1, 'trading away the handcuff costs insurance');
+});

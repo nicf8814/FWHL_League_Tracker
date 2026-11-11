@@ -76,6 +76,7 @@ export function Status({ pid }: { pid: PlayerId }) {
   const inj = idx.injury.get(pid);
   const stale = base.stale.get(pid);
   const r = base.returnWeek(pid);
+  if ((inj?.status === 'OUT' || inj?.status === 'IR' || stale) && !base.isOut(pid)) return <span className="tag text-even">Playing (your call)</span>;
   if (inj && (inj.status === 'OUT' || inj.status === 'IR'))
     return <span className="tag text-loss" title={inj.note}>{inj.status}{r >= 18 ? ' · season' : r > base.now ? ` · Wk ${r}` : ''}</span>;
   if (stale) return <span className="tag text-loss" title="Missed his last games; treated as out until he plays">Missed {stale}</span>;

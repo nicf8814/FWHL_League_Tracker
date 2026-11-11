@@ -215,6 +215,9 @@ export interface Settings {
   injuryStrength: number; // 0-1
   useNews: boolean;
   productionRamp: boolean;
+  rampMedian: boolean; // ramp toward the median game instead of the average
+  handcuff: boolean; // value backup RBs for the team that also owns the starter
+  returnWeeks: Record<PlayerId, number>; // hand-set injury return weeks, overriding the data's estimate
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -225,4 +228,7 @@ export const DEFAULT_SETTINGS: Settings = {
   injuryStrength: 0.6,
   useNews: true,
   productionRamp: true,
+  rampMedian: false,
+  handcuff: false,
+  returnWeeks: {},
 };

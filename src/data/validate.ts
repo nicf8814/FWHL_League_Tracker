@@ -130,6 +130,9 @@ export function coerceSettings(input: unknown, teamIds: ReadonlySet<number> | nu
     injuryStrength: clamp(s.injuryStrength, 0, 1, D.injuryStrength),
     useNews: typeof s.useNews === 'boolean' ? s.useNews : D.useNews,
     productionRamp: typeof s.productionRamp === 'boolean' ? s.productionRamp : D.productionRamp,
+    rampMedian: typeof s.rampMedian === 'boolean' ? s.rampMedian : D.rampMedian,
+    handcuff: typeof s.handcuff === 'boolean' ? s.handcuff : D.handcuff,
+    returnWeeks: isObj(s.returnWeeks) ? Object.fromEntries(Object.entries(s.returnWeeks).filter(([k, v]) => /^pl-\d+$/.test(k) && Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 18).slice(0, 200)) as Record<string, number> : {},
   };
 }
 

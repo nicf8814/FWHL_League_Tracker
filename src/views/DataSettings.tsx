@@ -38,12 +38,56 @@ export default function DataSettings() {
         </p>
       </Section>
 
+      <ReturnWeeks />
       <Gaps />
       <EngineSettings settings={settings} onChange={setSettings} />
       <ImportChart />
       <Backup />
       <p className="text-sm"><a className="link" href="#/method">How the values, odds and grades are worked out</a></p>
     </div>
+  );
+}
+
+// Old app: hand-set return weeks. Each one overrides the data's estimate on this device, reruns the
+// season sim and moves values; clear it to go back to the data.
+function ReturnWeeks() {
+  const { idx, base, settings, setSettings } = useLeague();
+  const now = idx.currentWeek;
+  const listed = [...new Set([...idx.injury.keys(), ...base.stale.keys(), ...Object.keys(settings.returnWeeks)])]
+    .filter((p) => idx.owner.has(p) && (idx.injury.get(p)?.status !== 'Q' || settings.returnWeeks[p] !== undefined))
+    .sort((a, b) => (idx.owner.get(a)! - idx.owner.get(b)!) || a.localeCompare(b));
+  const set = (p: string, v: string) => {
+    const next = { ...settings.returnWeeks };
+    if (v === '') delete next[p]; else next[p] = Number(v);
+    setSettings({ returnWeeks: next });
+  };
+  const weeks = Array.from({ length: 18 - now }, (_, i) => now + 1 + i).filter((w) => w < 18);
+  return (
+    <Section title="Injury return weeks" aside={Object.keys(settings.returnWeeks).length ? `${Object.keys(settings.returnWeeks).length} set by you` : 'From the data'}>
+      <p className="max-w-[70ch] text-sm text-ink-2">Out, IR and missed-games players on rosters. Pick a week to override the estimate on this device; it changes availability, values and playoff odds.</p>
+      {!listed.length ? <p className="text-sm text-ink-3">Nobody is out.</p> : (
+        <ul className="grid">
+          {listed.map((p) => {
+            const mine = settings.returnWeeks[p];
+            return (
+              <li key={p} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-rule py-2 text-sm">
+                <span className="min-w-0"><b className="font-medium">{idx.players.get(p)?.name}</b> <span className="text-ink-3">· {idx.teams.get(idx.owner.get(p)!)?.name} · {idx.injury.get(p)?.note || (base.stale.has(p) ? 'missed recent games' : idx.injury.get(p)?.status)}</span></span>
+                <label className="flex items-center gap-2">
+                  <span className="sr-only">Return week for {idx.players.get(p)?.name}</span>
+                  {mine !== undefined && <span className="size-2 rounded-full bg-accent" aria-hidden="true" />}
+                  <select className="field w-auto py-1" value={mine ?? ''} onChange={(e) => set(p, e.target.value)}>
+                    <option value="">Data estimate{base.returnWeek(p) && mine === undefined ? ` (Wk ${base.returnWeek(p) >= 18 ? 'season' : base.returnWeek(p)})` : ''}</option>
+                    <option value={now}>Playing now</option>
+                    {weeks.map((w) => <option key={w} value={w}>Week {w}</option>)}
+                    <option value={18}>Out for season</option>
+                  </select>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Section>
   );
 }
 
@@ -84,7 +128,7 @@ const PRESETS: [string, string, Partial<Settings>][] = [
   ['scoring', 'What scores', { marketShare: 25 }],
   ['charts', 'Trade charts only', { chartWeights: { peaked: 65, menton: 35, fantasypros: 0 } }],
 ];
-const ENGINE_KEYS = ['marketShare', 'chartWeights', 'injuryStrength', 'useNews', 'productionRamp'] as const;
+const ENGINE_KEYS = ['marketShare', 'chartWeights', 'injuryStrength', 'useNews', 'productionRamp', 'rampMedian', 'handcuff'] as const;
 const engineOf = (s: Settings) => JSON.stringify(ENGINE_KEYS.map((k) => s[k]));
 
 function EngineSettings({ settings: s, onChange }: { settings: Settings; onChange: (p: Partial<Settings>) => void }) {
@@ -108,6 +152,8 @@ function EngineSettings({ settings: s, onChange }: { settings: Settings; onChang
       {cw.peaked + cw.menton + cw.fantasypros === 0 && <p role="alert" className="text-sm text-loss">All chart weights are 0, so the market side is empty and values come from scoring only.</p>}
       <div className="grid gap-2">
         <Check label="Production ramp: blend each player's season average into his projection as games are played" checked={s.productionRamp} changed={s.productionRamp !== D.productionRamp} onChange={(v) => onChange({ productionRamp: v })} />
+        <Check label="Ramp toward each player's median game instead of his average (needs 3+ games), so one big game or dud doesn't move him" checked={s.rampMedian} changed={s.rampMedian !== D.rampMedian} onChange={(v) => onChange({ rampMedian: v })} />
+        <Check label="Handcuff insurance: a backup RB counts for the team that also holds his starter (McCaffrey to Black, Walker to E. Johnson)" checked={s.handcuff} changed={s.handcuff !== D.handcuff} onChange={(v) => onChange({ handcuff: v })} />
         <Check label="Apply role and news adjustments" checked={s.useNews} changed={s.useNews !== D.useNews} onChange={(v) => onChange({ useNews: v })} />
       </div>
     </Section>

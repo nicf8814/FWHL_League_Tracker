@@ -119,7 +119,8 @@ export function LeagueProvider({ children, repo = localRepository }: { children:
 
   const ds = load.state === 'ready' ? load.ds : null;
   const idx = useMemo(() => (ds ? buildIndex(ds) : null), [ds]);
-  const base = useMemo(() => (idx ? buildBase(idx, settings.productionRamp) : null), [idx, settings.productionRamp]);
+  const baseOpts = useMemo(() => ({ median: settings.rampMedian, returns: settings.returnWeeks }), [settings.rampMedian, settings.returnWeeks]);
+  const base = useMemo(() => (idx ? buildBase(idx, settings.productionRamp, baseOpts) : null), [idx, settings.productionRamp, baseOpts]);
   const simInput = useMemo<SimInput | null>(() => {
     if (!base) return null;
     const { idx: ix } = base;
