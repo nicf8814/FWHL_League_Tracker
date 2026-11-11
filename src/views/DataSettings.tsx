@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS, type Settings } from '../data/schema.ts';
 import { useLeague } from '../data/store.tsx';
 import { freshness } from '../engine/league.ts';
 import { Section, TeamSelect } from '../ui/components.tsx';
+import { ImportChart } from './ImportChart.tsx';
 
 export default function DataSettings() {
   const { idx, settings, setSettings } = useLeague();
@@ -36,6 +37,7 @@ export default function DataSettings() {
       </Section>
 
       <EngineSettings settings={settings} onChange={setSettings} />
+      <ImportChart />
       <Backup />
     </div>
   );

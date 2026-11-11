@@ -20,6 +20,7 @@ interface League {
   exportBackup: () => BackupFile;
   importBackup: (text: string) => Promise<{ ok: true } | { ok: false; errors: string[] }>;
   resetData: () => Promise<void>;
+  replaceDataset: (ds: Dataset) => Promise<void>;
   savedTrades: SavedTrade[];
   setSavedTrades: (next: (list: SavedTrade[]) => SavedTrade[]) => void;
 }
@@ -169,6 +170,13 @@ export function LeagueProvider({ children, repo = localRepository }: { children:
     [repo, settings, setSavedTrades],
   );
 
+  // In-app imports (FEAT-1): the caller has already validated ds. Saved before it's shown, like importBackup.
+  const replaceDataset = useCallback(async (next: Dataset) => {
+    await repo.saveDataset(next);
+    setSim(null);
+    setLoad({ state: 'ready', ds: next });
+  }, [repo]);
+
   const resetData = useCallback(async () => {
     const fresh = await repo.resetDataset();
     setSim(null);
@@ -179,7 +187,7 @@ export function LeagueProvider({ children, repo = localRepository }: { children:
   if (load.state === 'error') return <Splash text={load.message} error />;
   if (!idx || !base || !values || !simInput) return <Splash text="Preparing…" />;
   return (
-    <Ctx.Provider value={{ idx, base, values, valuesVersion: version.current, sim, simInput, settings, setSettings, exportBackup, importBackup, resetData, savedTrades, setSavedTrades }}>
+    <Ctx.Provider value={{ idx, base, values, valuesVersion: version.current, sim, simInput, settings, setSettings, exportBackup, importBackup, resetData, replaceDataset, savedTrades, setSavedTrades }}>
       {children}
     </Ctx.Provider>
   );

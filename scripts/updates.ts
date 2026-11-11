@@ -350,6 +350,13 @@ export function applyChart(ds: Dataset, source: 'peaked' | 'menton', week: numbe
   return rep;
 }
 
+// CSV with columns name,value,pos (header optional), in the chart's order.
+export function chartRowsFromCsv(text: string): ChartRow[] {
+  const rows = parseCsv(text);
+  const body = rows[0] && !Number.isFinite(Number(rows[0][1])) ? rows.slice(1) : rows;
+  return body.map(([name = '', value = '', pos]) => ({ name: name.trim(), value: Number(value), ...(pos?.trim() ? { pos: pos.trim().toUpperCase() as Pos } : {}) }));
+}
+
 // ---------- FantasyPros rest-of-season ranks ----------
 export interface RankRow { name: string; pos: Pos; rank: number }
 
@@ -364,6 +371,13 @@ export function applyRanks(ds: Dataset, rows: RankRow[], asOf: string): Report {
   setSource(ds, 'fantasypros', { asOf }, 'FantasyPros rest-of-season ranks (half PPR)');
   rep.changes.push(`FantasyPros ranks for ${out.size} players`);
   return rep;
+}
+
+// CSV with columns name,pos,rank (header optional).
+export function rankRowsFromCsv(text: string): RankRow[] {
+  const rows = parseCsv(text);
+  const body = rows[0] && !Number.isFinite(Number(rows[0][2])) ? rows.slice(1) : rows;
+  return body.map(([name = '', pos = '', rank = '']) => ({ name: name.trim(), pos: pos.trim().toUpperCase() as Pos, rank: Number(rank) }));
 }
 
 // ---------- file format ----------
