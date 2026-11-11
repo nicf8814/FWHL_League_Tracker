@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import { DEFAULT_SETTINGS, type Dataset } from '../data/schema.ts';
 import { coerceSettings, validateDataset } from '../data/validate.ts';
 import { findTrades } from './finder.ts';
-import { buildIndex, freshness, standings, weekOfDate } from './league.ts';
+import { buildIndex, dataGaps, freshness, standings, weekOfDate } from './league.ts';
 import { buildBase, buildValues, lineup } from './model.ts';
 import { rank6, seed, simulate, tally, type SimInput } from './sim.ts';
 import { evaluate, tradeFromQuery, tradeToQuery, validateTrade } from './trade.ts';
@@ -135,4 +135,11 @@ test('exact ties count as ties (LOGIC-17)', () => {
   assert.equal(rank6(100, [120, 110, 105, 104, 103, 100, 90, 80, 70, 60, 50]), 'T'); // 5 above, 1 level: straddles 6th
   // A team 1 game up on a tie keeps the edge: 1.5 wins beats 1.
   assert.deepEqual(seed([1, 2], (i) => (i === 1 ? 1.5 : 1), () => 0, () => 0, 1), [1, 2]);
+});
+
+test('data gaps name what is missing (LOGIC-14)', () => {
+  const g = dataGaps(idx);
+  assert.ok(g.some((x) => x.what.startsWith('Rostered players without an ESPN id')));
+  assert.ok(g.some((x) => x.what.includes('Wk 1') && x.what.includes('no free-agent scores')), 'Weeks 1-6 only have rostered players');
+  assert.ok(!g.some((x) => x.what.includes('no free-agent scores') && x.what.includes('Wk 7')));
 });

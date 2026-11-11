@@ -1,7 +1,7 @@
 import { useId, useRef, useState } from 'react';
 import { DEFAULT_SETTINGS, type Settings } from '../data/schema.ts';
 import { useLeague } from '../data/store.tsx';
-import { freshness } from '../engine/league.ts';
+import { dataGaps, freshness } from '../engine/league.ts';
 import { Section, Seg, TeamSelect } from '../ui/components.tsx';
 import { getTheme, setTheme, type Theme } from '../ui/theme.ts';
 import { ImportChart } from './ImportChart.tsx';
@@ -38,11 +38,32 @@ export default function DataSettings() {
         </p>
       </Section>
 
+      <Gaps />
       <EngineSettings settings={settings} onChange={setSettings} />
       <ImportChart />
       <Backup />
       <p className="text-sm"><a className="link" href="#/method">How the values, odds and grades are worked out</a></p>
     </div>
+  );
+}
+
+function Gaps() {
+  const { idx } = useLeague();
+  const gaps = dataGaps(idx);
+  return (
+    <Section title="Data gaps" aside={gaps.length ? `${gaps.length} to know about` : 'None'}>
+      {!gaps.length ? <p className="text-sm text-ink-2">Nothing missing.</p> : (
+        <ul className="grid">
+          {gaps.map((g) => (
+            <li key={g.what} className="grid gap-0.5 border-b border-rule py-2 text-sm">
+              <span className="flex justify-between gap-3"><b className="font-medium">{g.what}</b><span className="num shrink-0 text-ink-3">{g.total > 1 ? `${g.count} of ${g.total}` : ''}</span></span>
+              <span className="text-ink-2">{g.fix}</span>
+              {g.names && g.names.length <= 40 && g.names.length < g.total && <details><summary className="cursor-pointer text-ink-3">Show who</summary><p className="text-ink-2">{g.names.join(', ')}</p></details>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Section>
   );
 }
 
