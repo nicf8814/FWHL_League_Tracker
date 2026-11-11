@@ -10,7 +10,7 @@ import { buildBase, buildValues, lineup } from './model.ts';
 import { rank6, seed, simulate, type SimInput } from './sim.ts';
 import { evaluate, tradeFromQuery, tradeToQuery, validateTrade } from './trade.ts';
 
-const raw = JSON.parse(readFileSync(new URL('../../public/seed/fwhl-2026.json', import.meta.url), 'utf8'));
+const raw = JSON.parse(readFileSync(new URL('../../test/fixtures/fwhl-2026-11-10.json', import.meta.url), 'utf8'));
 const checked = validateDataset(raw);
 assert.ok(checked.ok, 'seed must validate');
 const ds = (checked as { value: Dataset }).value;

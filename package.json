@@ -14,7 +14,9 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "node --test src/engine/engine.test.ts"
+    "test": "node --test src/engine/engine.test.ts scripts/updates.test.ts",
+    "data": "node scripts/data.ts",
+    "data:check": "node scripts/data.ts check"
   },
   "dependencies": {
     "react": "19.3.1",

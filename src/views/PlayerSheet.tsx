@@ -87,7 +87,7 @@ function Body({ pid, onClose }: { pid: PlayerId; onClose: () => void }) {
                     <td className="l n">{w}</td>
                     <td className="l">{r!.opponent ?? '–'}</td>
                     <td className="l">{r!.teamId === null ? 'FA' : teamName(idx, r!.teamId)}</td>
-                    <td className="l">{{ start: 'Started', bench: 'Bench', ir: 'IR', fa: 'Free agent' }[r!.slot]}</td>
+                    <td className="l">{w > idx.scoresThrough ? 'Projected' : { start: 'Started', bench: 'Bench', ir: 'IR', fa: 'Free agent' }[r!.slot]}</td>
                     <td className="n">{fmt(r!.points)}</td>
                     <td className="n">{fmt(r!.projection)}</td>
                   </tr>
