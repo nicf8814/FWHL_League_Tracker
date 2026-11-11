@@ -70,7 +70,7 @@ function Gaps() {
 function ThemePicker() {
   const [t, setT] = useState<Theme>(getTheme);
   return (
-    <div className="grid gap-1">
+    <div className="grid grid-cols-1 gap-1">
       <span className="text-sm text-ink-3">Theme</span>
       <Seg label="Theme" value={t} options={[['system', 'Match device'], ['light', 'Light'], ['dark', 'Dark']] as const} onChange={(v) => { setTheme(v); setT(v); }} />
     </div>
@@ -94,7 +94,7 @@ function EngineSettings({ settings: s, onChange }: { settings: Settings; onChang
   return (
     <Section title="Value engine" aside={<button type="button" className="btn btn-quiet" disabled={preset === 'default'} onClick={() => onChange(defaults)}>Reset this section</button>}>
       <p className="max-w-[70ch] text-sm text-ink-2">Trade value blends what league mates will accept (the charts) with what actually scores (ESPN projections in your scoring, blended with season production). Changes apply as you drag; the playoff simulation doesn't rerun for these. A gold mark means a setting differs from the default.</p>
-      <div className="grid gap-1">
+      <div className="grid grid-cols-1 gap-1">
         <span className="text-sm text-ink-3">Preset{preset === 'custom' ? ' (custom)' : ''}</span>
         <Seg label="Preset" value={preset} options={PRESETS.map(([id, label]) => [id, label] as const)} onChange={(id) => onChange({ ...defaults, ...PRESETS.find((p) => p[0] === id)![2] })} />
       </div>

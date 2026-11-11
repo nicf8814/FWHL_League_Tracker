@@ -5,9 +5,10 @@ import { test } from 'node:test';
 import { DEFAULT_SETTINGS, type Dataset } from '../data/schema.ts';
 import { coerceSettings, validateDataset } from '../data/validate.ts';
 import { findTrades } from './finder.ts';
-import { buildIndex, dataGaps, freshness, standings, weekOfDate } from './league.ts';
+import { buildIndex, chartAccuracy, dataGaps, freshness, standings, weekOfDate } from './league.ts';
 import { buildBase, buildValues, lineup } from './model.ts';
 import { rank6, seed, simulate, tally, type SimInput } from './sim.ts';
+import { keeperCalls, keeperSet } from './keepers.ts';
 import { evaluate, tradeFromQuery, tradeToQuery, validateTrade } from './trade.ts';
 
 const raw = JSON.parse(readFileSync(new URL('../../test/fixtures/fwhl-2026-11-10.json', import.meta.url), 'utf8'));
@@ -142,4 +143,23 @@ test('data gaps name what is missing (LOGIC-14)', () => {
   assert.ok(g.some((x) => x.what.startsWith('Rostered players without an ESPN id')));
   assert.ok(g.some((x) => x.what.includes('Wk 1') && x.what.includes('no free-agent scores')), 'Weeks 1-6 only have rostered players');
   assert.ok(!g.some((x) => x.what.includes('no free-agent scores') && x.what.includes('Wk 7')));
+});
+
+test('chart accuracy is a rank correlation per chart week', () => {
+  const acc = chartAccuracy(idx);
+  assert.ok(acc.length >= 6);
+  for (const a of acc) { assert.ok(a.rho > -1 && a.rho < 1); assert.ok(a.week < idx.scoresThrough); }
+  assert.ok(acc.every((a) => a.rho > 0.2), 'charts should rank players better than chance');
+});
+
+test('keeper calls follow the old kEval rules', () => {
+  const calls = keeperCalls(base);
+  assert.ok(calls.size > 100);
+  for (const c of calls.values()) {
+    if (c.cost === null) assert.equal(c.label, 'none');
+    else if (c.label === 'legit') assert.ok(c.surplus! >= 10 && c.par > 0);
+    else if (c.label === 'border') assert.ok(c.surplus! >= 0 && c.surplus! < 10 && c.par > 0);
+  }
+  const roster = idx.roster.get(team('Nic'))!;
+  assert.ok(keeperSet(calls, roster, 2).length <= 2 || keeperSet(calls, roster, 2).every((p) => calls.get(p)!.label === 'lock'));
 });
