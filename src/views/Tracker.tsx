@@ -102,47 +102,64 @@ function TradeCard({ tx, ev, onOpen }: { tx: Transaction; ev: Evaluation; onOpen
   );
 }
 
+// What if (cleanup, Nov 10): the trade's players first and its one biggest effect; vetoes and rewinds
+// on their own tabs; trades that changed no record or seed fold into one line. Detail lives in the sheet.
+type Rec = { w: number; l: number; t: number; pf: number; seed: number };
+const ord = (n: number) => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th');
+
+function effect(idx: ReturnType<typeof useLeague>['idx'], s: Scenario, real: Map<TeamId, Rec>, alt: Map<TeamId, Rec>) {
+  const cond = s.veto ? 'If it went through' : 'Without it';
+  const all = [...real.keys()];
+  const recMoves = all.filter((t) => wl(real.get(t)!) !== wl(alt.get(t)!));
+  const seedMoves = all.filter((t) => real.get(t)!.seed !== alt.get(t)!.seed);
+  const mine = teamsOf(s.tx);
+  const pick = (ts: TeamId[]) => [...ts].sort((x, y) => Number(mine.includes(y)) - Number(mine.includes(x)) || Math.abs(alt.get(y)!.w - real.get(y)!.w) - Math.abs(alt.get(x)!.w - real.get(x)!.w))[0];
+  const t = pick(recMoves) ?? pick(seedMoves);
+  const changed = new Set([...recMoves, ...seedMoves]).size;
+  if (t === undefined) return { mattered: false, line: 'No record or seed would change.', more: 0 };
+  const a = real.get(t)!, b = alt.get(t)!;
+  const what = wl(a) !== wl(b) ? `${teamName(idx, t)} would be ${wl(b)} instead of ${wl(a)}` : `${teamName(idx, t)} would be the ${ord(b.seed)} seed instead of ${ord(a.seed)}`;
+  // When neither trading team moves, say so, so a third team's name doesn't read as part of the deal.
+  const line = mine.includes(t) ? `${cond}, ${what}.` : `${cond}, ${mine.map((m) => teamName(idx, m)).join(' and ')} would stay put, but ${what}.`;
+  return { mattered: true, line, more: changed - 1 };
+}
+
 function WhatIfList({ vetoes, trades, evals, onOpen }: { vetoes: Transaction[]; trades: Transaction[]; evals: Map<string, { s: Scenario; ev: Evaluation }>; onOpen: (id: string) => void }) {
   const { idx, settings } = useLeague();
-  const card = (tx: Transaction) => {
-    const { s, ev } = evals.get(tx.id)!;
-    const C = ev.calc;
-    const [nowS, altS] = s.veto ? [C.alt, C.real] : [C.real, C.alt]; // "now" = the world being judged
-    const others = [...C.real.keys()].filter((t) => !teamsOf(tx).includes(t) && (wl(C.real.get(t)!) !== wl(C.alt.get(t)!) || C.real.get(t)!.seed !== C.alt.get(t)!.seed));
-    const chain = C.undo.filter((u) => u.id !== tx.id);
-    const sixth = (m: typeof C.real) => [...m].find(([, r]) => r.seed === idx.ds.season.seedsByRecord + 1)?.[0];
-    return (
-      <button key={tx.id} type="button" onClick={() => onOpen(tx.id)} className="rowbtn grid w-full gap-1.5 border-b border-rule py-3 text-left">
-        <span className="flex justify-between text-xs text-ink-3">
-          <span><span className={`tag mr-2 ${s.veto ? 'text-loss' : 'text-primary'}`}>{s.veto ? 'Vetoed' : 'Rewind'}</span>Week {tx.week} · {dateLabel(tx.date)}</span>
-          <span>{s.veto ? 'If it went through' : 'If it never happened'}</span>
+  const { query, replace } = useRoute();
+  const kind: 'veto' | 'rewind' = query.get('wi') === 'rewind' || (query.get('wi') !== 'veto' && !vetoes.length) ? 'rewind' : 'veto';
+  const list = kind === 'veto' ? vetoes : trades;
+  const read = list.map((tx) => { const { s, ev } = evals.get(tx.id)!; return { tx, s, ...effect(idx, s, ev.calc.real, ev.calc.alt) }; });
+  const shown = read.filter((r) => r.mattered), quiet = read.filter((r) => !r.mattered);
+  const card = (r: (typeof read)[number]) => (
+    <button key={r.tx.id} type="button" onClick={() => onOpen(r.tx.id)} className="rowbtn grid w-full gap-1 border-b border-rule py-3 text-left">
+      <span className="text-xs text-ink-3">Week {r.tx.week} · {dateLabel(r.tx.date)}</span>
+      {teamsOf(r.tx).map((tm) => (
+        <span key={tm} className="flex flex-wrap items-baseline gap-x-2">
+          <span className={`flex items-center gap-2 font-medium ${tm === settings.myTeamId ? 'text-primary' : ''}`}><Mono team={tm} size="sm" />{teamName(idx, tm)}</span>
+          <span className="text-ink-2">{r.s.veto ? 'would get' : 'got'} {r.tx.legs.filter((l) => l.toTeamId === tm).map((l) => idx.players.get(l.playerId)?.name ?? l.playerId).join(', ')}</span>
         </span>
-        {teamsOf(tx).map((tm) => {
-          const a = (s.veto ? altS : nowS).get(tm)!, b = (s.veto ? nowS : altS).get(tm)!; // real -> scenario
-          const d = b.w - a.w;
-          return (
-            <span key={tm} className="flex flex-wrap items-baseline justify-between gap-x-4">
-              <span className={`flex items-center gap-2 font-medium ${tm === settings.myTeamId ? 'text-primary' : ''}`}><Mono team={tm} size="sm" />{teamName(idx, tm)}</span>
-              <span className="num text-sm">{wl(a)} → <b className={d > 0 ? 'text-gain' : d < 0 ? 'text-loss' : ''}>{wl(b)}</b> · PF {fmt(a.pf)} → {fmt(b.pf)} · seed {a.seed} → {b.seed}</span>
-            </span>
-          );
-        })}
-        {others.length > 0 && <span className="text-xs text-ink-2">Also: {others.map((t) => { const a = C.real.get(t)!, b = C.alt.get(t)!; return `${teamName(idx, t)} ${wl(a) === wl(b) ? `seed ${a.seed} → ${b.seed}` : `${wl(a)} → ${wl(b)}`}`; }).join(', ')}</span>}
-        <span className="text-xs text-ink-3">6th seed (PF): {sixth(C.real) === sixth(C.alt) ? `${teamName(idx, sixth(C.real))} either way` : `${teamName(idx, sixth(C.real))} really, ${teamName(idx, sixth(C.alt))} in this version`}{chain.length ? ` · also undoes ${chain.map((u) => `${teamsOf(u).map((t) => teamName(idx, t)).join('-')} (Wk ${u.week})`).join(', ')}` : ''}</span>
-      </button>
-    );
-  };
+      ))}
+      <span className="mt-1 text-sm">{r.line}{r.more > 0 && <span className="text-ink-3"> {r.more} more change{r.more > 1 ? 's' : ''} inside.</span>}</span>
+    </button>
+  );
   return (
-    <div className="grid gap-8">
-      <section className="grid gap-1">
-        <h2 className="border-b border-ink pb-1 text-lg">Vetoed trades, as if they went through</h2>
-        {vetoes.length ? vetoes.map(card) : <Empty>No vetoed trades this season.</Empty>}
-      </section>
-      <section className="grid gap-1">
-        <h2 className="border-b border-ink pb-1 text-lg">Rewind a real trade</h2>
-        <p className="text-sm text-ink-3">Records, points for and seeds through Week {idx.scoresThrough} if the trade never happened. Later trades that moved the same players are undone too.</p>
-        {trades.map(card)}
-      </section>
+    <div className="grid gap-4">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <Seg label="Which trades" value={kind} options={[['veto', `Vetoed (${vetoes.length})`], ['rewind', `Rewind a real trade (${trades.length})`]] as const} onChange={(k) => replace('tracker', `tab=whatif&wi=${k}`)} />
+        <p className="text-sm text-ink-3">{kind === 'veto' ? 'As if each vetoed trade had gone through.' : 'As if the trade never happened, with later trades of the same players undone.'}</p>
+      </div>
+      {!list.length ? <Empty>{kind === 'veto' ? 'No vetoed trades this season.' : 'No trades logged yet.'}</Empty> : (
+        <>
+          {shown.length > 0 && <ul className="grid gap-x-8 lg:grid-cols-2">{shown.map((r) => <li key={r.tx.id}>{card(r)}</li>)}</ul>}
+          {quiet.length > 0 && (
+            <details className="border-b border-rule">
+              <summary className="flex min-h-11 cursor-pointer items-center text-sm text-ink-2">{quiet.length} trade{quiet.length > 1 ? 's' : ''} that wouldn't change any record or seed</summary>
+              <ul className="grid gap-x-8 lg:grid-cols-2">{quiet.map((r) => <li key={r.tx.id}>{card(r)}</li>)}</ul>
+            </details>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -160,6 +177,7 @@ function Analysis({ s, ev }: { s: Scenario; ev: Evaluation }) {
         <p className="text-sm text-ink-3">Week {s.tx.week} · {dateLabel(s.tx.date)} · {ev.n ? `${ev.n} week${ev.n > 1 ? 's' : ''} of results` : 'no games played yet'}{s.veto ? ' · what if it went through' : ''}</p>
         <CopySummary s={s} ev={ev} />
       </div>
+      <TheTrade s={s} />
       <div className="grid grid-cols-2 gap-px bg-rule" role="group" aria-label="Team">
         {teams.map((tm) => (
           <button key={tm} type="button" aria-pressed={tab === tm} onClick={() => setTab(tm)} className={`flex items-center gap-3 p-3 text-left ${tab === tm ? 'border-b-[3px] border-accent bg-surface' : 'border-b-[3px] border-transparent bg-paper text-ink-3'}`}>
@@ -181,6 +199,28 @@ function Analysis({ s, ev }: { s: Scenario; ev: Evaluation }) {
         </div>
       </details>
     </div>
+  );
+}
+
+function TheTrade({ s }: { s: Scenario }) {
+  const { idx, values: V } = useLeague();
+  const open = usePlayerSheet();
+  return (
+    <section aria-label="The trade" className="grid grid-cols-1 gap-4 border-y border-rule py-3 sm:grid-cols-2">
+      {teamsOf(s.tx).map((tm) => (
+        <div key={tm} className="grid content-start gap-1">
+          <h3 className="flex items-center gap-2 text-sm"><Mono team={tm} size="sm" />{teamName(idx, tm)} {s.veto ? 'would get' : 'got'}</h3>
+          <ul className="grid">
+            {s.tx.legs.filter((l) => l.toTeamId === tm).map((l) => (
+              <li key={l.playerId} className="flex items-baseline justify-between gap-3 text-sm">
+                <PlayerName pid={l.playerId} onOpen={open} />
+                <span className="num text-ink-3">{fmt(V.bv(l.playerId), 0)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </section>
   );
 }
 
@@ -253,8 +293,8 @@ function Ripple({ s, ev }: { s: Scenario; ev: Evaluation }) {
   const rows = idx.teamIds.filter((t) => C.aff.includes(t) || wl(W1.get(t)!) !== wl(W2.get(t)!) || W1.get(t)!.seed !== W2.get(t)!.seed || (O1 && O2 && Math.abs(O1.odds[t]! - O2.odds[t]!) >= 0.04)).sort((a, b) => W1.get(a)!.seed - W1.get(b)!.seed);
   const other = s.veto ? 'real' : 'no trade';
   return (
-    <section className="grid gap-2">
-      <h3 className="border-b border-ink pb-1">League ripple</h3>
+    <details className="group grid gap-2 border-t border-ink">
+      <summary className="flex min-h-11 cursor-pointer items-center justify-between font-medium">League ripple <span className="text-sm font-normal text-ink-3">{rows.length} team{rows.length === 1 ? '' : 's'} affected</span></summary>
       <div className="overflow-x-auto">
         <table className="tbl">
           <thead><tr><th className="l">Team</th><th>Record</th><th>Seed</th><th>PF</th><th>Playoffs</th></tr></thead>
@@ -276,7 +316,7 @@ function Ripple({ s, ev }: { s: Scenario; ev: Evaluation }) {
         </table>
       </div>
       {!odds && <p className="text-xs text-ink-3" role="status">Simulating playoff odds in both worlds…</p>}
-    </section>
+    </details>
   );
 }
 
