@@ -36,7 +36,7 @@ export default function Method() {
       </Section>
 
       <Section title="Data">
-        <p>No live connections. The app reads one league file that the weekly tasks refresh from ESPN, the trade charts and FantasyPros usage stats, and the site redeploys when it changes. What you import or change stays in this browser; export a backup to keep it. Every source's date is in <a className="link" href={href('data')}>Data & settings</a>.</p>
+        <p>No live connections. The app reads one league file that the weekly tasks refresh from ESPN and the trade charts, and the site redeploys when it changes. What you import or change stays in this browser; export a backup to keep it. Every source's date is in <a className="link" href={href('data')}>Data & settings</a>.</p>
       </Section>
     </article>
   );

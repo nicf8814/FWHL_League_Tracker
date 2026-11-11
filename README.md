@@ -76,11 +76,11 @@ To add a real backend later, write another `Repository` with the same methods (d
 | `valuations` | source + week + playerId | Peaked and Menton chart values (0-100 index) |
 | `rankings` | source + playerId | empty; held FantasyPros rest-of-season ranks until trade value moved to the charts plus ESPN projections |
 | `injuries`, `news`, `keepers`, `transactions` | playerId / id | status and return week, role news, 2027 keeper cost, trades and vetoes |
-| `usage` (optional) | playerId | FantasyPros volume vs production, for Buy & sell |
+| `usage` (optional) | playerId | unused; held FantasyPros volume vs production for the dropped Buy & sell volume flags |
 
 `meta.sources` carries an as-of stamp per source; the app shows each one and flags it when it gets old.
 
-**Weekly refresh.** Scheduled tasks read ESPN and FantasyPros in a browser, write an input file, and run `npm run data -- <command>`, which validates everything and refuses bad data. Trade charts come from images transcribed to CSV. Each update is a commit to `main`, and the deploy re-checks the data before publishing. Formats and steps: [docs/data-updates.md](docs/data-updates.md). A browser that imported its own file keeps it only until newer data is deployed.
+**Weekly refresh.** Scheduled tasks read ESPN in a browser, write an input file, and run `npm run data -- <command>`, which validates everything and refuses bad data. Trade charts come from images transcribed to CSV. Each update is a commit to `main`, and the deploy re-checks the data before publishing. Formats and steps: [docs/data-updates.md](docs/data-updates.md). A browser that imported its own file keeps it only until newer data is deployed.
 
 ## Deploy
 

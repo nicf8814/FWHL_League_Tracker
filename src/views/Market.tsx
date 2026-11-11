@@ -7,10 +7,8 @@ import { href } from '../app/router.ts';
 import { Empty, fmt, PlayerName, PosMark, Section } from '../ui/components.tsx';
 import { usePlayerSheet } from './PlayerSheet.tsx';
 
-// Buy & sell: where the market (charts) and the scoring model disagree, plus the signals behind it:
-// volume vs production, chart momentum and injury returns.
+// Buy & sell: where the market (charts) and the scoring model disagree, plus chart momentum and injury returns.
 const EDGE = 8; // value points of model vs market before it's worth a look
-const USAGE_GAP = 3; // pts/game between what he scores and what his volume usually scores
 
 type Row = { p: PlayerId; edge: number; reasons: string[]; score: number };
 
@@ -18,7 +16,6 @@ export default function Market() {
   const { idx, values: V, base, settings } = useLeague();
   const me = settings.myTeamId;
   const open = usePlayerSheet();
-  const usage = useMemo(() => new Map((idx.ds.usage ?? []).map((u) => [u.playerId, u])), [idx]);
   const hist = useMemo(() => chartHistory(idx.ds), [idx]);
   const latest = Math.max(0, ...hist.peaked.keys(), ...hist.menton.keys());
   const { buy, sell } = useMemo(() => {
@@ -28,11 +25,6 @@ export default function Market() {
       const reasons: string[] = [];
       let score = edge;
       if (Math.abs(edge) >= EDGE) reasons.push(edge > 0 ? `Scores like ${fmt(b.model, 0)}, charts say ${fmt(b.market, 0)}` : `Charts say ${fmt(b.market, 0)}, scores like ${fmt(b.model, 0)}`);
-      const u = usage.get(p);
-      if (u && u.g >= 4 && (u.fpg >= 8 || u.xpg >= 8) && Math.abs(u.fpg - u.xpg) >= USAGE_GAP) {
-        reasons.push(u.fpg < u.xpg ? `Due for more: ${fmt(u.fpg)} pts/g on volume worth ${fmt(u.xpg)}` : `Due to cool off: ${fmt(u.fpg)} pts/g on volume worth ${fmt(u.xpg)}`);
-        score += (u.xpg - u.fpg) * 2;
-      }
       const now = chartAvgAt(hist, p, latest), then = chartAvgAt(hist, p, latest - 2);
       if (now !== null && then !== null && Math.abs(now - then) >= 6) { reasons.push(`Charts ${now > then ? 'up' : 'down'} ${fmt(Math.abs(now - then), 0)} in 2 weeks`); score -= (now - then) / 2; }
       const r = base.returnWeek(p);
@@ -45,7 +37,7 @@ export default function Market() {
       buy: rows.filter((r) => idx.owner.get(r.p) !== me && r.score >= EDGE / 2).sort((a, b) => b.score - a.score).slice(0, 25),
       sell: rows.filter((r) => (me === null || idx.owner.get(r.p) === me) && r.score <= -EDGE / 2).sort((a, b) => a.score - b.score).slice(0, 25),
     };
-  }, [idx, V, base, usage, hist, latest, me]);
+  }, [idx, V, base, hist, latest, me]);
 
   const table = (rows: Row[], kind: 'buy' | 'sell') => rows.length ? (
     <ul className="grid">
@@ -68,14 +60,14 @@ export default function Market() {
   return (
     <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:items-start">
       <Section title="Buy" aside="On other rosters">
-        <p className="text-sm text-ink-2">Scoring better than the charts price him, getting the volume that usually means more points, sliding on the charts, or about to come back from injury.</p>
+        <p className="text-sm text-ink-2">Scoring better than the charts price him, sliding on the charts, or about to come back from injury.</p>
         {table(buy, 'buy')}
       </Section>
       <Section title="Sell" aside={me === null ? 'Whole league' : `On ${teamName(idx, me)}`}>
-        <p className="text-sm text-ink-2">Priced above what he scores, scoring above his volume, or rising on the charts: worth more in a trade than in your lineup.</p>
+        <p className="text-sm text-ink-2">Priced above what he scores, or rising on the charts: worth more in a trade than in your lineup.</p>
         {table(sell, 'sell')}
       </Section>
-      {!idx.ds.usage?.length && <p className="text-sm text-ink-3 lg:col-span-2">Volume vs production isn't loaded yet; it arrives with the Tuesday FantasyPros task. Scoring and charts have to be {EDGE} or more value apart to show.</p>}
+      <p className="text-sm text-ink-3 lg:col-span-2">Scoring and charts have to be {EDGE} or more value apart to show.</p>
     </div>
   );
 }

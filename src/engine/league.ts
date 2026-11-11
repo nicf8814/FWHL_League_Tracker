@@ -158,7 +158,6 @@ export function dataGaps(idx: Index): Gap[] {
   if (thin.length) gaps.push({ what: `Weeks with no free-agent scores (${thin.map((w) => `Wk ${w}`).join(', ')})`, count: thin.length, total: idx.scoresThrough, fix: 'Run the "FWHL 5 - Backfill Weeks 1-6" task; trade grades in those weeks use a rougher replacement level.' });
   const missing = Array.from({ length: idx.scoresThrough }, (_, i) => i + 1).filter((w) => !idx.weeks.has(w));
   if (missing.length) gaps.push({ what: `Played weeks with no player scores (${missing.map((w) => `Wk ${w}`).join(', ')})`, count: missing.length, total: idx.scoresThrough, fix: 'Run the Weekly Results task for those weeks.' });
-  if (!idx.ds.usage?.length) gaps.push({ what: 'No volume vs production (usage) data', count: 1, total: 1, fix: 'Runs on its own every Tuesday (FantasyPros Stats task).' });
   return gaps;
 }
 

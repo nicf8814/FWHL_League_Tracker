@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import type { Dataset } from '../src/data/schema.ts';
 import { validateDataset } from '../src/data/validate.ts';
-import { applyChart, applyProjections, applyResults, applyRosters, dropFantasyProsRanks, formatDataset, newReport, Players, slug, type ResultsIn, type RostersIn } from './updates.ts';
+import { applyChart, applyProjections, applyResults, applyRosters, dropFantasyPros, formatDataset, newReport, Players, slug, type ResultsIn, type RostersIn } from './updates.ts';
 
 const fixture = readFileSync(new URL('../test/fixtures/fwhl-2026-11-10.json', import.meta.url), 'utf8');
 const fresh = (): Dataset => JSON.parse(fixture);
@@ -125,13 +125,15 @@ test('the file format round-trips', () => {
   assert.deepEqual(JSON.parse(formatDataset(ds)), ds);
 });
 
-test('dropping FantasyPros ranks clears them and their source, and leaves a valid file', () => {
+test('dropping FantasyPros clears its ranks, usage and sources, and leaves a valid file', () => {
   const ds = fresh();
   const n = ds.rankings.filter((r) => r.source === 'fantasypros').length;
   assert.ok(n > 0, 'the fixture has FantasyPros ranks');
-  const rep = dropFantasyProsRanks(ds);
+  const u = ds.usage?.length ?? 0;
+  const rep = dropFantasyPros(ds);
   assert.equal(ds.rankings.length, 0);
-  assert.equal(ds.meta.sources.some((s) => s.id === 'fantasypros'), false);
-  assert.deepEqual(rep.changes, [`Removed ${n} FantasyPros ranks`]);
+  assert.equal(ds.usage, undefined);
+  assert.equal(ds.meta.sources.some((s) => s.id === 'fantasypros' || s.id === 'fpstats'), false);
+  assert.deepEqual(rep.changes, [`Removed ${n} FantasyPros ranks and ${u} usage rows`]);
   assert.ok(validateDataset(JSON.parse(formatDataset(ds))).ok);
 });

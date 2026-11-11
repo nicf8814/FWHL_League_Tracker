@@ -6,7 +6,7 @@ import type { Dataset } from '../src/data/schema.ts';
 import { validateDataset } from '../src/data/validate.ts';
 import { buildIndex, freshness } from '../src/engine/league.ts';
 import {
-  applyChart, applyProjections, applyResults, applyRosters, applyUsage, arizonaToday, dropFantasyProsRanks, formatDataset, chartRowsFromCsv,
+  applyChart, applyProjections, applyResults, applyRosters, arizonaToday, dropFantasyPros, formatDataset, chartRowsFromCsv,
   type ChartRow, type Report,
 } from './updates.ts';
 
@@ -40,7 +40,7 @@ function summary(ds: Dataset) {
   return {
     currentWeek: idx.currentWeek,
     scoresThrough: idx.scoresThrough,
-    counts: { players: ds.players.length, rosterSpots: rostered, playerWeeks: ds.playerWeeks.length, transactions: ds.transactions.length, usage: ds.usage?.length ?? 0 },
+    counts: { players: ds.players.length, rosterSpots: rostered, playerWeeks: ds.playerWeeks.length, transactions: ds.transactions.length },
     rosteredWithEspnId: `${withId}/${rostered}`,
     sources: freshness(idx).map((s) => `${s.id}: ${s.asOf} (${s.age}${s.stale ? ', stale' : ''})`),
   };
@@ -70,16 +70,15 @@ try {
     case 'results': { const ds = load(); finish(ds, applyResults(ds, readJson(rest[0]) as never, today)); break; }
     case 'projections': { const ds = load(); finish(ds, applyProjections(ds, readJson(rest[0]) as never, today, force)); break; }
     case 'rosters': { const ds = load(); finish(ds, applyRosters(ds, readJson(rest[0]) as never, today, force)); break; }
-    case 'usage': { const ds = load(); finish(ds, applyUsage(ds, readJson(rest[0]) as never)); break; }
     case 'chart': {
       const [source, week, csv] = rest;
       const ds = load();
       finish(ds, applyChart(ds, source as 'peaked' | 'menton', Number(week), chartRows(csv)));
       break;
     }
-    case 'drop-fantasypros': { const ds = load(); finish(ds, dropFantasyProsRanks(ds)); break; }
+    case 'drop-fantasypros': { const ds = load(); finish(ds, dropFantasyPros(ds)); break; }
     default:
-      fail(`unknown command "${cmd ?? ''}". Use: check | results <json> | projections <json> | rosters <json> | usage <json> | chart <peaked|menton> <week> <csv>`);
+      fail(`unknown command "${cmd ?? ''}". Use: check | results <json> | projections <json> | rosters <json> | chart <peaked|menton> <week> <csv>`);
   }
 } catch (e) {
   fail(e instanceof Error ? e.message : String(e));

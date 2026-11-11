@@ -35,7 +35,7 @@ const SECTIONS: Section[] = [
 const sectionsFor = (passed: boolean) => (passed ? SECTIONS.map((x) => ({ ...x, pages: x.pages.filter((p) => p.route !== 'finder') })) : SECTIONS);
 const sectionOf = (r: Route) => SECTIONS.find((x) => x.pages.some((p) => p.route === r))!;
 export const PAGES = SECTIONS.flatMap((x) => x.pages);
-const SHORT: Record<string, string> = { espn: 'ESPN', peaked: 'Peaked', menton: 'Menton', fpstats: 'FantasyPros usage' };
+const SHORT: Record<string, string> = { espn: 'ESPN', peaked: 'Peaked', menton: 'Menton' };
 const VIEWS: Record<Route, React.ComponentType> = { home: Home, finder: Finder, analyzer: Analyzer, tracker: Tracker, standings: Standings, players: Players, teams: Teams, data: DataSettings, method: Method, keepers: Keepers, market: Market, waivers: Waivers };
 
 const EXTRA: Command[] = [

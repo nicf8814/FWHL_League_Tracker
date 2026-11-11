@@ -21,9 +21,8 @@ Nic gathers data with scheduled tasks that follow docs/gathering.md and send him
 | `backfill-week<L>.json` | `results` | `Data: backfill Week <L> with free agents` (one commit for several weeks: `Data: backfill Weeks <a>-<b> with free agents`) |
 | `projections-week<C>.json` | `projections` | `Data: Week <C> projections` |
 | `rosters-<date>.json` | `rosters` | `Data: rosters and injuries <YYYY-MM-DD>` |
-| `usage-week<N>.json` | `usage` | `Data: FantasyPros usage Week <N>` |
 
-1. Copy the file to `/tmp/fwhl/`, then run the command with `--dry-run`. Stop and tell Nic if it errors, if `created` lists more than 10 players (40 for a backfill week), or if `unmatched` isn't empty for `usage` (list the names).
+1. Copy the file to `/tmp/fwhl/`, then run the command with `--dry-run`. Stop and tell Nic if it errors or if `created` lists more than 10 players (40 for a backfill week).
 2. Run it without `--dry-run`, run the checks above, commit only the data file, rebase on `origin/main` and push to `main`.
 3. Check the newest Deploy run on `main` succeeds (up to 5 minutes). If it sits queued, start Deploy by hand (`workflow_dispatch` on `main`).
 4. Give Nic the commit link, the `changes` line, players added, ESPN ids filled in, and whether the deploy succeeded. For a backfill, check `npm run data:check` still shows scores through the latest week, not Week 6.
