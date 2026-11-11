@@ -74,6 +74,7 @@ function Body({ pid, onClose }: { pid: PlayerId; onClose: () => void }) {
           {b.keeper > 0.05 && <> · keeper premium <span className="num">{signed(b.keeper)}</span> for {teamName(idx, owner)}</>}
         </p>
         {inj && <p className="text-sm"><b>Status.</b> {inj.note || inj.status}{base.isOut(pid) && base.returnWeek(pid) < 18 ? `, back around Week ${base.returnWeek(pid)}` : base.returnWeek(pid) >= 18 ? ', out for the season' : ''}.</p>}
+        {!inj && base.stale.has(pid) && <p className="text-sm"><b>Status.</b> Scored 0 with no projection in his last {base.stale.get(pid)} games, so he's treated as out until he plays again.</p>}
         {news && <p className="text-sm"><b>News.</b> {news.note} (<span className="num">{signed(news.pct, 0)}%</span>).</p>}
         {k?.note && <p className="text-sm text-ink-2"><b>Keeper.</b> {k.note}.</p>}
         {weeks.length > 0 && (

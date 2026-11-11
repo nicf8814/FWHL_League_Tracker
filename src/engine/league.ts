@@ -141,7 +141,7 @@ export function deadlineInfo(idx: Index, now = Date.now()) {
   const d = Date.parse(idx.ds.season.tradeDeadline);
   const ms = d - now;
   const days = Math.ceil(ms / 864e5);
-  return { passed: ms <= 0, days, label: ms <= 0 ? 'Deadline passed' : `${days} day${days === 1 ? '' : 's'} to deadline`, date: new Date(d) };
+  return { passed: ms <= 0, days, label: ms <= 0 ? 'Deadline passed' : `${days} day${days === 1 ? '' : 's'} to deadline (${new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})`, date: new Date(d) };
 }
 
 export const teamName =(idx: Index, id: TeamId | null | undefined) => (id == null ? 'Free agent' : idx.teams.get(id)?.name ?? `Team ${id}`);

@@ -121,6 +121,7 @@ function Side({ title, team, other, picked, onTeam, onToggle }: { title: string;
         <h2 className="flex items-center gap-2 text-lg"><Mono team={team} />{teamName(idx, team)} {title}</h2>
         <span className="num text-sm text-ink-3">{picked.length ? `${picked.length} · ${fmt(picked.reduce((s, p) => s + V.bv(p), 0))}` : 'none yet'}</span>
       </div>
+      <p className="-mt-2 flex justify-end gap-4 text-xs text-ink-3" aria-hidden="true"><span>Pts/wk</span><span>Value</span></p>
       <ul className="grid">
         {roster.map((p) => {
           const on = picked.includes(p);
