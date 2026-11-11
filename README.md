@@ -21,12 +21,20 @@ Requires Node 22.18 or newer (the tests run TypeScript directly).
 
 | View | What it does |
 | --- | --- |
-| Trade finder | Pick a position you need, tag your players Sell / Open / Keep, add players you want. Finds offers the other manager should accept, ranked by points per week your lineup gains. |
-| Analyzer | Two teams, tick what each sends. Verdict on trade value, each lineup's weekly change, how the partner sees it by his own values, and this week's lineup before and after. The trade lives in the URL, so a trade is a link. |
-| Standings | Record, PF, PA, max PF, lineup efficiency, playoff odds (10,000 simulated seasons) split into the record path and the points-for 6th seed, odds trend by week, weekly results including the Weeks 12-14 top-6 rule. |
-| Players | Every valued player: trade value, market vs model, pts/wk, above replacement, each chart, keeper cost. |
+| Trade finder | Pick a position you need, tag your players Sell / Open / Keep (or in bulk), add players you want. Finds offers the other manager should accept, ranked by points per week your lineup gains; says what each partner needs. Pin or hide offers. Runs in a worker. Retired after the deadline. |
+| Analyzer | Two teams, tick what each sends. Verdict on trade value, how each chart and the scoring model read it on their own, each lineup's weekly change (rosters stay the same size), how the partner sees it. Undo/redo, save trades and compare two or three, share as a link or text. |
+| Trade tracker | Every trade graded per team (production plus value, keepers on top), record with and without it, and the league ripple. What if: vetoed trades as if they went through, and any trade rewound with its chain. |
+| Buy & sell | Where scoring and the charts disagree, plus volume vs production, chart momentum and injury returns. |
+| Waivers | Free agents ranked by what they add to your lineup after the cut. |
+| Keepers | 2027 keeper calls: auction worth at the player's points rank vs his keeper cost, best set per team, league bargains. |
+| Standings | This week for your team, records, PF, PA, max PF, efficiency, playoff odds (10,000 simulated seasons) by record path and the points-for seed, odds trend, weekly results with the Weeks 12-14 top-6 rule. |
+| Players | Every valued player; sort any column, choose columns, export CSV, chart moves since any week. |
+| Chart history | A player's Peaked and Menton values by week, and how well each week's chart ranked players by later scoring. |
 | Teams | Any roster by position with role, pts/wk and value. |
-| Data & settings | Your team, data freshness per source, value engine weights, backup export / import / reset. |
+| Data & settings | Your team, theme, data sources and gaps, injury return weeks, value engine presets, chart and FantasyPros import, backup export / import / reset. |
+| How it works | The methodology in plain words. |
+
+Ctrl/⌘ K (or /) opens a palette for pages, players, teams and actions; `?` lists the keyboard shortcuts. The app installs to a home screen and works offline.
 
 First visit asks which team is yours. That choice is stored on the device only, so every league mate can use the same site from their own side.
 
@@ -41,16 +49,18 @@ Engine (src/engine)              Pure TypeScript, no DOM. Tested with Node.
   ├─ league.ts   indexes, current week, standings, freshness
   ├─ model.ts    projections, availability, chart blend, model, keepers, weekly lineup gains
   ├─ trade.ts    trade validation, evaluation, URL encoding
-  ├─ finder.ts   trade search
+  ├─ finder.ts   trade search and team needs (runs in finder.worker.ts via finderClient.ts)
+  ├─ replay.ts   trade tracker and what-ifs: grades, records with and without, the chain of trades
+  ├─ keepers.ts  2027 keeper calls
   └─ sim.ts      season simulation (runs in sim.worker.ts via simClient.ts)
   │
-Repository (src/data/repository.ts)   loadDataset / saveDataset / resetDataset / settings
+Repository (src/data/repository.ts)   loadDataset / saveDataset / resetDataset / settings / saved trades
   └─ local adapter: bundled seed JSON + IndexedDB; settings in localStorage
 ```
 
-To add a real backend later, write another `Repository` with the same four methods and pass it to `<LeagueProvider repo={...}>`. Nothing above it changes.
+To add a real backend later, write another `Repository` with the same methods (data, settings, saved trades) and pass it to `<LeagueProvider repo={...}>`. Nothing above it changes.
 
-**Performance.** The playoff simulation depends only on the schedule, results and team strength, so it runs in a Web Worker and is cached by exactly those inputs: dragging a value slider never reruns it. Finder results are cached by the full query, so opening a team or showing more offers is instant.
+**Performance.** The playoff simulation depends only on the schedule, results and team strength, so it runs in a Web Worker and is cached by exactly those inputs: dragging a value slider never reruns it. The trade finder runs in its own worker too, cached by the full query, so typing and tagging never freeze the page. The tracker opens at once and fills in playoff odds for both worlds a moment later.
 
 ## Data
 
