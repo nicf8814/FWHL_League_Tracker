@@ -1,21 +1,23 @@
 import { useMemo, useState } from 'react';
 import { useLeague, useSimHistory } from '../data/store.tsx';
 import { bestActual, standings, teamName, type StandingRow } from '../engine/league.ts';
+import { luck } from '../engine/luck.ts';
 import { rank6 } from '../engine/sim.ts';
-import { fmt, Mono, pct, Section } from '../ui/components.tsx';
+import { fmt, Mono, pct, Section, signed, tone } from '../ui/components.tsx';
 import { ThisWeek } from './ThisWeek.tsx';
 import { useFull } from '../ui/detail.ts';
 
-type Key = 'seed' | 'pf' | 'pa' | 'maxPf' | 'odds';
+type Key = 'seed' | 'pf' | 'pa' | 'maxPf' | 'luck' | 'odds';
 const COLS: [Key, string][] = [['seed', 'Seed'], ['pf', 'PF'], ['pa', 'PA'], ['maxPf', 'Max PF'], ['odds', 'Playoffs']];
 
 export default function Standings() {
   const { idx, sim, settings } = useLeague();
   const rows = useMemo(() => standings(idx), [idx]);
+  const L = useMemo(() => luck(idx.teamIds, idx.games, idx.ds.season.top6Weeks), [idx]);
   const history = useSimHistory();
   const [sort, setSort] = useState<{ k: Key; dir: 1 | -1 }>({ k: 'seed', dir: 1 });
   const val = (r: StandingRow): number =>
-    sort.k === 'seed' ? -r.seed : sort.k === 'odds' ? (sim?.odds[r.teamId] ?? 0) + r.pf / 1e7 : sort.k === 'maxPf' ? r.maxPf ?? -1 : r[sort.k];
+    sort.k === 'seed' ? -r.seed : sort.k === 'odds' ? (sim?.odds[r.teamId] ?? 0) + r.pf / 1e7 : sort.k === 'maxPf' ? r.maxPf ?? -1 : sort.k === 'luck' ? L.get(r.teamId)!.luck : r[sort.k];
   const sorted = [...rows].sort((a, b) => sort.dir * (val(b) - val(a)));
   const byRecord = idx.ds.season.seedsByRecord;
   const click = (k: Key) => setSort((s) => (s.k === k && k !== 'seed' ? { k, dir: s.dir === 1 ? -1 : 1 } : { k, dir: 1 }));
@@ -46,8 +48,12 @@ export default function Standings() {
           Seeds 1 to {byRecord} go by record (ties broken head to head, then points for). Seed {byRecord + 1} is the most points for among everyone else.
           Weeks {idx.ds.season.top6Weeks.join(', ')} are not head to head: the top 6 scores get a win.
         </p>}
+        {full && <p className="max-w-[70ch] text-sm text-ink-2">
+          Luck is wins minus expected wins (xW). Each week your score is compared with all 11 others: beating 8 of them is worth 8/11 of a win, whoever you actually played.
+          Top 6 weeks have no opponent, so they add no luck. {lucky(L, idx)}
+        </p>}
         <div className="-mx-4 overflow-x-auto md:mx-0">
-          <table className={`tbl ${full ? 'min-w-[46rem]' : 'max-w-3xl'}`}>
+          <table className={`tbl ${full ? 'min-w-[56rem]' : 'max-w-3xl'}`}>
             <thead>
               <tr>
                 {th('seed', '#', 'l w-10')}
@@ -55,6 +61,9 @@ export default function Standings() {
                 <th>W-L</th>
                 {COLS.slice(1, full ? 4 : 2).map(([k, l]) => th(k, l))}
                 {full && <th>Eff</th>}
+                {full && <th title="Expected wins: the record your weekly scores earned against the whole league">xW</th>}
+                {th('luck', 'Luck')}
+                {full && <th title="Record if you played every team every week">All-play</th>}
                 {th('odds', 'Playoffs')}
                 {full && <><th>Top {byRecord} by record</th>
                 <th>Seed {byRecord + 1} by PF</th>
@@ -75,7 +84,10 @@ export default function Standings() {
                     <td className="n">{fmt(r.pf)}</td>
                     {full && <><td className="n">{fmt(r.pa)}</td>
                     <td className="n">{fmt(r.maxPf)}</td>
-                    <td className="n">{r.efficiency === null ? '–' : `${Math.round(r.efficiency * 100)}%`}</td></>}
+                    <td className="n">{r.efficiency === null ? '–' : `${Math.round(r.efficiency * 100)}%`}</td>
+                    <td className="n text-ink-2">{fmt(L.get(r.teamId)!.xw)}</td></>}
+                    <td className={`n ${tone(L.get(r.teamId)!.luck, 0.5)}`}>{signed(L.get(r.teamId)!.luck)}</td>
+                    {full && <td className="n text-ink-2">{L.get(r.teamId)!.allPlay.w}-{L.get(r.teamId)!.allPlay.l}{L.get(r.teamId)!.allPlay.t ? `-${L.get(r.teamId)!.allPlay.t}` : ''}</td>}
                     <td className="n font-semibold">
                       {sim ? <span className="inline-flex items-center justify-end gap-2"><span className="meter w-16 sm:w-24" aria-hidden="true"><span className={pctTone(sim.odds[r.teamId]!)} style={{ width: `${Math.max(2, sim.odds[r.teamId]! * 100)}%` }} /></span><span className="w-11">{pct(sim.odds[r.teamId])}</span></span> : '…'}
                     </td>
@@ -159,4 +171,11 @@ function Week() {
       )}
     </Section>
   );
+}
+
+function lucky(L: ReturnType<typeof luck>, idx: Parameters<typeof teamName>[0]): string {
+  const rows = [...L].filter(([, x]) => x.games > 0).sort((a, b) => b[1].luck - a[1].luck);
+  if (rows.length < 2) return '';
+  const [hi, lo] = [rows[0]!, rows[rows.length - 1]!];
+  return `Luckiest so far: ${teamName(idx, hi[0])} (${signed(hi[1].luck)} wins). Unluckiest: ${teamName(idx, lo[0])} (${signed(lo[1].luck)}).`;
 }
