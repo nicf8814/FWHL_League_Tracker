@@ -1,7 +1,8 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import type { PlayerId, Pos, TeamId } from '../data/schema.ts';
 import { useDebounced, useLeague } from '../data/store.tsx';
-import { findTrades, finderKey, hasInput, type FinderQuery, type Offer, type TeamOffers } from '../engine/finder.ts';
+import { finderKey, hasInput, type FinderQuery, type Offer, type TeamOffers } from '../engine/finder.ts';
+import { findTradesAsync } from '../engine/finderClient.ts';
 import { teamName } from '../engine/league.ts';
 import { tradeToQuery } from '../engine/trade.ts';
 import { href } from '../app/router.ts';
@@ -40,21 +41,23 @@ export default function Finder() {
     200,
   );
   const key = finderKey(q, valuesVersion);
-  const [result, setResult] = useState<{ key: string; data: TeamOffers[] } | null>(null);
+  const [result, setResult] = useState<{ key: string; data: TeamOffers[]; error?: string } | null>(null);
   const busy = hasInput(q) && result?.key !== key;
 
   useEffect(() => {
     if (!hasInput(q)) return;
     const hit = RESULTS.get(key);
     if (hit) { setResult({ key, data: hit }); return; }
-    // Yield one frame so "Finding trades…" paints before the search blocks.
-    const t = setTimeout(() => {
-      const data = findTrades(V, q);
-      RESULTS.set(key, data);
-      if (RESULTS.size > MAX_CACHED) RESULTS.delete(RESULTS.keys().next().value!);
-      setResult({ key, data });
-    }, 16);
-    return () => clearTimeout(t);
+    let live = true; // a newer search makes this one's answer stale
+    findTradesAsync({ ds: idx.ds, version: valuesVersion, ramp: V.base.ramp, settings: V.settings, sim: V.sim, q, V }).then(
+      (data) => {
+        RESULTS.set(key, data);
+        if (RESULTS.size > MAX_CACHED) RESULTS.delete(RESULTS.keys().next().value!);
+        if (live) setResult({ key, data });
+      },
+      (e: unknown) => live && setResult({ key, data: [], error: e instanceof Error ? e.message : String(e) }),
+    );
+    return () => { live = false; };
   }, [key]); // key encodes q and the values version, so V and q are current here
 
   const changeTeam = (t: TeamId | null) => {
@@ -105,6 +108,8 @@ export default function Finder() {
         </div>
         {!hasInput(q) ? (
           <Empty>Pick the position you need, tag players to sell, or add a player you want.</Empty>
+        ) : !busy && result?.error ? (
+          <p role="alert" className="text-loss">The search failed: {result.error}. Change a setting to try again.</p>
         ) : !busy && !data.length ? (
           <Empty>No fair offers at these settings. Try moving "Who wins on paper" or allowing a small weekly loss.</Empty>
         ) : (

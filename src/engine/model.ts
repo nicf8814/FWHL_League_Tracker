@@ -17,6 +17,7 @@ const WEEKLY_LOSS_OK = 1; // pts/wk you can lose and still call it fair
 
 export interface Base {
   idx: Index;
+  ramp: boolean; // productionRamp it was built with
   now: number;
   proj: Map<PlayerId, number>; // pts/wk after the production ramp
   stale: Map<PlayerId, number>; // missed-games rule: games in a row with 0 points and no projection
@@ -78,7 +79,7 @@ export function buildBase(idx: Index, productionRamp: boolean): Base {
     ret.set(p, r);
     return r;
   };
-  const base: Base = { idx, now, proj, stale, isOut, outTag, returnWeek, strength: {} };
+  const base: Base = { idx, ramp: productionRamp, now, proj, stale, isOut, outTag, returnWeek, strength: {} };
   for (const t of idx.teamIds) base.strength[t] = lineup(base, (idx.roster.get(t) ?? []).filter((p) => !isOut(p)), () => 1).start;
   return base;
 }
@@ -118,6 +119,7 @@ export interface Blend {
 export interface Values {
   base: Base;
   settings: Settings;
+  sim: SimResult | null;
   oddsReady: boolean;
   teamOdds: (t: TeamId | undefined) => number;
   keepWeight: (t: TeamId) => number;
@@ -366,7 +368,7 @@ export function buildValues(base: Base, settings: Settings, sim: SimResult | nul
   };
 
   return {
-    base, settings, oddsReady: !!sim, teamOdds, keepWeight, blend, bv, chart, aboveReplacement, replacement, replacementHealthy: replPlay, faReplacement, faFill,
+    base, settings, sim, oddsReady: !!sim, teamOdds, keepWeight, blend, bv, chart, aboveReplacement, replacement, replacementHealthy: replPlay, faReplacement, faFill,
     keeperValue, keepConv, studPremium, injuryCorrection, availFor, weekGain, rosterAfter, FAIR_RANGE, WEEKLY_LOSS_OK,
   };
 }
