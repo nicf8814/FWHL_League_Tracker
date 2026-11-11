@@ -96,15 +96,29 @@ export function PosMark({ pos }: { pos: Pos }) {
 }
 
 // Native <dialog>: focus trap, Escape and inert background come from the browser.
-export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
+export function Sheet({ open, onClose, title, children, ownHistory = true }: { open: boolean; onClose: () => void; title: string; children: ReactNode; ownHistory?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const close = useRef(onClose);
+  close.current = onClose;
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
     if (open && !d.open) d.showModal();
     if (!open && d.open) d.close();
   }, [open]);
+  // LOGIC-8: an open sheet owns one history entry, so the back button or gesture closes it instead of leaving the page.
+  useEffect(() => {
+    if (!open || !ownHistory) return; // ownHistory=false: the page put the sheet in the URL itself
+    history.pushState({ fwhlSheet: titleId }, '');
+    let mine = true;
+    const onPop = () => { mine = false; close.current(); };
+    window.addEventListener('popstate', onPop);
+    return () => {
+      window.removeEventListener('popstate', onPop);
+      if (mine && (history.state as { fwhlSheet?: string } | null)?.fwhlSheet === titleId) history.back();
+    };
+  }, [open, ownHistory, titleId]);
   return (
     <dialog
       ref={ref}

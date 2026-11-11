@@ -132,3 +132,38 @@ function Compare({ list, evs }: { list: SavedTrade[]; evs: (Evaluation | null)[]
     </div>
   );
 }
+
+// Share or copy a trade (audit FEAT-3): the link opens the same trade; the text reads well in a group chat.
+export function tradeText(idx: ReturnType<typeof useLeague>['idx'], t: { a: TeamId; b: TeamId; aGives: PlayerId[]; bGives: PlayerId[] }, ev: Evaluation) {
+  const names = (ids: PlayerId[]) => ids.map((p) => idx.players.get(p)?.name ?? p).join(', ') || 'nothing';
+  const A = teamName(idx, t.a), B = teamName(idx, t.b);
+  return [
+    `${A} sends: ${names(t.aGives)}`,
+    `${B} sends: ${names(t.bGives)}`,
+    `Verdict: ${ev.fairBoth ? 'Fair for both' : ev.verdict.label} (${signed(ev.verdict.diff)} value for ${A})`,
+    `Lineups: ${A} ${signed(ev.gainA)} pts/wk, ${B} ${signed(ev.gainB)} pts/wk`,
+  ].join('\n');
+}
+
+export function ShareTrade({ trade, ev }: { trade: { a: TeamId; b: TeamId; aGives: PlayerId[]; bGives: PlayerId[] }; ev: Evaluation }) {
+  const { idx } = useLeague();
+  const [msg, setMsg] = useState('');
+  const url = `${location.origin}${location.pathname}${href('analyzer', tradeToQuery(trade))}`;
+  const text = tradeText(idx, trade, ev);
+  const copy = async (s: string, what: string) => {
+    try { await navigator.clipboard.writeText(s); setMsg(`${what} copied.`); } catch { setMsg('Copy is blocked here. Select the address bar to copy the link.'); }
+  };
+  const share = async () => {
+    try { await navigator.share({ title: 'FWHL trade', text, url }); } catch (e) { if ((e as Error).name !== 'AbortError') copy(`${text}\n${url}`, 'Trade'); }
+  };
+  return (
+    <div className="grid justify-items-center gap-1">
+      <div className="flex flex-wrap justify-center gap-1">
+        {typeof navigator !== 'undefined' && 'share' in navigator && <button type="button" className="btn btn-quiet" onClick={share}>Share</button>}
+        <button type="button" className="btn btn-quiet" onClick={() => copy(url, 'Link')}>Copy link</button>
+        <button type="button" className="btn btn-quiet" onClick={() => copy(`${text}\n${url}`, 'Trade')}>Copy as text</button>
+      </div>
+      <span className="text-xs text-ink-3" role="status">{msg}</span>
+    </div>
+  );
+}

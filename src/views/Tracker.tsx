@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PlayerId, TeamId, Transaction } from '../data/schema.ts';
 import { useLeague } from '../data/store.tsx';
 import { teamName } from '../engine/league.ts';
@@ -31,9 +31,17 @@ function useEvaluations(list: Transaction[]) {
 
 export default function Tracker() {
   const { idx, settings } = useLeague();
-  const { query, replace } = useRoute();
+  const { query, replace, go } = useRoute();
   const tab: Tab = (['all', 'mine', 'whatif'] as const).find((t) => t === query.get('tab')) ?? 'all';
-  const [open, setOpen] = useState<string | null>(null);
+  // The open trade is in the URL, so it can be shared, and back closes it (LOGIC-8).
+  const open = query.get('tx');
+  const pushed = useRef(false);
+  const setOpen = (id: string | null) => {
+    if (!id && !open) { pushed.current = false; return; } // already closed by the back button
+    if (id) { pushed.current = true; go('tracker', `tab=${tab}&tx=${encodeURIComponent(id)}`); }
+    else if (pushed.current) { pushed.current = false; history.back(); }
+    else replace('tracker', `tab=${tab}`); // opened from a shared link: nothing of ours to go back to
+  };
   const trades = useMemo(() => idx.ds.transactions.filter((t) => t.type === 'trade').sort((a, b) => b.date.localeCompare(a.date) || b.effectiveWeek - a.effectiveWeek), [idx]);
   const vetoes = useMemo(() => idx.ds.transactions.filter((t) => t.type === 'veto').sort((a, b) => b.date.localeCompare(a.date)), [idx]);
   const mine = settings.myTeamId;
@@ -57,7 +65,7 @@ export default function Tracker() {
       ) : (
         <WhatIfList vetoes={vetoes} trades={trades} evals={evals} onOpen={setOpen} />
       )}
-      <Sheet open={!!sel} onClose={() => setOpen(null)} title={sel ? title(idx, sel.s) : ''}>
+      <Sheet ownHistory={false} open={!!sel} onClose={() => setOpen(null)} title={sel ? title(idx, sel.s) : ''}>
         {sel && <Analysis s={sel.s} ev={sel.ev} />}
       </Sheet>
     </div>
@@ -148,7 +156,10 @@ function Analysis({ s, ev }: { s: Scenario; ev: Evaluation }) {
   const r = ev.res.get(tab)!;
   return (
     <div className="grid gap-5">
-      <p className="text-sm text-ink-3">Week {s.tx.week} · {dateLabel(s.tx.date)} · {ev.n ? `${ev.n} week${ev.n > 1 ? 's' : ''} of results` : 'no games played yet'}{s.veto ? ' · what if it went through' : ''}</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-ink-3">Week {s.tx.week} · {dateLabel(s.tx.date)} · {ev.n ? `${ev.n} week${ev.n > 1 ? 's' : ''} of results` : 'no games played yet'}{s.veto ? ' · what if it went through' : ''}</p>
+        <CopySummary s={s} ev={ev} />
+      </div>
       <div className="grid grid-cols-2 gap-px bg-rule" role="group" aria-label="Team">
         {teams.map((tm) => (
           <button key={tm} type="button" aria-pressed={tab === tm} onClick={() => setTab(tm)} className={`flex items-center gap-3 p-3 text-left ${tab === tm ? 'border-b-[3px] border-accent bg-surface' : 'border-b-[3px] border-transparent bg-paper text-ink-3'}`}>
@@ -170,6 +181,27 @@ function Analysis({ s, ev }: { s: Scenario; ev: Evaluation }) {
         </div>
       </details>
     </div>
+  );
+}
+
+// FEAT-3: grades and records as text, with a link that opens this sheet.
+function CopySummary({ s, ev }: { s: Scenario; ev: Evaluation }) {
+  const { idx } = useLeague();
+  const [msg, setMsg] = useState('');
+  const text = () => [
+    `${title(idx, s)} (Week ${s.tx.week})`,
+    ...teamsOf(s.tx).map((tm) => {
+      const r = ev.res.get(tm)!, now = ev.calc.real.get(tm)!, alt = ev.calc.alt.get(tm)!;
+      const got = lastNames(idx, s.tx.legs.filter((l) => l.toTeamId === tm).map((l) => l.playerId));
+      return `${teamName(idx, tm)} got ${got}: ${r.grade}, ${s.veto ? `${wl(alt)} if it went through (really ${wl(now)})` : `${wl(now)} (${wl(alt)} without it)`}`;
+    }),
+    location.href,
+  ].join('\n');
+  return (
+    <span className="flex items-center gap-2">
+      <span className="text-xs text-ink-3" role="status">{msg}</span>
+      <button type="button" className="btn btn-quiet" onClick={async () => { try { await navigator.clipboard.writeText(text()); setMsg('Copied.'); } catch { setMsg('Copy is blocked here.'); } }}>Copy summary</button>
+    </span>
   );
 }
 

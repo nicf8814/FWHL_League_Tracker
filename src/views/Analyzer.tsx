@@ -7,7 +7,7 @@ import { evaluate, MAX_PER_SIDE, tradeFromQuery, tradeToQuery, type Evaluation, 
 import { useRoute } from '../app/router.ts';
 import { Empty, fmt, Mono, PlayerName, PosMark, signed, TeamSelect, tone } from '../ui/components.tsx';
 import { usePlayerSheet } from './PlayerSheet.tsx';
-import { SavedTrades, SaveTradeButton } from './SavedTrades.tsx';
+import { SavedTrades, SaveTradeButton, ShareTrade } from './SavedTrades.tsx';
 
 // The trade lives in the URL, so a trade is a link and the back button undoes a team change.
 function useTrade() {
@@ -57,7 +57,7 @@ export default function Analyzer() {
         <div className="order-1 lg:order-2">
           <div className="grid gap-3 lg:sticky lg:top-20">
             <VerdictPanel ev={ev} a={T.a} b={T.b} onClear={() => T.set({ aGives: [], bGives: [] })} />
-            {ev && !ev.errors.length && <SaveTradeButton trade={T} />}
+            {ev && !ev.errors.length && T.b !== null && <><SaveTradeButton trade={T} /><ShareTrade trade={{ a: T.a, b: T.b, aGives: T.aGives, bGives: T.bGives }} ev={ev} /></>}
           </div>
         </div>
         <div className="perf order-3 hidden lg:block" aria-hidden="true" />

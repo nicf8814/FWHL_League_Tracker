@@ -26,7 +26,7 @@ export function useRoute() {
   }, []);
   // Update the query without adding a history entry (typing, toggling players).
   const replace = useCallback((r: Route, q?: string) => {
-    history.replaceState(null, '', href(r, q));
+    history.replaceState(history.state, '', href(r, q));
     window.dispatchEvent(new HashChangeEvent('hashchange'));
   }, []);
   return { route, query, go, replace };
