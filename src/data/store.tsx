@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { buildIndex, type Index } from '../engine/league.ts';
+import { buildIndex, deadlineInfo, type Index } from '../engine/league.ts';
 import { buildBase, buildValues, type Base, type Values } from '../engine/model.ts';
 import type { SimInput, SimResult } from '../engine/sim.ts';
 import { simulateHistory, simulateOdds } from '../engine/simClient.ts';
@@ -38,6 +38,17 @@ export function useDebounced<T>(value: T, ms: number): T {
     return () => clearTimeout(t);
   }, [value, ms]);
   return v;
+}
+
+// The deadline label and post-deadline mode (FEAT-11) flip on their own while the app is open.
+export function useDeadline() {
+  const { idx } = useLeague();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  return deadlineInfo(idx, now);
 }
 
 export function useSimHistory(): Record<number, Record<number, number>> | null {

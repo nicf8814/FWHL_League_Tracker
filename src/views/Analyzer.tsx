@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { PlayerId, TeamId } from '../data/schema.ts';
-import { useLeague } from '../data/store.tsx';
+import { useDeadline, useLeague } from '../data/store.tsx';
 import { teamName } from '../engine/league.ts';
 import { lineup, type Lineup } from '../engine/model.ts';
 import { evaluate, MAX_PER_SIDE, tradeFromQuery, tradeToQuery, type Evaluation, type Trade } from '../engine/trade.ts';
@@ -29,6 +29,7 @@ function useTrade() {
 export default function Analyzer() {
   const { idx, values: V } = useLeague();
   const T = useTrade();
+  const dl = useDeadline();
   const ev = useMemo(() => (T.b === null ? null : evaluate(V, { a: T.a, b: T.b, aGives: T.aGives, bGives: T.bGives })), [V, T.a, T.b, T.aGives.join(), T.bGives.join()]);
   const toggle = (side: 'aGives' | 'bGives', p: PlayerId) => {
     const cur = T[side];
@@ -37,6 +38,11 @@ export default function Analyzer() {
 
   return (
     <div className="grid grid-cols-1 gap-8">
+      {dl.passed && (
+        <p role="note" className="border-l-[3px] border-accent bg-surface px-4 py-2 text-sm">
+          The trade deadline has passed. Anything here is a what-if: it can't be made until the 2027 season.
+        </p>
+      )}
       {T.dropped.length > 0 && (
         <p role="status" className="border border-even bg-even-soft px-4 py-2 text-sm">
           Removed {T.dropped.map((p) => idx.players.get(p)?.name ?? p).join(', ')}: not on that team's roster in the current data.
