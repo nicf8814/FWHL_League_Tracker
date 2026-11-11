@@ -163,3 +163,26 @@ export function dataGaps(idx: Index): Gap[] {
   if (!idx.ds.usage?.length) gaps.push({ what: 'No volume vs production (usage) data', count: 1, total: 1, fix: 'Runs on its own every Tuesday (FantasyPros Stats task).' });
   return gaps;
 }
+
+// Trade-chart history: source -> week -> player -> value (0-100, each chart's top player = 100).
+export type ChartSource = 'peaked' | 'menton';
+export function chartHistory(ds: Dataset): Record<ChartSource, Map<number, Map<PlayerId, number>>> {
+  const out = { peaked: new Map(), menton: new Map() } as Record<ChartSource, Map<number, Map<PlayerId, number>>>;
+  for (const v of ds.valuations) {
+    if (v.source !== 'peaked' && v.source !== 'menton') continue;
+    const m = out[v.source];
+    if (!m.has(v.week)) m.set(v.week, new Map());
+    m.get(v.week)!.set(v.playerId, v.value);
+  }
+  return out;
+}
+
+// Average of the two charts as of a week (each chart's latest week at or before it). Null if neither rates him.
+export function chartAvgAt(h: ReturnType<typeof chartHistory>, p: PlayerId, week: number): number | null {
+  const vals = (['peaked', 'menton'] as const).flatMap((s) => {
+    const w = Math.max(-1, ...[...h[s].keys()].filter((x) => x <= week));
+    const v = w < 0 ? undefined : h[s].get(w)!.get(p);
+    return v === undefined ? (w < 0 ? [] : [0]) : [v]; // on the chart that week but not listed = 0
+  });
+  return vals.length && vals.some((v) => v > 0) ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+}

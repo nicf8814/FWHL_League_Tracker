@@ -1,7 +1,7 @@
 import { useDeferredValue, useMemo, useState } from 'react';
 import type { Player, Pos, TeamId } from '../data/schema.ts';
 import { useLeague } from '../data/store.tsx';
-import { teamName } from '../engine/league.ts';
+import { chartAvgAt, chartHistory, teamName } from '../engine/league.ts';
 import { fmt, PlayerName, POS_OPTIONS, Seg, signed } from '../ui/components.tsx';
 import { SortHeader, TableTools, useTable, type Col } from '../ui/table.tsx';
 import { usePlayerSheet } from './PlayerSheet.tsx';
@@ -16,6 +16,11 @@ export default function Players() {
   const [who, setWho] = useState<'all' | 'rostered' | 'fa' | `${TeamId}`>('all');
   const [limit, setLimit] = useState(PAGE);
   const term = useDeferredValue(q.trim().toLowerCase());
+  // FEAT-14: compare chart values with an earlier week.
+  const hist = useMemo(() => chartHistory(idx.ds), [idx]);
+  const chartWeeks = useMemo(() => [...new Set([...hist.peaked.keys(), ...hist.menton.keys()])].sort((a, b) => a - b), [hist]);
+  const latest = chartWeeks[chartWeeks.length - 1] ?? 0;
+  const [since, setSince] = useState<number>(() => chartWeeks[chartWeeks.length - 2] ?? latest);
 
   const rows = useMemo(() => {
     return [...idx.players.values()]
@@ -44,13 +49,14 @@ export default function Players() {
       { id: 'menton', label: 'Menton', value: (p) => V.chart(p.id, 'menton') },
       { id: 'fpros', label: 'FPros', value: (p) => V.chart(p.id, 'fantasypros') },
       { id: 'keep', label: "Keep '27", value: (p) => { const k = idx.keeper.get(p.id); return k ? k.cost ?? 'No' : null; }, cell: (p) => { const k = idx.keeper.get(p.id); return k ? (k.cost === null ? 'No' : `$${k.cost}`) : '–'; } },
+      { id: 'move', label: `Charts since Wk ${since}`, value: (p) => { const a = chartAvgAt(hist, p.id, latest), b = chartAvgAt(hist, p.id, since); return a === null || b === null ? null : a - b; }, cell: (p) => { const a = chartAvgAt(hist, p.id, latest), b = chartAvgAt(hist, p.id, since); if (a === null || b === null) return '–'; const d = a - b; return <span className={Math.abs(d) < 0.5 ? 'text-ink-3' : d > 0 ? 'text-gain' : 'text-loss'}>{signed(d)}</span>; } },
       { id: 'bye', label: 'Bye', hidden: true, value: (p) => p.bye },
       { id: 'season', label: 'Season pts', hidden: true, value: (p) => idx.stats.get(p.id)?.seasonPoints },
       { id: 'avg', label: 'Avg', hidden: true, value: (p) => idx.stats.get(p.id)?.seasonAvg },
       { id: 'ros', label: 'ROS proj', hidden: true, value: (p) => idx.stats.get(p.id)?.projRestOfSeason },
       { id: 'rank', label: 'ESPN rank', left: true, hidden: true, value: (p) => idx.stats.get(p.id)?.posRank },
     ];
-  }, [idx, V, base, open]);
+  }, [idx, V, base, open, hist, since, latest]);
   const t = useTable('players', cols, rows, { id: 'value', dir: -1 });
 
   return (
@@ -69,6 +75,12 @@ export default function Players() {
         <label className="grid min-w-[12rem] flex-1 gap-1 text-sm text-ink-3 sm:max-w-xs">
           Search
           <input className="field" type="search" value={q} onChange={(e) => { setQ(e.target.value); setLimit(PAGE); }} placeholder="Player name" />
+        </label>
+        <label className="grid gap-1 text-sm text-ink-3">
+          Chart moves since
+          <select className="field w-auto" value={since} onChange={(e) => setSince(Number(e.target.value))}>
+            {chartWeeks.filter((w) => w < latest).map((w) => <option key={w} value={w}>Week {w}</option>)}
+          </select>
         </label>
         <div className="ml-auto flex items-center gap-3">
           <p className="num text-sm text-ink-3" role="status">{rows.length} players</p>
