@@ -1,0 +1,15 @@
+{
+  "name": "FWHL League Tracker",
+  "short_name": "FWHL",
+  "description": "Trades, standings and player values for the Favre's Waffle House league.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F4F1E8",
+  "theme_color": "#1E3A2F",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

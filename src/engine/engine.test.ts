@@ -4,11 +4,12 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { DEFAULT_SETTINGS, type Dataset } from '../data/schema.ts';
 import { coerceSettings, validateDataset } from '../data/validate.ts';
-import { findTrades } from './finder.ts';
-import { buildIndex, freshness, standings, weekOfDate } from './league.ts';
+import { findTrades, fitsSlot, teamNeeds } from './finder.ts';
+import { buildIndex, chartAccuracy, dataGaps, freshness, standings, weekOfDate } from './league.ts';
 import { buildBase, buildValues, lineup } from './model.ts';
-import { rank6, seed, simulate, type SimInput } from './sim.ts';
-import { evaluate, tradeFromQuery, tradeToQuery, validateTrade } from './trade.ts';
+import { rank6, seed, simulate, tally, type SimInput } from './sim.ts';
+import { keeperCalls, keeperSet } from './keepers.ts';
+import { bySource, evaluate, tradeFromQuery, tradeToQuery, validateTrade } from './trade.ts';
 
 const raw = JSON.parse(readFileSync(new URL('../../test/fixtures/fwhl-2026-11-10.json', import.meta.url), 'utf8'));
 const checked = validateDataset(raw);
@@ -96,7 +97,11 @@ test('regression: the port reproduces the Sandbox engine exactly', () => {
   same(ev.value.aSends, 137.8, 'Nic sends');
   same(ev.value.bSends, 16.2, 'Vince sends');
   same(ev.gainA, -24.1, 'Nic pts/wk');
-  same(ev.gainB, 26.1, 'Vince pts/wk');
+  // The Sandbox showed +26.1; Vince takes 2 for 1, and since LOGIC-5 he cuts his lowest-valued player
+  // to stay at roster size, which costs him 0.2 pts/wk of bye-week depth.
+  same(ev.gainB, 25.9, 'Vince pts/wk');
+  assert.equal(v9.autoDrops(trade.b, trade.bGives, trade.aGives).length, 1, 'Vince cuts one player');
+  assert.deepEqual(v9.autoDrops(trade.a, trade.aGives, trade.bGives), [], 'Nic cuts nobody');
   same(ev.partnerEdge, 121.7, 'Vince on paper');
   assert.equal(ev.verdict.kind, 'lose');
   // At the real current week the value side is unchanged; only the weeks left change.
@@ -123,4 +128,64 @@ test('validation rejects broken data and coerces settings', () => {
   assert.equal(s.myTeamId, null);
   assert.equal(s.marketShare, 100);
   assert.equal(s.chartWeights.peaked, 0);
+});
+
+test('exact ties count as ties (LOGIC-17)', () => {
+  const T = tally([1, 2], [[1, 1, 2, 100, 100, true]], []);
+  assert.deepEqual([T.get(1)!.w, T.get(1)!.t, T.get(2)!.t], [0, 1, 1]);
+  assert.equal(rank6(100, [120, 110, 105, 104, 103, 100, 90, 80, 70, 60, 50]), 'T'); // 5 above, 1 level: straddles 6th
+  // A team 1 game up on a tie keeps the edge: 1.5 wins beats 1.
+  assert.deepEqual(seed([1, 2], (i) => (i === 1 ? 1.5 : 1), () => 0, () => 0, 1), [1, 2]);
+});
+
+test('data gaps name what is missing (LOGIC-14)', () => {
+  const g = dataGaps(idx);
+  assert.ok(g.some((x) => x.what.startsWith('Rostered players without an ESPN id')));
+  assert.ok(g.some((x) => x.what.includes('Wk 1') && x.what.includes('no free-agent scores')), 'Weeks 1-6 only have rostered players');
+  assert.ok(!g.some((x) => x.what.includes('no free-agent scores') && x.what.includes('Wk 7')));
+});
+
+test('chart accuracy is a rank correlation per chart week', () => {
+  const acc = chartAccuracy(idx);
+  assert.ok(acc.length >= 6);
+  for (const a of acc) { assert.ok(a.rho > -1 && a.rho < 1); assert.ok(a.week < idx.scoresThrough); }
+  assert.ok(acc.every((a) => a.rho > 0.2), 'charts should rank players better than chance');
+});
+
+test('keeper calls follow the old kEval rules', () => {
+  const calls = keeperCalls(base);
+  assert.ok(calls.size > 100);
+  for (const c of calls.values()) {
+    if (c.cost === null) assert.equal(c.label, 'none');
+    else if (c.label === 'legit') assert.ok(c.surplus! >= 10 && c.par > 0);
+    else if (c.label === 'border') assert.ok(c.surplus! >= 0 && c.surplus! < 10 && c.par > 0);
+  }
+  const roster = idx.roster.get(team('Nic'))!;
+  assert.ok(keeperSet(calls, roster, 2).length <= 2 || keeperSet(calls, roster, 2).every((p) => calls.get(p)!.label === 'lock'));
+});
+
+test('handcuff insurance counts only for the team holding both (old app, Oct 29)', () => {
+  const on = buildValues(base, { ...DEFAULT_SETTINGS, handcuff: true }, sim);
+  const off = buildValues(base, DEFAULT_SETTINGS, sim);
+  const cmc = pid('Christian McCaffrey'), black = pid('Kaelon Black');
+  assert.ok(on.handcuffOf(black));
+  const nic = team('Nic'); // holds both
+  assert.ok(idx.roster.get(nic)!.includes(cmc) && idx.roster.get(nic)!.includes(black));
+  const lose = (V: typeof on) => V.weekGain(nic, [black], []);
+  assert.ok(lose(on) < lose(off) - 0.1, 'trading away the handcuff costs insurance');
+});
+
+test('each source reads a trade on its own; a split is a toss-up', () => {
+  const trade = { a: team('Nic'), b: team('Vince'), aGives: [pid('Josh Allen'), pid('Christian McCaffrey')], bGives: [pid('Dak Prescott')] };
+  const r = bySource(V, trade);
+  assert.deepEqual(r.reads.map((x) => x.source), ['Peaked', 'Menton', 'FantasyPros', 'Scoring']);
+  assert.ok(r.reads.every((x) => x.verdict.kind === 'lose'), 'everyone says Nic loses this one');
+  assert.equal(r.tossUp, false);
+});
+
+test('team needs name the weakest lineup spot', () => {
+  const n = teamNeeds(V);
+  assert.equal(n.size, 12);
+  for (const x of n.values()) assert.ok(['QB', 'RB', 'WR', 'WR/TE', 'FLEX'].includes(x.slot));
+  assert.ok(fitsSlot('TE', 'WR/TE') && fitsSlot('RB', 'FLEX') && !fitsSlot('QB', 'FLEX'));
 });

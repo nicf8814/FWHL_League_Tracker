@@ -1,12 +1,13 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { PlayerId, TeamId } from '../data/schema.ts';
-import { useLeague } from '../data/store.tsx';
+import { useDeadline, useLeague } from '../data/store.tsx';
 import { teamName } from '../engine/league.ts';
 import { lineup, type Lineup } from '../engine/model.ts';
-import { evaluate, MAX_PER_SIDE, tradeFromQuery, tradeToQuery, type Evaluation, type Trade } from '../engine/trade.ts';
+import { bySource, evaluate, MAX_PER_SIDE, tradeFromQuery, tradeToQuery, type Evaluation, type Trade } from '../engine/trade.ts';
 import { useRoute } from '../app/router.ts';
 import { Empty, fmt, Mono, PlayerName, PosMark, signed, TeamSelect, tone } from '../ui/components.tsx';
 import { usePlayerSheet } from './PlayerSheet.tsx';
+import { SavedTrades, SaveTradeButton, ShareTrade } from './SavedTrades.tsx';
 
 // The trade lives in the URL, so a trade is a link and the back button undoes a team change.
 function useTrade() {
@@ -19,16 +20,44 @@ function useTrade() {
   const keep = (list: PlayerId[] | undefined, team: TeamId | null) => (list ?? []).filter((p) => team !== null && idx.owner.get(p) === team);
   const aGives = keep(raw.aGives, a), bGives = keep(raw.bGives, b);
   const dropped = [...(raw.aGives ?? []), ...(raw.bGives ?? [])].filter((p) => !aGives.includes(p) && !bGives.includes(p));
+  const cur = b === null ? `a=${a}` : tradeToQuery({ a, b, aGives, bGives });
   const set = (t: Omit<Partial<Trade>, 'b'> & { b?: TeamId | null }) => {
     const next = { a, b, aGives, bGives, ...t };
-    replace('analyzer', next.b === null ? `a=${next.a}` : tradeToQuery(next as Trade));
+    const q = next.b === null ? `a=${next.a}` : tradeToQuery(next as Trade);
+    if (q === cur) return;
+    edits.past.push(cur); edits.future = []; if (edits.past.length > 100) edits.past.shift();
+    replace('analyzer', q);
   };
-  return { a, b, aGives, bGives, dropped, set };
+  const step = (from: string[], to: string[]) => { const q = from.pop(); if (q === undefined) return; to.push(cur); replace('analyzer', q); };
+  const undo = () => step(edits.past, edits.future);
+  const redo = () => step(edits.future, edits.past);
+  return { a, b, aGives, bGives, dropped, set, undo, redo };
+}
+
+// FEAT-4 / LOGIC-13: every edit (including Clear) can be undone. Edits use replaceState, so the
+// back button stays for leaving the page and Undo/Redo walk the edits. Kept for the visit only.
+const edits = { past: [] as string[], future: [] as string[] };
+
+function useUndoKeys(undo: () => void, redo: () => void) {
+  useEffect(() => {
+    const on = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || el?.closest('input:not([type=checkbox]),textarea,select,[contenteditable=true]')) return;
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+      else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); redo(); }
+    };
+    window.addEventListener('keydown', on);
+    return () => window.removeEventListener('keydown', on);
+  }, [undo, redo]);
 }
 
 export default function Analyzer() {
   const { idx, values: V } = useLeague();
   const T = useTrade();
+  const dl = useDeadline();
+  const canUndo = edits.past.length > 0, canRedo = edits.future.length > 0; // read on render: every edit changes the URL
+  useUndoKeys(T.undo, T.redo);
   const ev = useMemo(() => (T.b === null ? null : evaluate(V, { a: T.a, b: T.b, aGives: T.aGives, bGives: T.bGives })), [V, T.a, T.b, T.aGives.join(), T.bGives.join()]);
   const toggle = (side: 'aGives' | 'bGives', p: PlayerId) => {
     const cur = T[side];
@@ -37,6 +66,15 @@ export default function Analyzer() {
 
   return (
     <div className="grid grid-cols-1 gap-8">
+      {dl.passed && (
+        <p role="note" className="border-l-[3px] border-accent bg-surface px-4 py-2 text-sm">
+          The trade deadline has passed. Anything here is a what-if: it can't be made until the 2027 season.
+        </p>
+      )}
+      <div className="-mb-6 flex justify-end gap-1" role="group" aria-label="Edit history">
+        <button type="button" className="btn btn-quiet" disabled={!canUndo} onClick={T.undo} title="Ctrl/⌘ Z">Undo</button>
+        <button type="button" className="btn btn-quiet" disabled={!canRedo} onClick={T.redo} title="Ctrl/⌘ Shift Z">Redo</button>
+      </div>
       {T.dropped.length > 0 && (
         <p role="status" className="border border-even bg-even-soft px-4 py-2 text-sm">
           Removed {T.dropped.map((p) => idx.players.get(p)?.name ?? p).join(', ')}: not on that team's roster in the current data.
@@ -48,7 +86,10 @@ export default function Analyzer() {
         </div>
         <div className="perf order-2 hidden lg:block" aria-hidden="true" />
         <div className="order-1 lg:order-2">
-          <VerdictPanel ev={ev} a={T.a} b={T.b} onClear={() => T.set({ aGives: [], bGives: [] })} />
+          <div className="grid gap-3 lg:sticky lg:top-20">
+            <VerdictPanel ev={ev} a={T.a} b={T.b} onClear={() => T.set({ aGives: [], bGives: [] })} />
+            {ev && !ev.errors.length && T.b !== null && <><SaveTradeButton trade={T} /><ShareTrade trade={{ a: T.a, b: T.b, aGives: T.aGives, bGives: T.bGives }} ev={ev} /></>}
+          </div>
         </div>
         <div className="perf order-3 hidden lg:block" aria-hidden="true" />
         <div className="order-3 lg:order-4">
@@ -63,6 +104,7 @@ export default function Analyzer() {
         </div>
       </div>
       {ev && !ev.errors.length && T.b !== null && <LineupImpact a={T.a} b={T.b} aGives={T.aGives} bGives={T.bGives} />}
+      <SavedTrades />
     </div>
   );
 }
@@ -79,6 +121,7 @@ function Side({ title, team, other, picked, onTeam, onToggle }: { title: string;
         <h2 className="flex items-center gap-2 text-lg"><Mono team={team} />{teamName(idx, team)} {title}</h2>
         <span className="num text-sm text-ink-3">{picked.length ? `${picked.length} · ${fmt(picked.reduce((s, p) => s + V.bv(p), 0))}` : 'none yet'}</span>
       </div>
+      <p className="-mt-2 flex justify-end gap-4 text-xs text-ink-3" aria-hidden="true"><span>Pts/wk</span><span>Value</span></p>
       <ul className="grid">
         {roster.map((p) => {
           const on = picked.includes(p);
@@ -116,7 +159,7 @@ function VerdictPanel({ ev, a, b, onClear }: { ev: Evaluation | null; a: TeamId;
   const color = k === 'win' ? 'text-gain' : k === 'lose' ? 'text-loss' : 'text-even';
   const odds = V.teamOdds(b);
   return (
-    <section aria-live="polite" aria-label="Verdict" className="grid gap-4 border-y-2 border-ink py-4 lg:sticky lg:top-20">
+    <section aria-live="polite" aria-label="Verdict" className="grid gap-4 border-y-2 border-ink py-4">
       <div className="grid justify-items-center gap-1 text-center">
         <p className={`font-display text-2xl font-extrabold uppercase [font-stretch:75%] ${color}`}>{ev.fairBoth ? 'Fair for both' : ev.verdict.label}</p>
         <p className="text-sm text-ink-2">{ev.fairBoth ? `${B} sees it as even by his own values, and ${A}'s lineup doesn't lose ground.` : `On trade value, from ${A}'s side.`}</p>
@@ -130,6 +173,7 @@ function VerdictPanel({ ev, a, b, onClear }: { ev: Evaluation | null; a: TeamId;
         ))}
       </dl>
       <p className={`num text-center text-sm ${color}`}>{signed(ev.verdict.diff)} ({signed(ev.verdict.pct, 0)}%) for {A}</p>
+      <SourceChips a={a} b={b} />
       <dl className="grid gap-2 text-sm">
         <Row label={`${A} lineup`} value={<span className={`num ${tone(ev.gainA)}`}>{signed(ev.gainA)} pts/wk</span>} />
         <Row label={`${B} lineup`} value={<span className={`num ${tone(ev.gainB)}`}>{signed(ev.gainB)} pts/wk</span>} />
@@ -151,11 +195,31 @@ function Row({ label, value, hint }: { label: string; value: React.ReactNode; hi
   );
 }
 
+// "Charts say" chips and the toss-up badge (old app), read straight from the URL's trade.
+function SourceChips({ a, b }: { a: TeamId; b: TeamId }) {
+  const { values: V } = useLeague();
+  const T = useTrade();
+  const r = bySource(V, { a, b, aGives: T.aGives, bGives: T.bGives });
+  const agree = r.reads.filter((x) => x.verdict.kind === (r.reads.filter((y) => y.verdict.kind === 'win').length >= r.reads.filter((y) => y.verdict.kind === 'lose').length ? 'win' : 'lose')).length;
+  const c = (k: string) => (k === 'win' ? 'text-gain' : k === 'lose' ? 'text-loss' : 'text-even');
+  return (
+    <div className="grid justify-items-center gap-1.5">
+      {r.tossUp && <span className="tag text-even">Toss-up: sources split</span>}
+      <ul className="flex flex-wrap justify-center gap-1.5 text-xs" aria-label="Each source on its own">
+        {r.reads.map((x) => <li key={x.source} className={`tag ${c(x.verdict.kind)}`}>{x.source} {signed(x.verdict.pct, 0)}%</li>)}
+      </ul>
+      {!r.tossUp && <span className="text-xs text-ink-3">{agree} of {r.reads.length} sources agree</span>}
+    </div>
+  );
+}
+
 function LineupImpact({ a, b, aGives, bGives }: { a: TeamId; b: TeamId; aGives: PlayerId[]; bGives: PlayerId[] }) {
   const { idx, base, values: V } = useLeague();
   const one = (team: TeamId, out: PlayerId[], inn: PlayerId[]) => {
     const now = (keys: PlayerId[]) => lineup(base, keys.filter((k) => !base.isOut(k)), () => 1);
-    return { before: now(idx.roster.get(team) ?? []), after: now(V.rosterAfter(team, out, inn)), gain: V.weekGain(team, out, inn) };
+    const r = idx.roster.get(team) ?? [];
+    const fills = r.length - out.length + inn.length < r.length ? V.rosterAfter(team, out, inn).filter((k) => !r.includes(k) && !inn.includes(k)) : [];
+    return { before: now(r), after: now(V.rosterAfter(team, out, inn)), gain: V.weekGain(team, out, inn), drops: V.autoDrops(team, out, inn), fills };
   };
   return (
     <details className="group border-t-2 border-ink pt-3" open>
@@ -175,7 +239,7 @@ function LineupImpact({ a, b, aGives, bGives }: { a: TeamId; b: TeamId; aGives: 
   );
 }
 
-function LineupCol({ team, before, after, gain }: { team: TeamId; before: Lineup; after: Lineup; gain: number }) {
+function LineupCol({ team, before, after, gain, drops, fills }: { team: TeamId; before: Lineup; after: Lineup; gain: number; drops: PlayerId[]; fills: PlayerId[] }) {
   const { idx } = useLeague();
   return (
     <div className="grid gap-2">
@@ -202,6 +266,8 @@ function LineupCol({ team, before, after, gain }: { team: TeamId; before: Lineup
         </tbody>
       </table>
       <p className="num text-xs text-ink-3">Starters this week {fmt(before.start)} → {fmt(after.start)}</p>
+      {drops.length > 0 && <p className="text-sm text-even">To stay at {idx.roster.get(team)?.length} players, cuts {drops.map((p) => idx.players.get(p)?.name ?? p).join(', ')} (lowest value). Counted in pts/wk.</p>}
+      {fills.length > 0 && <p className="text-sm text-ink-2">Open roster spot{fills.length > 1 ? 's' : ''} filled from free agents: {fills.map((p) => idx.players.get(p)?.name ?? p).join(', ')}.</p>}
     </div>
   );
 }

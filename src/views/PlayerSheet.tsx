@@ -74,6 +74,9 @@ function Body({ pid, onClose }: { pid: PlayerId; onClose: () => void }) {
           {b.keeper > 0.05 && <> · keeper premium <span className="num">{signed(b.keeper)}</span> for {teamName(idx, owner)}</>}
         </p>
         {inj && <p className="text-sm"><b>Status.</b> {inj.note || inj.status}{base.isOut(pid) && base.returnWeek(pid) < 18 ? `, back around Week ${base.returnWeek(pid)}` : base.returnWeek(pid) >= 18 ? ', out for the season' : ''}.</p>}
+        {!inj && base.stale.has(pid) && <p className="text-sm"><b>Status.</b> Scored 0 with no projection in his last {base.stale.get(pid)} games, so he's treated as out until he plays again.</p>}
+        {(() => { const h = V.handcuffOf(pid); if (!h) return null; const other = h.backup === pid ? h.starter : h.backup; const both = idx.owner.get(h.starter) !== undefined && idx.owner.get(h.starter) === idx.owner.get(h.backup);
+          return <p className="text-sm"><b>Handcuff.</b> {h.backup === pid ? 'Backup to' : 'Backed up by'} {idx.players.get(other)?.name}. Worth about +{h.gain.toFixed(1)} pts/wk of insurance to a team holding both{both ? ` (${teamName(idx, idx.owner.get(pid))} does)` : ''}{V.settings.handcuff ? '' : '; turn on handcuff insurance in Data & settings to count it'}.</p>; })()}
         {news && <p className="text-sm"><b>News.</b> {news.note} (<span className="num">{signed(news.pct, 0)}%</span>).</p>}
         {k?.note && <p className="text-sm text-ink-2"><b>Keeper.</b> {k.note}.</p>}
         {weeks.length > 0 && (

@@ -12,11 +12,15 @@ const RAMP_BACK = 0.75; // first game back from injury counts at 75%
 const STRETCH_W = 1.25; // weeks 12-14
 const PLAYOFF_W = 1.5; // weeks 15-17, times playoff odds
 const DEPTH_W = 0.1; // bench depth credit
+// shortcut: [starter, backup] pairs are hand-kept, as in the old app; move them into the data when ESPN depth charts are pulled.
+const HANDCUFFS: [string, string][] = [['Christian McCaffrey', 'Kaelon Black'], ['Kenneth Walker', 'Emmett Johnson']];
 const FAIR_RANGE = 5; // partner's on-paper edge that still reads as fair
 const WEEKLY_LOSS_OK = 1; // pts/wk you can lose and still call it fair
 
 export interface Base {
   idx: Index;
+  ramp: boolean; // productionRamp it was built with
+  key: string; // baseKey of everything it was built with
   now: number;
   proj: Map<PlayerId, number>; // pts/wk after the production ramp
   stale: Map<PlayerId, number>; // missed-games rule: games in a row with 0 points and no projection
@@ -29,15 +33,31 @@ export interface Base {
 // Weight of season average vs ESPN projection by games played: 0 at 0, 50% at 7, 70% by 12.
 export const rampWeight = (g: number) => (g <= 0 ? 0 : g <= 7 ? (0.5 * g) / 7 : 0.5 + (0.2 * Math.min(g - 7, 5)) / 5);
 
-export function buildBase(idx: Index, productionRamp: boolean): Base {
+// Per-device engine options that change projections or availability (they rebuild Base and rerun the sim).
+export interface BaseOpts {
+  median?: boolean; // ramp toward each player's median game instead of his average (3+ games)
+  returns?: Record<PlayerId, number>; // hand-set return weeks; at or before this week = playing now, 18 = season
+}
+export const baseKey = (ramp: boolean, o: BaseOpts = {}) => JSON.stringify([ramp, !!o.median, o.returns ?? {}]);
+
+export function buildBase(idx: Index, productionRamp: boolean, opts: BaseOpts = {}): Base {
   const now = idx.currentWeek;
   const proj = new Map<PlayerId, number>();
+  const median = (pid: PlayerId) => {
+    const pts: number[] = [];
+    for (const [w, m] of idx.weeks) { const r = m.get(pid); if (w <= idx.scoresThrough && r && r.points != null && r.opponent !== 'BYE' && !(r.points === 0 && !r.projection)) pts.push(r.points); }
+    if (pts.length < 3) return null;
+    pts.sort((a, b) => a - b);
+    const h = pts.length >> 1;
+    return pts.length % 2 ? pts[h]! : (pts[h - 1]! + pts[h]!) / 2;
+  };
   for (const [pid, s] of idx.stats) {
     const wk0 = s.projPerWeek ?? 0;
     let wk = wk0;
     if (productionRamp && s.seasonAvg && s.seasonAvg > 0 && s.seasonPoints && s.seasonPoints > 0 && wk0 > 0) {
       const w = rampWeight(s.seasonPoints / s.seasonAvg);
-      wk = (1 - w) * wk0 + w * s.seasonAvg;
+      const basis = opts.median ? median(pid) ?? s.seasonAvg : s.seasonAvg;
+      wk = (1 - w) * wk0 + w * basis;
     }
     proj.set(pid, wk);
   }
@@ -59,11 +79,14 @@ export function buildBase(idx: Index, productionRamp: boolean): Base {
     const s = idx.injury.get(p)?.status;
     return s === 'OUT' || s === 'IR';
   };
-  const isOut = (p: PlayerId) => outTag(p) || stale.has(p);
+  const set = (p: PlayerId) => opts.returns?.[p];
+  const isOut = (p: PlayerId) => { const o = set(p); return o !== undefined ? o > now : outTag(p) || stale.has(p); };
   const ret = new Map<PlayerId, number>();
   const returnWeek = (p: PlayerId) => {
     const hit = ret.get(p);
     if (hit !== undefined) return hit;
+    const o = set(p);
+    if (o !== undefined) { const r = o <= now ? 0 : Math.min(18, o); ret.set(p, r); return r; }
     const inj = idx.injury.get(p);
     let r: number | null = inj?.returnWeek ?? null;
     if (r !== null && r >= 15) r = 18;
@@ -78,7 +101,7 @@ export function buildBase(idx: Index, productionRamp: boolean): Base {
     ret.set(p, r);
     return r;
   };
-  const base: Base = { idx, now, proj, stale, isOut, outTag, returnWeek, strength: {} };
+  const base: Base = { idx, ramp: productionRamp, key: baseKey(productionRamp, opts), now, proj, stale, isOut, outTag, returnWeek, strength: {} };
   for (const t of idx.teamIds) base.strength[t] = lineup(base, (idx.roster.get(t) ?? []).filter((p) => !isOut(p)), () => 1).start;
   return base;
 }
@@ -118,6 +141,7 @@ export interface Blend {
 export interface Values {
   base: Base;
   settings: Settings;
+  sim: SimResult | null;
   oddsReady: boolean;
   teamOdds: (t: TeamId | undefined) => number;
   keepWeight: (t: TeamId) => number;
@@ -126,6 +150,7 @@ export interface Values {
   chart: (p: PlayerId, source: 'peaked' | 'menton' | 'fantasypros') => number | null;
   aboveReplacement: (p: PlayerId) => number | null;
   replacement: Record<Pos, number>;
+  replacementHealthy: Record<Pos, number>; // same ranks, Out/IR players left out
   faReplacement: Record<Pos, number>;
   faFill: PlayerId[];
   keeperValue: (keys: PlayerId[]) => number;
@@ -135,6 +160,8 @@ export interface Values {
   availFor: (p: PlayerId, team: TeamId | undefined) => number;
   weekGain: (team: TeamId, out: PlayerId[], inn: PlayerId[]) => number;
   rosterAfter: (team: TeamId, out: PlayerId[], inn: PlayerId[]) => PlayerId[];
+  autoDrops: (team: TeamId, out: PlayerId[], inn: PlayerId[]) => PlayerId[];
+  handcuffOf: (p: PlayerId) => { starter: PlayerId; backup: PlayerId; gain: number } | null;
   FAIR_RANGE: number;
   WEEKLY_LOSS_OK: number;
 }
@@ -151,6 +178,7 @@ export function buildValues(base: Base, settings: Settings, sim: SimResult | nul
   const regEnd = season.regularSeasonWeeks;
   const ids = [...idx.players.keys()];
   const posOf = (p: PlayerId) => idx.players.get(p)!.pos;
+  const findByName = (n: string) => [...idx.players.values()].find((p) => p.name === n)?.id;
   const teamOdds = (t: TeamId | undefined) => (t !== undefined && sim ? sim.odds[t] ?? 0.5 : 0.5);
   const keepWeight = (t: TeamId) => (sim ? 0.12 + 0.48 * (1 - (sim.odds[t] ?? 0.5)) : 0.3);
 
@@ -345,19 +373,38 @@ export function buildValues(base: Base, settings: Settings, sim: SimResult | nul
     if (v === undefined) baseCache.set(key, (v = weekLineup(idx.roster.get(team) ?? [], w)));
     return v;
   };
+  // LOGIC-5: rosters stay the same size. Short: the best free agents fill in. Long: the team cuts its
+  // lowest-valued players it already had (never one it just got).
+  const autoDrops = (team: TeamId, out: PlayerId[], inn: PlayerId[]): PlayerId[] => {
+    const r = idx.roster.get(team) ?? [];
+    const kept = r.filter((k) => !out.includes(k));
+    const extra = kept.length + inn.filter((k) => !r.includes(k)).length - r.length;
+    if (extra <= 0) return [];
+    return [...kept].sort((x, y) => bv(x) - bv(y) || x.localeCompare(y)).slice(0, extra);
+  };
   const rosterAfter = (team: TeamId, out: PlayerId[], inn: PlayerId[]) => {
     const r = idx.roster.get(team) ?? [];
-    const a = r.filter((k) => !out.includes(k)).concat(inn.filter((k) => !r.includes(k)));
+    const drop = autoDrops(team, out, inn);
+    const a = r.filter((k) => !out.includes(k) && !drop.includes(k)).concat(inn.filter((k) => !r.includes(k)));
     return a.length >= r.length ? a : a.concat(faFill.filter((k) => !a.includes(k)).slice(0, r.length - a.length));
   };
+  // Handcuff insurance (old app, Oct 29): a backup RB is worth something to the team that also holds his
+  // starter: the chance the starter misses a week (15%, 30% if Questionable) times what the backup
+  // scores above a replacement RB stepping in (65% of the starter's projection).
+  const cuffs = HANDCUFFS.map(([a, b]) => [findByName(a), findByName(b)] as const).filter((x): x is readonly [PlayerId, PlayerId] => !!x[0] && !!x[1]);
+  const cuffGain = (starter: PlayerId) => (base.isOut(starter) ? 0 : (idx.injury.get(starter)?.status === 'Q' ? 0.3 : 0.15) * Math.max(0, 0.65 * (base.proj.get(starter) ?? 0) - replPlay.RB));
+  const cuffBonus = (keys: PlayerId[]) => (settings.handcuff ? cuffs.reduce((s, [a, b]) => s + (keys.includes(a) && keys.includes(b) ? cuffGain(a) : 0), 0) : 0);
+  const handcuffOf = (p: PlayerId) => { const c = cuffs.find(([a, b]) => a === p || b === p); return c ? { starter: c[0], backup: c[1], gain: cuffGain(c[0]) } : null; };
   const weekGain = (team: TeamId, out: PlayerId[], inn: PlayerId[]) => {
     const after = rosterAfter(team, out, inn);
+    const cuff = cuffBonus(after) - cuffBonus(idx.roster.get(team) ?? []);
     const wts: [number, number][] = [];
     for (let w = now; w <= regEnd; w++) wts.push([w, season.top6Weeks.includes(w) ? STRETCH_W : 1]);
     const p = teamOdds(team);
     if (p > 0.02) for (const w of season.playoffWeeks) wts.push([w, PLAYOFF_W * p]);
     const sw = wts.reduce((s, [, x]) => s + x, 0);
-    return sw ? wts.reduce((s, [w, x]) => s + x * (weekLineup(after, w) - baseWeek(team, w)), 0) / sw : 0;
+    // shortcut: handcuff insurance feeds lineup gain (analyzer, finder, waivers) but not the 0-100 trade value; revisit if it should move the market side.
+    return (sw ? wts.reduce((s, [w, x]) => s + x * (weekLineup(after, w) - baseWeek(team, w)), 0) / sw : 0) + cuff;
   };
   const aboveReplacement = (p: PlayerId) => {
     const pos = idx.players.get(p)?.pos;
@@ -365,7 +412,7 @@ export function buildValues(base: Base, settings: Settings, sim: SimResult | nul
   };
 
   return {
-    base, settings, oddsReady: !!sim, teamOdds, keepWeight, blend, bv, chart, aboveReplacement, replacement, faReplacement, faFill,
-    keeperValue, keepConv, studPremium, injuryCorrection, availFor, weekGain, rosterAfter, FAIR_RANGE, WEEKLY_LOSS_OK,
+    base, settings, sim, oddsReady: !!sim, teamOdds, keepWeight, blend, bv, chart, aboveReplacement, replacement, replacementHealthy: replPlay, faReplacement, faFill,
+    keeperValue, keepConv, studPremium, injuryCorrection, availFor, weekGain, rosterAfter, autoDrops, handcuffOf, FAIR_RANGE, WEEKLY_LOSS_OK,
   };
 }

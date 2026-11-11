@@ -1,5 +1,5 @@
-import type { Dataset, Settings } from './schema.ts';
-import { coerceSettings, validateDataset } from './validate.ts';
+import type { Dataset, SavedTrade, Settings } from './schema.ts';
+import { coerceSavedTrades, coerceSettings, validateDataset } from './validate.ts';
 
 // Data-access layer (audit DATA-4). The UI only ever talks to a Repository through the store hooks.
 // Today: the bundled seed file + IndexedDB on this device. Later: an HTTP adapter with the same four
@@ -10,12 +10,15 @@ export interface Repository {
   resetDataset(): Promise<Dataset>;
   loadSettings(teamIds: ReadonlySet<number> | null): Settings;
   saveSettings(s: Settings): void;
+  loadSavedTrades(): Promise<SavedTrade[]>;
+  saveSavedTrades(list: SavedTrade[]): Promise<void>;
 }
 
 const SEED_URL = `${import.meta.env.BASE_URL}seed/fwhl-2026.json`;
 const DB = 'fwhl';
 const STORE = 'kv';
 const DATASET_KEY = 'dataset';
+const SAVED_KEY = 'savedTrades';
 const SETTINGS_KEY = 'fwhl.settings.v1';
 
 function openDb(): Promise<IDBDatabase> {
@@ -101,6 +104,17 @@ export const localRepository: Repository = {
       // Storage full or blocked: settings stay in memory for this visit.
     }
   },
+  async loadSavedTrades() {
+    try {
+      return coerceSavedTrades(await idb<unknown>('readonly', (s) => s.get(SAVED_KEY)));
+    } catch (e) {
+      console.warn('IndexedDB read failed; no saved trades.', e);
+      return [];
+    }
+  },
+  async saveSavedTrades(list) {
+    await idb('readwrite', (s) => s.put(list, SAVED_KEY));
+  },
 };
 
 // Backup file = dataset + this device's settings, so nothing is ever trapped in one browser.
@@ -109,6 +123,7 @@ export interface BackupFile {
   exportedAt: string;
   dataset: Dataset;
   settings: Settings;
+  savedTrades?: SavedTrade[];
 }
 
 export function parseBackup(text: string): Result {
@@ -124,6 +139,11 @@ export function parseBackup(text: string): Result {
   if (!v.ok) return v;
   const teams = new Set(v.value.teams.map((t) => t.id));
   // A bare dataset keeps this device's settings (settings: null).
-  return { ok: true, dataset: v.value, settings: isBackup ? coerceSettings((json as BackupFile).settings, teams) : null };
+  return {
+    ok: true,
+    dataset: v.value,
+    settings: isBackup ? coerceSettings((json as BackupFile).settings, teams) : null,
+    savedTrades: isBackup && 'savedTrades' in (json as object) ? coerceSavedTrades((json as BackupFile).savedTrades).filter((t) => teams.has(t.a) && teams.has(t.b)) : null,
+  };
 }
-type Result = { ok: true; dataset: Dataset; settings: Settings | null } | { ok: false; errors: string[] };
+type Result = { ok: true; dataset: Dataset; settings: Settings | null; savedTrades: SavedTrade[] | null } | { ok: false; errors: string[] };

@@ -2,11 +2,11 @@
 //   node scripts/data.ts <command> [args] [--dry-run] [--force] [--file <dataset.json>]
 // Commands and input formats: docs/data-updates.md. Exit code 1 = nothing was written.
 import { readFileSync, writeFileSync } from 'node:fs';
-import type { Dataset, Pos } from '../src/data/schema.ts';
+import type { Dataset } from '../src/data/schema.ts';
 import { validateDataset } from '../src/data/validate.ts';
 import { buildIndex, freshness } from '../src/engine/league.ts';
 import {
-  applyChart, applyProjections, applyRanks, applyResults, applyRosters, applyUsage, arizonaToday, formatDataset, parseCsv,
+  applyChart, applyProjections, applyRanks, applyResults, applyRosters, applyUsage, arizonaToday, formatDataset, chartRowsFromCsv, rankRowsFromCsv,
   type ChartRow, type RankRow, type Report,
 } from './updates.ts';
 
@@ -56,16 +56,12 @@ function finish(ds: Dataset, rep: Report) {
 
 function chartRows(p: string | undefined): ChartRow[] {
   if (!p) fail('missing CSV file.');
-  const rows = parseCsv(readFileSync(p, 'utf8'));
-  const body = rows[0] && !Number.isFinite(Number(rows[0][1])) ? rows.slice(1) : rows; // optional header
-  return body.map(([name = '', value = '', pos]) => ({ name, value: Number(value), ...(pos ? { pos: pos.toUpperCase() as Pos } : {}) }));
+  return chartRowsFromCsv(readFileSync(p, 'utf8'));
 }
 
 function rankRows(p: string | undefined): RankRow[] {
   if (!p) fail('missing CSV file.');
-  const rows = parseCsv(readFileSync(p, 'utf8'));
-  const body = rows[0] && !Number.isFinite(Number(rows[0][2])) ? rows.slice(1) : rows;
-  return body.map(([name = '', pos = '', rank = '']) => ({ name, pos: pos.toUpperCase() as Pos, rank: Number(rank) }));
+  return rankRowsFromCsv(readFileSync(p, 'utf8'));
 }
 
 const today = opt('--today') ?? arizonaToday();

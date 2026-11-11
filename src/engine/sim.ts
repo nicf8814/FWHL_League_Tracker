@@ -135,7 +135,7 @@ export function simulate(inp: SimInput): SimResult {
     const W = new Map<TeamId, number>(), PF = new Map<TeamId, number>(), H = new Map<TeamId, Map<TeamId, number>>(), off = new Map<TeamId, number>();
     for (const i of ids) {
       const b = base.get(i)!;
-      W.set(i, b.w); PF.set(i, b.pf); H.set(i, new Map(b.h2h)); off.set(i, cfg.teamSd * normal());
+      W.set(i, b.w + b.t / 2); PF.set(i, b.pf); H.set(i, new Map(b.h2h)); off.set(i, cfg.teamSd * normal());
     }
     for (const w of weeks) {
       const sc = new Map<TeamId, number>();
@@ -144,11 +144,13 @@ export function simulate(inp: SimInput): SimResult {
         sc.set(i, v);
         PF.set(i, PF.get(i)! + v);
       }
+      // LOGIC-17: an exact tie is a tie (half a win each), same as in the real standings.
       if (inp.top6Weeks.includes(w)) {
-        for (const i of [...ids].sort((a, b) => sc.get(b)! - sc.get(a)!).slice(0, 6)) W.set(i, W.get(i)! + 1);
+        for (const i of ids) { const r = rank6(sc.get(i)!, ids.filter((j) => j !== i).map((j) => sc.get(j)!)); if (r !== 'L') W.set(i, W.get(i)! + (r === 'W' ? 1 : 0.5)); }
       } else {
         for (const [, h, a] of byWeek.get(w)!) {
-          const x = sc.get(h)! >= sc.get(a)! ? h : a, y = x === h ? a : h;
+          if (sc.get(h) === sc.get(a)) { W.set(h, W.get(h)! + 0.5); W.set(a, W.get(a)! + 0.5); continue; }
+          const x = sc.get(h)! > sc.get(a)! ? h : a, y = x === h ? a : h;
           W.set(x, W.get(x)! + 1);
           H.get(x)!.set(y, (H.get(x)!.get(y) ?? 0) + 1);
         }

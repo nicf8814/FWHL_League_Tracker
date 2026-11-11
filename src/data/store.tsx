@@ -1,10 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { buildIndex, type Index } from '../engine/league.ts';
+import { buildIndex, deadlineInfo, type Index } from '../engine/league.ts';
 import { buildBase, buildValues, type Base, type Values } from '../engine/model.ts';
 import type { SimInput, SimResult } from '../engine/sim.ts';
 import { simulateHistory, simulateOdds } from '../engine/simClient.ts';
 import { localRepository, parseBackup, type BackupFile, type Repository } from './repository.ts';
-import type { Dataset, Settings } from './schema.ts';
+import type { Dataset, SavedTrade, Settings } from './schema.ts';
 
 // The only place components get league data from. Views call useLeague(); nothing imports storage.
 
@@ -20,6 +20,9 @@ interface League {
   exportBackup: () => BackupFile;
   importBackup: (text: string) => Promise<{ ok: true } | { ok: false; errors: string[] }>;
   resetData: () => Promise<void>;
+  replaceDataset: (ds: Dataset) => Promise<void>;
+  savedTrades: SavedTrade[];
+  setSavedTrades: (next: (list: SavedTrade[]) => SavedTrade[]) => void;
 }
 
 const Ctx = createContext<League | null>(null);
@@ -38,6 +41,17 @@ export function useDebounced<T>(value: T, ms: number): T {
     return () => clearTimeout(t);
   }, [value, ms]);
   return v;
+}
+
+// The deadline label and post-deadline mode (FEAT-11) flip on their own while the app is open.
+export function useDeadline() {
+  const { idx } = useLeague();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  return deadlineInfo(idx, now);
 }
 
 export function useSimHistory(): Record<number, Record<number, number>> | null {
@@ -60,6 +74,23 @@ export function LeagueProvider({ children, repo = localRepository }: { children:
   const [load, setLoad] = useState<Load>({ state: 'loading' });
   const [settings, setSettingsState] = useState<Settings>(() => repo.loadSettings(null));
   const [sim, setSim] = useState<SimResult | null>(null);
+  const [savedTrades, setSaved] = useState<SavedTrade[]>([]);
+  useEffect(() => {
+    let live = true;
+    repo.loadSavedTrades().then((l) => live && setSaved(l));
+    return () => {
+      live = false;
+    };
+  }, [repo]);
+  const setSavedTrades = useCallback(
+    (fn: (list: SavedTrade[]) => SavedTrade[]) =>
+      setSaved((cur) => {
+        const next = fn(cur);
+        repo.saveSavedTrades(next).catch((e: unknown) => console.warn('Could not save trades on this device.', e));
+        return next;
+      }),
+    [repo],
+  );
 
   useEffect(() => {
     let live = true;
@@ -88,7 +119,8 @@ export function LeagueProvider({ children, repo = localRepository }: { children:
 
   const ds = load.state === 'ready' ? load.ds : null;
   const idx = useMemo(() => (ds ? buildIndex(ds) : null), [ds]);
-  const base = useMemo(() => (idx ? buildBase(idx, settings.productionRamp) : null), [idx, settings.productionRamp]);
+  const baseOpts = useMemo(() => ({ median: settings.rampMedian, returns: settings.returnWeeks }), [settings.rampMedian, settings.returnWeeks]);
+  const base = useMemo(() => (idx ? buildBase(idx, settings.productionRamp, baseOpts) : null), [idx, settings.productionRamp, baseOpts]);
   const simInput = useMemo<SimInput | null>(() => {
     if (!base) return null;
     const { idx: ix } = base;
@@ -119,8 +151,8 @@ export function LeagueProvider({ children, repo = localRepository }: { children:
 
   const exportBackup = useCallback((): BackupFile => {
     if (!ds) throw new Error('No data loaded yet.');
-    return { kind: 'fwhl-backup', exportedAt: new Date().toISOString(), dataset: ds, settings };
-  }, [ds, settings]);
+    return { kind: 'fwhl-backup', exportedAt: new Date().toISOString(), dataset: ds, settings, savedTrades };
+  }, [ds, settings, savedTrades]);
 
   const importBackup = useCallback(
     async (text: string) => {
@@ -133,10 +165,18 @@ export function LeagueProvider({ children, repo = localRepository }: { children:
       const next = r.settings ?? { ...settings, myTeamId: settings.myTeamId !== null && teams.has(settings.myTeamId) ? settings.myTeamId : null };
       repo.saveSettings(next);
       setSettingsState(next);
+      if (r.savedTrades) setSavedTrades(() => r.savedTrades!);
       return { ok: true as const };
     },
-    [repo, settings],
+    [repo, settings, setSavedTrades],
   );
+
+  // In-app imports (FEAT-1): the caller has already validated ds. Saved before it's shown, like importBackup.
+  const replaceDataset = useCallback(async (next: Dataset) => {
+    await repo.saveDataset(next);
+    setSim(null);
+    setLoad({ state: 'ready', ds: next });
+  }, [repo]);
 
   const resetData = useCallback(async () => {
     const fresh = await repo.resetDataset();
@@ -148,7 +188,7 @@ export function LeagueProvider({ children, repo = localRepository }: { children:
   if (load.state === 'error') return <Splash text={load.message} error />;
   if (!idx || !base || !values || !simInput) return <Splash text="Preparing…" />;
   return (
-    <Ctx.Provider value={{ idx, base, values, valuesVersion: version.current, sim, simInput, settings, setSettings, exportBackup, importBackup, resetData }}>
+    <Ctx.Provider value={{ idx, base, values, valuesVersion: version.current, sim, simInput, settings, setSettings, exportBackup, importBackup, resetData, replaceDataset, savedTrades, setSavedTrades }}>
       {children}
     </Ctx.Provider>
   );

@@ -61,6 +61,7 @@ Every player in an input is a reference:
 - `rows`: that week's line for every rostered player, plus free agents who scored. `slot` is `start`, `bench`, `ir` or `fa`; `opponent` is the NFL opponent or `"BYE"`. Each team's `start` points must add up to its score within 0.1, or the run stops.
 - `season`: season totals for rostered players.
 - `transactions`: see below. Existing ones are never changed.
+- Backfill (task 5): an earlier `week` replaces only that week's rows and leaves "scores through" alone. Send `"season": []` so today's season totals aren't overwritten with old ones, and `"transactions": []`.
 
 ### projections (task 2)
 
@@ -107,6 +108,7 @@ Every player in an input is a reference:
 
 - `id`: `"t"` + the ESPN transaction id for an accepted trade; `"wi"` + the first 8 characters of the vetoed proposal's id for a veto (`"type": "veto"`).
 - Both teams must send at least one player. A transaction whose id already exists is skipped.
+- Each new trade leg is stamped with two snapshots the Trade tracker grades from: `rosAtTrade` (the player's ESPN rest-of-season projection in the data at that moment) and `valueAtTrade` (his Peaked/Menton chart value then). They can't be rebuilt later, so load a trade in the same run as, or right after, that week's projections and charts. Vetoes get no chart value; the tracker values a veto at today's numbers.
 
 ### usage (task 4)
 

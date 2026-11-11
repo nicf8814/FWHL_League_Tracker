@@ -3,6 +3,7 @@ import { useLeague, useSimHistory } from '../data/store.tsx';
 import { bestActual, standings, teamName, type StandingRow } from '../engine/league.ts';
 import { rank6 } from '../engine/sim.ts';
 import { fmt, Mono, pct, Section } from '../ui/components.tsx';
+import { ThisWeek } from './ThisWeek.tsx';
 
 type Key = 'seed' | 'pf' | 'pa' | 'maxPf' | 'odds';
 const COLS: [Key, string][] = [['seed', 'Seed'], ['pf', 'PF'], ['pa', 'PA'], ['maxPf', 'Max PF'], ['odds', 'Playoffs']];
@@ -25,6 +26,7 @@ export default function Standings() {
 
   return (
     <div className="grid grid-cols-1 gap-10">
+      <ThisWeek />
       <Section title={`Through Week ${idx.scoresThrough}`} aside={sim ? `Playoff odds from ${idx.ds.season.sim.runs.toLocaleString()} simulated seasons` : 'Simulating the rest of the season…'}>
         <p className="max-w-[70ch] text-sm text-ink-2">
           Seeds 1 to {byRecord} go by record (ties broken head to head, then points for). Seed {byRecord + 1} is the most points for among everyone else.

@@ -45,12 +45,16 @@ export function TeamSelect({ value, onChange, label, exclude, allowEmpty }: { va
   return (
     <div className="grid gap-1">
       <label htmlFor={id} className="text-sm text-ink-3">{label}</label>
-      <select id={id} className="field" value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}>
-        {allowEmpty !== undefined && <option value="">{allowEmpty}</option>}
-        {idx.ds.teams.filter((t) => t.id !== exclude).map((t) => (
-          <option key={t.id} value={t.id}>{t.name}{t.id === settings.myTeamId ? ' (mine)' : ''}</option>
-        ))}
-      </select>
+      {/* UI-13: the team's monogram sits inside the native select, so it keeps the platform picker and its a11y */}
+      <div className="relative">
+        {value !== null && <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"><Mono team={value} /></span>}
+        <select id={id} className={`field ${value !== null ? 'pl-12' : ''}`} value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}>
+          {allowEmpty !== undefined && <option value="">{allowEmpty}</option>}
+          {idx.ds.teams.filter((t) => t.id !== exclude).map((t) => (
+            <option key={t.id} value={t.id}>{t.name}{t.id === settings.myTeamId ? ' (mine)' : ''}</option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 }
@@ -72,6 +76,7 @@ export function Status({ pid }: { pid: PlayerId }) {
   const inj = idx.injury.get(pid);
   const stale = base.stale.get(pid);
   const r = base.returnWeek(pid);
+  if ((inj?.status === 'OUT' || inj?.status === 'IR' || stale) && !base.isOut(pid)) return <span className="tag text-even">Playing (your call)</span>;
   if (inj && (inj.status === 'OUT' || inj.status === 'IR'))
     return <span className="tag text-loss" title={inj.note}>{inj.status}{r >= 18 ? ' · season' : r > base.now ? ` · Wk ${r}` : ''}</span>;
   if (stale) return <span className="tag text-loss" title="Missed his last games; treated as out until he plays">Missed {stale}</span>;
@@ -96,15 +101,38 @@ export function PosMark({ pos }: { pos: Pos }) {
 }
 
 // Native <dialog>: focus trap, Escape and inert background come from the browser.
-export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
+// Run fn once a sheet that owns a history entry has finished closing (its history.back() has landed),
+// so a command that opens the next sheet isn't closed by the previous one's popstate.
+export function afterSheetClose(fn: () => void) {
+  let done = false;
+  const run = () => { if (done) return; done = true; window.removeEventListener('popstate', run); fn(); };
+  window.addEventListener('popstate', run);
+  setTimeout(run, 250); // shortcut: fallback if no popstate comes (storage-less embeds); 250 ms covers a slow back()
+}
+
+export function Sheet({ open, onClose, title, children, ownHistory = true }: { open: boolean; onClose: () => void; title: string; children: ReactNode; ownHistory?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const close = useRef(onClose);
+  close.current = onClose;
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
-    if (open && !d.open) d.showModal();
+    if (open && !d.open) { d.showModal(); d.querySelector<HTMLElement>('[data-autofocus]')?.focus(); }
     if (!open && d.open) d.close();
   }, [open]);
+  // LOGIC-8: an open sheet owns one history entry, so the back button or gesture closes it instead of leaving the page.
+  useEffect(() => {
+    if (!open || !ownHistory) return; // ownHistory=false: the page put the sheet in the URL itself
+    history.pushState({ fwhlSheet: titleId }, '');
+    let mine = true;
+    const onPop = () => { mine = false; close.current(); };
+    window.addEventListener('popstate', onPop);
+    return () => {
+      window.removeEventListener('popstate', onPop);
+      if (mine && (history.state as { fwhlSheet?: string } | null)?.fwhlSheet === titleId) history.back();
+    };
+  }, [open, ownHistory, titleId]);
   return (
     <dialog
       ref={ref}

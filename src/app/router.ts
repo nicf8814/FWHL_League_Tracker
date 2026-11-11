@@ -1,7 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
 // Hash routing on the native hashchange event: deep links and the back button work, no router library.
-export const ROUTES = ['finder', 'analyzer', 'standings', 'players', 'teams', 'data'] as const;
+export const ROUTES = ['finder', 'analyzer', 'tracker', 'standings', 'players', 'teams', 'data', 'method', 'keepers', 'market', 'waivers', 'charts', 'more'] as const;
 export type Route = (typeof ROUTES)[number];
 
 const subscribe = (cb: () => void) => {
@@ -26,7 +26,7 @@ export function useRoute() {
   }, []);
   // Update the query without adding a history entry (typing, toggling players).
   const replace = useCallback((r: Route, q?: string) => {
-    history.replaceState(null, '', href(r, q));
+    history.replaceState(history.state, '', href(r, q));
     window.dispatchEvent(new HashChangeEvent('hashchange'));
   }, []);
   return { route, query, go, replace };

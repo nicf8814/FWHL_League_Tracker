@@ -111,7 +111,7 @@ export function standings(idx: Index): StandingRow[] {
       max.set(t, { mx: cur.mx + Math.max(m, sc), pf: cur.pf + sc, n: cur.n + 1 });
     }
   }
-  const order = seed(idx.teamIds, (i) => T.get(i)!.w, (i) => T.get(i)!.pf, (i, j) => T.get(i)!.h2h.get(j) ?? 0, season.seedsByRecord);
+  const order = seed(idx.teamIds, (i) => T.get(i)!.w + T.get(i)!.t / 2, (i) => T.get(i)!.pf, (i, j) => T.get(i)!.h2h.get(j) ?? 0, season.seedsByRecord);
   return order.map((teamId, k) => {
     const m = max.get(teamId);
     return { ...T.get(teamId)!, teamId, seed: k + 1, maxPf: m ? m.mx : null, efficiency: m && m.mx ? m.pf / m.mx : null };
@@ -141,7 +141,83 @@ export function deadlineInfo(idx: Index, now = Date.now()) {
   const d = Date.parse(idx.ds.season.tradeDeadline);
   const ms = d - now;
   const days = Math.ceil(ms / 864e5);
-  return { passed: ms <= 0, days, label: ms <= 0 ? 'Deadline passed' : `${days} day${days === 1 ? '' : 's'} to deadline`, date: new Date(d) };
+  return { passed: ms <= 0, days, label: ms <= 0 ? 'Deadline passed' : `${days} day${days === 1 ? '' : 's'} to deadline (${new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})`, date: new Date(d) };
 }
 
 export const teamName =(idx: Index, id: TeamId | null | undefined) => (id == null ? 'Free agent' : idx.teams.get(id)?.name ?? `Team ${id}`);
+
+// LOGIC-14: what the data is missing, so a thin number can be traced to its cause.
+export interface Gap { what: string; count: number; total: number; fix: string; names?: string[] }
+export function dataGaps(idx: Index): Gap[] {
+  const rostered = [...idx.owner.keys()];
+  const name = (p: PlayerId) => idx.players.get(p)?.name ?? p;
+  const gaps: Gap[] = [];
+  const add = (what: string, ids: PlayerId[], fix: string, total = rostered.length) => { if (ids.length) gaps.push({ what, count: ids.length, total, fix, names: ids.map(name).sort() }); };
+  add('Rostered players without an ESPN id', rostered.filter((p) => idx.players.get(p)?.espnId == null), 'Filled in by any ESPN task run (results, projections or quick refresh).');
+  add('Rostered players without a rest-of-season projection', rostered.filter((p) => idx.stats.get(p)?.projRestOfSeason == null && !idx.injury.get(p)), 'Run the Projections task.');
+  add('Rostered players on no trade chart or rank list', rostered.filter((p) => !idx.chart.peaked.has(p) && !idx.chart.menton.has(p) && !idx.fpRank.has(p)), 'Usually deep bench; check spelling in the next chart if a starter is listed.');
+  const thin = [...idx.weeks].filter(([w, m]) => w <= idx.scoresThrough && ![...m.values()].some((r) => r.slot === 'fa')).map(([w]) => w).sort((a, b) => a - b);
+  if (thin.length) gaps.push({ what: `Weeks with no free-agent scores (${thin.map((w) => `Wk ${w}`).join(', ')})`, count: thin.length, total: idx.scoresThrough, fix: 'Run the "FWHL 5 - Backfill Weeks 1-6" task; trade grades in those weeks use a rougher replacement level.' });
+  const missing = Array.from({ length: idx.scoresThrough }, (_, i) => i + 1).filter((w) => !idx.weeks.has(w));
+  if (missing.length) gaps.push({ what: `Played weeks with no player scores (${missing.map((w) => `Wk ${w}`).join(', ')})`, count: missing.length, total: idx.scoresThrough, fix: 'Run the Weekly Results task for those weeks.' });
+  if (!idx.ds.usage?.length) gaps.push({ what: 'No volume vs production (usage) data', count: 1, total: 1, fix: 'Runs on its own every Tuesday (FantasyPros Stats task).' });
+  return gaps;
+}
+
+// Trade-chart history: source -> week -> player -> value (0-100, each chart's top player = 100).
+export type ChartSource = 'peaked' | 'menton';
+export function chartHistory(ds: Dataset): Record<ChartSource, Map<number, Map<PlayerId, number>>> {
+  const out = { peaked: new Map(), menton: new Map() } as Record<ChartSource, Map<number, Map<PlayerId, number>>>;
+  for (const v of ds.valuations) {
+    if (v.source !== 'peaked' && v.source !== 'menton') continue;
+    const m = out[v.source];
+    if (!m.has(v.week)) m.set(v.week, new Map());
+    m.get(v.week)!.set(v.playerId, v.value);
+  }
+  return out;
+}
+
+// Average of the two charts as of a week (each chart's latest week at or before it). Null if neither rates him.
+export function chartAvgAt(h: ReturnType<typeof chartHistory>, p: PlayerId, week: number): number | null {
+  const vals = (['peaked', 'menton'] as const).flatMap((s) => {
+    const w = Math.max(-1, ...[...h[s].keys()].filter((x) => x <= week));
+    const v = w < 0 ? undefined : h[s].get(w)!.get(p);
+    return v === undefined ? (w < 0 ? [] : [0]) : [v]; // on the chart that week but not listed = 0
+  });
+  return vals.length && vals.some((v) => v > 0) ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+}
+
+// How well each week's chart ranked players by what they scored afterwards: Spearman rank correlation
+// between the chart value that week and points per game played since (2+ games). 1 = perfect order.
+export function chartAccuracy(idx: Index): { source: ChartSource; week: number; n: number; rho: number }[] {
+  const h = chartHistory(idx.ds);
+  const ranks = (xs: number[]) => {
+    const o = xs.map((x, i) => [x, i] as const).sort((a, b) => a[0] - b[0]);
+    const r = new Array<number>(xs.length);
+    for (let i = 0; i < o.length; ) {
+      let j = i;
+      while (j + 1 < o.length && o[j + 1]![0] === o[i]![0]) j++;
+      for (let k = i; k <= j; k++) r[o[k]![1]] = (i + j) / 2;
+      i = j + 1;
+    }
+    return r;
+  };
+  const out: { source: ChartSource; week: number; n: number; rho: number }[] = [];
+  for (const source of ['peaked', 'menton'] as const)
+    for (const [week, vals] of [...h[source]].sort((a, b) => a[0] - b[0])) {
+      if (week >= idx.scoresThrough) continue;
+      const pairs: [number, number][] = [];
+      for (const [p, v] of vals) {
+        const pts: number[] = [];
+        for (let w = week + 1; w <= idx.scoresThrough; w++) { const r = idx.weeks.get(w)?.get(p); if (r && r.points != null && r.opponent !== 'BYE') pts.push(r.points); }
+        if (pts.length >= 2) pairs.push([v, pts.reduce((a, b) => a + b, 0) / pts.length]);
+      }
+      if (pairs.length < 20) continue;
+      const a = ranks(pairs.map((x) => x[0])), b = ranks(pairs.map((x) => x[1]));
+      const m = (a.length - 1) / 2;
+      let num = 0, da = 0, db = 0;
+      for (let i = 0; i < a.length; i++) { num += (a[i]! - m) * (b[i]! - m); da += (a[i]! - m) ** 2; db += (b[i]! - m) ** 2; }
+      out.push({ source, week, n: pairs.length, rho: num / Math.sqrt(da * db) });
+    }
+  return out;
+}

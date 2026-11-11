@@ -144,6 +144,8 @@ export interface TransactionLeg {
   playerId: PlayerId;
   fromTeamId: TeamId;
   toTeamId: TeamId;
+  rosAtTrade?: number | null; // ESPN rest-of-season points when the trade happened (a snapshot; can't be rebuilt later)
+  valueAtTrade?: number | null; // chart value (Peaked/Menton average) when the trade happened
 }
 
 export interface Transaction {
@@ -193,6 +195,17 @@ export interface Dataset {
   usage?: Usage[]; // optional: absent until the FantasyPros stats task first runs
 }
 
+// A trade saved from the analyzer (FEAT-2). Kept on this device and in backups, never in the dataset.
+export interface SavedTrade {
+  id: string;
+  name: string;
+  savedAt: string; // ISO
+  a: TeamId;
+  b: TeamId;
+  aGives: PlayerId[];
+  bGives: PlayerId[];
+}
+
 // Per-device settings. "My team" lives here, never in the data (DATA-2).
 export interface Settings {
   version: 1;
@@ -202,6 +215,9 @@ export interface Settings {
   injuryStrength: number; // 0-1
   useNews: boolean;
   productionRamp: boolean;
+  rampMedian: boolean; // ramp toward the median game instead of the average
+  handcuff: boolean; // value backup RBs for the team that also owns the starter
+  returnWeeks: Record<PlayerId, number>; // hand-set injury return weeks, overriding the data's estimate
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -212,4 +228,7 @@ export const DEFAULT_SETTINGS: Settings = {
   injuryStrength: 0.6,
   useNews: true,
   productionRamp: true,
+  rampMedian: false,
+  handcuff: false,
+  returnWeeks: {},
 };
