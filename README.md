@@ -73,6 +73,8 @@ To add a real backend later, write another `Repository` with the same four metho
 
 ## Deploy
 
+Live at **https://nicf8814.github.io/FWHL_League_Tracker/**. Every push to `main` runs the tests, builds and publishes to GitHub Pages (`.github/workflows/deploy.yml`); a failing test stops the deploy.
+
 `npm run build` produces a static site in `dist/` with relative paths, so it works on GitHub Pages, Netlify or any static host, including a sub-path.
 
 ## Deliberate shortcuts
