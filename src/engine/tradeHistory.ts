@@ -5,9 +5,11 @@
 //     gave (the weekly projections in the lineups). There are no trade-chart values for past seasons.
 //   As weeks are played the grade moves toward production: weeks / (weeks + 4) of it is points per week
 //     above replacement, got minus gave. Replacement is the 12th QB, 31st RB, 34th WR and 7th TE among
-//     rostered players that week (the Tracker's ranks; past seasons have no free-agent scores).
+//     rostered players that week (the Tracker's ranks; past seasons have no free-agent scores). A week a
+//     player didn't play (no points and no projection, or off every roster) counts as even: his team
+//     started someone else. The live Tracker skips those weeks the same way (no score that week).
 //   Keepers: what really happened the next season, kept value (worth - keeper price) by this side minus
-//     by the partner, weighted 25%.
+//     by the partner, weighted 25%, counted only once that next season is over.
 //   Replay: each week again with the trade undone (best lineup with and without the players), for the
 //     record, seed and playoff spot.
 import type { OwnerKey } from '../data/history.ts';
@@ -30,7 +32,7 @@ export interface SeasonInput {
   finish: Map<OwnerKey, number | null>;
 }
 export interface TradeInput { week: number; sides: [{ owner: OwnerKey; gets: string[] }, { owner: OwnerKey; gets: string[] }] }
-export interface NextKeepers { kept: (owner: OwnerKey, key: string) => { price: number; value: number | null } | null }
+export interface NextKeepers { final: boolean; kept: (owner: OwnerKey, key: string) => { price: number; value: number | null } | null }
 
 // "QB x1, RB x2, RB/WR/TE x1, ... BE x6, IR x1" -> starting slots
 export function parseSlots(roster: string): string[][] {
@@ -115,7 +117,11 @@ export function gradeTrade(S: SeasonInput, W: Map<number, WeekIndex>, t: TradeIn
   const par = (k: string, upto: number) => {
     const ws = weeks.filter((w) => w <= upto);
     if (!ws.length) return null;
-    return ws.reduce((a, w) => { const wk = W.get(w)!; return a + (wk.at.get(k)?.pts ?? 0) - (wk.repl.get(pos.get(k)!) ?? 0); }, 0) / ws.length;
+    return ws.reduce((a, w) => {
+      const wk = W.get(w)!, x = wk.at.get(k);
+      if (!x || ((x.pts ?? 0) === 0 && !x.proj)) return a; // didn't play: even with a replacement
+      return a + (x.pts ?? 0) - (wk.repl.get(pos.get(k)!) ?? 0);
+    }, 0) / ws.length;
   };
   const projRate = (k: string) => {
     const vals = weeks.map((w) => { const wk = W.get(w)!; const x = wk.at.get(k); return x?.proj == null ? null : x.proj - (wk.replProj.get(pos.get(k)!) ?? 0); }).filter((v): v is number => v !== null);
@@ -145,7 +151,7 @@ export function gradeTrade(S: SeasonInput, W: Map<number, WeekIndex>, t: TradeIn
       const proj = ws.map((x) => x?.proj).filter((v): v is number => v != null);
       return { p: playerIdx(k), ptsWk: weeks.length ? Math.round((ws.reduce((a, x) => a + (x?.pts ?? 0), 0) / weeks.length) * 10) / 10 : null, projWk: proj.length ? Math.round((proj.reduce((a, b) => a + b, 0) / proj.length) * 10) / 10 : null, starts: ws.filter((x) => x?.owner === me.owner && x.started).length, weeks: weeks.length };
     });
-    const keep = keepVal(kept) - keepVal(opKept);
+    const keep = next?.final ? keepVal(kept) - keepVal(opKept) : 0; // a keeper season still in progress doesn't count yet
     const graded = me.gets.length + op.gets.length > 0;
     const pGain = graded ? (() => { const g = sum(me.gets, projRate), o = sum(op.gets, projRate); return g === null || o === null ? null : g - o; })() : null;
     const init = pGain === null ? 0 : clamp(pGain / 8, -1, 1);
@@ -164,7 +170,7 @@ export function gradeTrade(S: SeasonInput, W: Map<number, WeekIndex>, t: TradeIn
       grade: score === null ? null : letter(score), initGrade: graded ? letter(clamp(init + 0, -1, 1)) : null, score: score === null ? null : Math.round(score * 1000) / 1000,
       path: graded ? Array.from({ length: n + 1 }, (_, i) => letter(at(i))) : [],
       prod: prod === null || !graded ? null : Math.round(prod * 10) / 10, projGain: pGain === null ? null : Math.round(pGain * 10) / 10,
-      keep, kept, record: realStand(me.owner), alt: altStand(me.owner), finish: S.finish.get(me.owner) ?? null,
+      keep, keepFinal: next?.final ?? true, kept, record: realStand(me.owner), alt: altStand(me.owner), finish: S.finish.get(me.owner) ?? null,
     };
   };
   return { eff, sides: [side(A, B, keptA, keptB), side(B, A, keptB, keptA)] };
