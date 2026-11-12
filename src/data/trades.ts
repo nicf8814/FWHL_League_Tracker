@@ -24,7 +24,8 @@ export interface TradeSide {
   path: string[]; // grade after each week, index 0 = at the trade
   prod: number | null; // points per week above replacement, got minus gave
   projGain: number | null; // projected points per week above replacement, got minus gave
-  keep: number; // next season's keeper value, kept by this side minus kept by the partner ($)
+  keep: number; // next season's keeper value, kept by this side minus kept by the partner ($); 0 until that season is over
+  keepFinal: boolean; // false: the next season is still being played, so kept players are shown but not graded
   kept: KeeperLine[]; // players from this trade that this side kept the next season
   record: { w: number; l: number; t: number; seed: number; playoffs: boolean };
   alt: { w: number; l: number; t: number; seed: number; playoffs: boolean }; // with the trade undone

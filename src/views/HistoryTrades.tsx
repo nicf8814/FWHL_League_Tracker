@@ -42,8 +42,8 @@ export function TradeHelp() {
         <p className="mb-2 font-display text-lg font-bold [font-stretch:85%]">How trades are graded</p>
         <ol className="grid list-decimal gap-1.5 pl-5 text-sm text-ink-2">
           <li><span className="text-ink">At the trade:</span> projected points per week above a replacement starter for the rest of the season, what you got minus what you gave.</li>
-          <li><span className="text-ink">As weeks are played</span> the grade moves to real production: points per week above replacement (the 12th QB, 31st RB, 34th WR, 7th TE that week). After n weeks, n ÷ (n + 4) of the grade is production.</li>
-          <li><span className="text-ink">Keepers:</span> players from the trade kept the next season count too, at their worth minus keeper price (a quarter of the weight).</li>
+          <li><span className="text-ink">As weeks are played</span> the grade moves to real production: points per week above replacement (the 12th QB, 31st RB, 34th WR, 7th TE that week). A week a player doesn't play counts as even, since you'd start someone else. After n weeks, n ÷ (n + 4) of the grade is production.</li>
+          <li><span className="text-ink">Keepers:</span> players from the trade kept the next season count too, at their worth minus keeper price (a quarter of the weight), once that season is over.</li>
           <li><span className="text-ink">C is even.</span> A and B: you came out ahead. D and F: you gave up more than you got.</li>
         </ol>
         <p className="mt-3 text-sm text-ink-2">The record and seed lines replay every week with the trade undone: your real score plus your best lineup without the trade minus your best lineup with it.</p>
@@ -132,7 +132,7 @@ function TradeDetail({ H, t, players }: { H: Hist; t: HistTrade; players: Trades
               <Line label="Production" note="pts/wk above replacement, got minus gave">{s.prod === null ? '–' : signed(s.prod, 1)}</Line>
               <Line label="With the trade" note="real record">{rec(s.record)}</Line>
               <Line label="Undone" note="every week replayed without it">{rec(s.alt)}</Line>
-              <Line label="Keepers next season" note={s.kept.length ? s.kept.map((k) => `${name(k.p)} at $${k.price}`).join(', ') : 'none kept from this trade'}>{s.keep ? signed(s.keep, 0).replace(/^([+−])/, '$1$') : '$0'}</Line>
+              <Line label="Keepers next season" note={s.kept.length ? `${s.kept.map((k) => `${name(k.p)} at $${k.price}`).join(', ')}${s.keepFinal ? '' : ' (season in progress, not graded yet)'}` : 'none kept from this trade'}>{!s.keepFinal ? 'so far' : s.keep ? signed(s.keep, 0).replace(/^([+−])/, '$1$') : '$0'}</Line>
             </dl>
           )}
           {s.path.length > 1 && (

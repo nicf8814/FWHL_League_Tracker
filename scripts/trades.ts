@@ -60,7 +60,7 @@ export function buildTrades(h: History, dir = 'data/history', lineups?: Lineups[
   const nextKeepers = (y: number) => {
     const ps = book.byYear.get(y + 1);
     if (!ps) return null;
-    return { kept: (o: OwnerKey, k: string) => { const x = ps.find((q) => q.keeper && q.owner === o && playerKey(q.name, q.pos) === k); return x ? { price: x.price, value: x.value } : null; } };
+    return { final: y + 1 < h.current.year, kept: (o: OwnerKey, k: string) => { const x = ps.find((q) => q.keeper && q.owner === o && playerKey(q.name, q.pos) === k); return x ? { price: x.price, value: x.value } : null; } };
   };
 
   type Raw = { year: number; week: number; source: HistTrade['source']; confidence: HistTrade['confidence']; date: string | null; sides: [{ owner: OwnerKey; gets: string[]; faab: number }, { owner: OwnerKey; gets: string[]; faab: number }]; dropped: [OwnerKey, string][] };

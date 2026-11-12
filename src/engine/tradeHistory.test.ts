@@ -57,3 +57,14 @@ test('budget-only swaps are listed but not graded', () => {
   assert.equal(faab.length, 2);
   assert.ok(faab.every((t) => t.sides.every((s) => s.grade === null)));
 });
+
+test('weeks a player does not play count as even; an unfinished keeper season is not graded', () => {
+  const t = find(2025, 'clint-h', 'Cam Skattebo'); // Skattebo for Garrett Wilson, both hurt after the trade
+  for (const s of t.sides) {
+    assert.equal(s.grade, 'C', `${s.owner}: neither played after the trade`);
+    assert.equal(s.prod, 0);
+    assert.equal(s.keep, 0);
+    assert.equal(s.keepFinal, false, 'the 2026 keeper season is still being played');
+  }
+  assert.ok(t.sides.find((s) => s.owner === 'clint-h')!.kept.length === 1, 'the keeper is still shown');
+});
