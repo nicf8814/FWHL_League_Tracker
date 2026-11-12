@@ -109,3 +109,14 @@ test('Nick Heisterkamp: his own team 2010-2018, co-owner of Tommy\'s from 2022 (
   const vsClint = headToHead(live, 'nick-heisterkamp', 'clint-h');
   assert.ok(vsClint.games.some((g) => g.year >= 2022));
 });
+
+test('Sleeper brackets: invented playoff-week games dropped, the missing 10th-place game added (bracket-fixes.csv)', () => {
+  const s25 = past.byYear.get(2025)!, s24 = past.byYear.get(2024)!;
+  const at = (s: typeof s25, w: number, o: string) => s.games.filter((g) => g.week === w && (g.home === o || g.away === o));
+  assert.equal(at(s25, 17, 'tommy-teves').length, 0, '5th place was Week 16');
+  assert.equal(at(s25, 16, 'tommy-teves')[0]!.winner, 'tommy-teves');
+  assert.equal(at(s24, 17, 'clint-h').length, 0);
+  const tenth = at(s25, 17, 'grant-gosselin');
+  assert.equal(tenth.length, 1);
+  assert.equal(tenth[0]!.winner, 'clint-helling');
+});

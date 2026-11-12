@@ -31,6 +31,17 @@ export function buildHistory(dir = 'data/history'): History {
     return a ? a.becomes! : name;
   };
   const yearOf = (r: Record<string, string>) => Number(r['Season Year']);
+  // bracket-fixes.csv: playoff-week games the export invented (drop) or left out (add); checked against the platform's bracket.
+  const pair = (a: string, b: string) => [a, b].sort().join('|');
+  for (const f of table(dir, 'bracket-fixes.csv')) {
+    const at = (r: Record<string, string>) => yearOf(r) === Number(f.season) && Number(r['Week Number']) === Number(f.week) && pair(r['Home Owner']!, r['Away Owner']!) === pair(f.home!, f.away!);
+    const i = matchups.findIndex(at);
+    if (f.action === 'drop') { if (i < 0) throw new Error(`bracket-fixes.csv: no ${f.season} Week ${f.week} game ${f.home} v ${f.away} to drop`); matchups.splice(i, 1); }
+    else if (f.action === 'add') {
+      if (i >= 0) throw new Error(`bracket-fixes.csv: ${f.season} Week ${f.week} ${f.home} v ${f.away} is already in the export`);
+      matchups.push({ 'Season Year': f.season!, 'Week Number': f.week!, 'Home Owner': f.home!, 'Home Team': '', 'Home Score': f.home_score!, 'Away Owner': f.away!, 'Away Team': '', 'Away Score': f.away_score! });
+    } else throw new Error(`bracket-fixes.csv: unknown action ${f.action}`);
+  }
   for (const r of standings) r['Owner Name'] = who(r['Owner Name']!, yearOf(r));
   for (const r of matchups) { r['Home Owner'] = who(r['Home Owner']!, yearOf(r)); r['Away Owner'] = who(r['Away Owner']!, yearOf(r)); }
   for (const r of champs) for (const p of ['1st', '2nd', '3rd']) if (r[`${p} Place Owner`]) r[`${p} Place Owner`] = who(r[`${p} Place Owner`]!, yearOf(r));
