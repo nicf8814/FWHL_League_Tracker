@@ -11,6 +11,13 @@ export interface HistOwner {
   teamId: TeamId | null; // team in the current league seed, if still in the league
   filler?: true; // a spot run by someone else to fill the league; never counted in a career
   note?: string;
+  coOwns?: CoOwn[]; // seasons this owner shares another owner's team; those seasons count in both careers
+}
+
+export interface CoOwn {
+  team: OwnerKey; // the owner whose team it is in the export
+  from: number;
+  to?: number; // inclusive; absent = still
 }
 
 export interface HistTeam {
@@ -53,6 +60,7 @@ export function validateHistory(raw: unknown): { ok: true; value: History } | { 
   if (!Array.isArray(h.owners) || !Array.isArray(h.seasons) || !h.current) return { ok: false, errors: ['missing owners, seasons or current'] };
   const keys = new Set(h.owners.map((o) => o.key));
   if (keys.size !== h.owners.length) errors.push('duplicate owner keys');
+  for (const o of h.owners) for (const c of o.coOwns ?? []) if (!keys.has(c.team) || c.team === o.key) errors.push(`${o.key}: co-owns unknown team ${c.team}`);
   for (const s of h.seasons) {
     const at = `season ${s.year}`;
     if (!Number.isInteger(s.year) || !Array.isArray(s.teams) || !Array.isArray(s.games)) { errors.push(`${at}: malformed`); continue; }

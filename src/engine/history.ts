@@ -120,8 +120,22 @@ export function buildHist(h: History, idx?: Index): Hist {
 export const ownerName = (H: Hist, o: OwnerKey) => H.owners.get(o)?.name ?? o;
 const counts = (H: Hist, o: OwnerKey) => !H.owners.get(o)?.filler;
 
+// ---------- Seats ----------
+// The team key that stands for an owner in a season: their own row, or the team they co-own.
+export function seatOf(H: Hist, o: OwnerKey, s: Season): OwnerKey | null {
+  if (s.rows.some((r) => r.owner === o)) return o;
+  const c = H.owners.get(o)?.coOwns?.find((x) => s.year >= x.from && (x.to === undefined || s.year <= x.to));
+  return c && s.rows.some((r) => r.owner === c.team) ? c.team : null;
+}
+// Everyone who ran a team key's team in a season, the export owner first.
+export function crew(H: Hist, team: OwnerKey, year: number): OwnerKey[] {
+  const s = H.byYear.get(year);
+  return s ? [team, ...[...H.owners.keys()].filter((o) => o !== team && seatOf(H, o, s) === team)] : [team];
+}
+export const crewName = (H: Hist, team: OwnerKey, year: number) => crew(H, team, year).map((o) => ownerName(H, o)).join(' & ');
+
 // ---------- Careers ----------
-export interface CareerSeason extends SeasonRow { year: number; live: boolean }
+export interface CareerSeason extends SeasonRow { year: number; live: boolean; with: OwnerKey[] } // with: co-owners that season
 export interface Career {
   owner: OwnerKey;
   name: string;
@@ -144,43 +158,57 @@ export interface Career {
 
 export function careers(H: Hist): Career[] {
   const latest = H.seasons.at(-1)?.year;
-  const by = new Map<OwnerKey, CareerSeason[]>();
-  for (const s of H.seasons) for (const r of s.rows) if (counts(H, r.owner)) by.set(r.owner, [...(by.get(r.owner) ?? []), { ...r, year: s.year, live: s.live }]);
-  return [...by].map(([owner, ss]) => {
+  const out: Career[] = [];
+  for (const owner of H.owners.keys()) {
+    if (!counts(H, owner)) continue;
+    const ss: CareerSeason[] = [];
+    const placed: [number[], number[], number[]] = [[], [], []];
+    for (const s of H.seasons) {
+      const seat = seatOf(H, owner, s);
+      if (!seat) continue;
+      ss.push({ ...s.rows.find((r) => r.owner === seat)!, year: s.year, live: s.live, with: crew(H, seat, s.year).filter((o) => o !== owner) });
+      const p = s.podium.indexOf(seat);
+      if (p >= 0 && p < POD) placed[p]!.push(s.year);
+    }
+    if (!ss.length) continue;
     const sum = (f: (x: CareerSeason) => number) => ss.reduce((a, x) => a + f(x), 0);
-    const placed = (p: number) => H.seasons.filter((s) => s.podium[p - 1] === owner).map((s) => s.year);
-    const titles = placed(1);
+    const [titles, runnerUps, thirds] = placed;
     const done = ss.filter((x) => x.finish !== null);
     const lastTitle = titles.at(-1);
-    return {
+    out.push({
       owner, name: ownerName(H, owner), seasons: ss,
       w: sum((x) => x.w), l: sum((x) => x.l), t: sum((x) => x.t), xw: sum((x) => x.xw), luck: sum((x) => x.luck),
       index: sum((x) => x.index) / ss.length,
-      titles, runnerUps: placed(2), thirds: placed(POD),
+      titles, runnerUps, thirds,
       playoffs: done.filter((x) => x.finish! <= H.byYear.get(x.year)!.playoffTeams).length,
       completed: done.length,
       lifer: ss.length >= LIFER_SEASONS,
       active: ss.some((x) => x.year === latest),
       drought: lastTitle === undefined ? null : done.filter((x) => x.year > lastTitle).length,
-    };
-  });
+    });
+  }
+  return out;
 }
 
 // ---------- Head to head ----------
 export interface H2H { w: number; l: number; t: number; pf: number; pa: number; playoffW: number; playoffL: number; games: Game[] }
-// Regular season and playoff bracket games; consolation games are left out.
+// Regular season and playoff bracket games; consolation games are left out. Follows each owner's
+// seat, so co-owned seasons count, and two co-owners never play each other in those seasons.
 export function headToHead(H: Hist, a: OwnerKey, b: OwnerKey): H2H {
   const out: H2H = { w: 0, l: 0, t: 0, pf: 0, pa: 0, playoffW: 0, playoffL: 0, games: [] };
-  for (const s of H.seasons)
+  for (const s of H.seasons) {
+    const [sa, sb] = [seatOf(H, a, s), seatOf(H, b, s)];
+    if (!sa || !sb || sa === sb) continue;
     for (const g of s.games) {
-      if (g.kind === 'consolation' || !((g.home === a && g.away === b) || (g.home === b && g.away === a))) continue;
+      if (g.kind === 'consolation' || !((g.home === sa && g.away === sb) || (g.home === sb && g.away === sa))) continue;
       out.games.push(g);
-      out.pf += g.home === a ? g.hs : g.as;
-      out.pa += g.home === a ? g.as : g.hs;
-      if (g.winner === a) { out.w++; if (g.kind === 'playoff') out.playoffW++; }
-      else if (g.winner === b) { out.l++; if (g.kind === 'playoff') out.playoffL++; }
+      out.pf += g.home === sa ? g.hs : g.as;
+      out.pa += g.home === sa ? g.as : g.hs;
+      if (g.winner === sa) { out.w++; if (g.kind === 'playoff') out.playoffW++; }
+      else if (g.winner === sb) { out.l++; if (g.kind === 'playoff') out.playoffL++; }
       else out.t++;
     }
+  }
   return out;
 }
 
@@ -228,13 +256,16 @@ export function records(H: Hist, n = 10): Records {
     let cur: { kind: 'W' | 'L' | 'T'; len: number; from: string; to: string } | null = null;
     const push = () => { if (cur && cur.kind !== 'T') (cur.kind === 'W' ? win : loss).push({ owner: o, len: cur.len, from: cur.from, to: cur.to, live: false }); };
     let last = '';
-    for (const s of H.seasons)
-      for (const g of [...s.games].filter((g) => g.kind === 'regular' && !s.top6Weeks.includes(g.week) && (g.home === o || g.away === o)).sort((a, b) => a.week - b.week)) {
-        const k = g.winner === o ? 'W' : g.winner === null ? 'T' : 'L';
+    for (const s of H.seasons) {
+      const seat = seatOf(H, o, s);
+      if (!seat) continue;
+      for (const g of [...s.games].filter((g) => g.kind === 'regular' && !s.top6Weeks.includes(g.week) && (g.home === seat || g.away === seat)).sort((a, b) => a.week - b.week)) {
+        const k = g.winner === seat ? 'W' : g.winner === null ? 'T' : 'L';
         const at = `${s.year} Wk ${g.week}`;
         if (cur && cur.kind === k) { cur.len++; cur.to = at; } else { push(); cur = { kind: k, len: 1, from: at, to: at }; }
         last = at;
       }
+    }
     push();
     const mine = [...win, ...loss].filter((x) => x.owner === o && x.to === last);
     if (latest?.live) mine.forEach((x) => { if (x.to.startsWith(String(latest.year))) x.live = true; });
@@ -252,13 +283,14 @@ export function records(H: Hist, n = 10): Records {
 }
 
 // ---------- Season awards ----------
-export interface Awards { year: number; live: boolean; champion?: SeasonRow; runnerUp?: SeasonRow; horseshoe: SeasonRow; snakebitten: SeasonRow; points: SeasonRow; last?: SeasonRow }
+// luckiest: most wins above what the scores earned; unluckiest: most below.
+export interface Awards { year: number; live: boolean; champion?: SeasonRow; runnerUp?: SeasonRow; luckiest: SeasonRow; unluckiest: SeasonRow; mostPoints: SeasonRow; last?: SeasonRow }
 export function seasonAwards(H: Hist, s: Season): Awards {
   const rows = s.rows.filter((r) => counts(H, r.owner));
   const best = (f: (r: SeasonRow) => number) => rows.reduce((a, b) => (f(b) > f(a) ? b : a));
   const at = (o?: OwnerKey) => s.rows.find((r) => r.owner === o);
   const lastPlace = s.live ? undefined : s.rows.find((r) => r.finish === s.rows.length);
-  return { year: s.year, live: s.live, champion: at(s.podium[0]), runnerUp: at(s.podium[1]), horseshoe: best((r) => r.luck), snakebitten: best((r) => -r.luck), points: best((r) => r.index), last: lastPlace };
+  return { year: s.year, live: s.live, champion: at(s.podium[0]), runnerUp: at(s.podium[1]), luckiest: best((r) => r.luck), unluckiest: best((r) => -r.luck), mostPoints: best((r) => r.index), last: lastPlace };
 }
 
 // Cumulative career luck after each season, for the chart.
