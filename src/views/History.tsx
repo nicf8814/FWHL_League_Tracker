@@ -3,14 +3,17 @@ import { useRoute } from '../app/router.ts';
 import { useLeague } from '../data/store.tsx';
 import { validateHistory, type History as HistoryFile, type OwnerKey } from '../data/history.ts';
 import {
-  buildHist, careers, headToHead, LIFER_SEASONS, ownerName, records, seasonAwards,
-  type Career, type Hist, type ScoreRec, type Season, type SeasonRow,
+  buildHist, careers, crew, headToHead, LIFER_SEASONS, ownerName, records, seasonAwards,
+  type Career, type Hist, type ScoreRec, type Season,
 } from '../engine/history.ts';
 import { Empty, fmt, Mono, Section, Seg, signed, tone } from '../ui/components.tsx';
 
+// The page is a stack of drawers: one per season (newest first, the latest open) and an
+// "All seasons" drawer holding the all-time views. ?year=Y opens a season, ?tab= an all-time view,
+// ?owner= an owner's page.
 const URL_ = `${import.meta.env.BASE_URL}seed/history.json`;
-type Tab = 'trophies' | 'owners' | 'luck' | 'rivals' | 'records';
-const TABS: [Tab, string][] = [['trophies', 'Trophies'], ['owners', 'Owners'], ['luck', 'Luck'], ['rivals', 'Rivals'], ['records', 'Records']];
+type Tab = 'champions' | 'owners' | 'luck' | 'rivals' | 'records';
+const TABS: [Tab, string][] = [['champions', 'Champions'], ['owners', 'Owners'], ['luck', 'Luck'], ['rivals', 'Rivals'], ['records', 'Records']];
 
 function useHistoryFile() {
   const [state, setState] = useState<HistoryFile | string | null>(null);
@@ -29,8 +32,8 @@ export default function HistoryView() {
   const { idx } = useLeague();
   const file = useHistoryFile();
   const H = useMemo(() => (file && typeof file !== 'string' ? buildHist(file, idx) : null), [file, idx]);
+  const all = useMemo(() => (H ? careers(H) : []), [H]);
   const { query, replace } = useRoute();
-  const tab = (TABS.find(([t]) => t === query.get('tab'))?.[0] ?? 'trophies') as Tab;
   const set = (patch: Record<string, string | null>) => {
     const q = new URLSearchParams(query);
     for (const [k, v] of Object.entries(patch)) if (v === null) q.delete(k); else q.set(k, v);
@@ -38,28 +41,67 @@ export default function HistoryView() {
   };
   if (typeof file === 'string') return <Empty>{file}</Empty>;
   if (!H) return <p className="text-sm text-ink-3" role="status">Loading the league history…</p>;
+  const owner = query.get('owner');
+  const c = owner ? all.find((x) => x.owner === owner) : undefined;
+  if (c) return <div className="grid grid-cols-1 gap-8"><OwnerPage H={H} c={c} go={set} /></div>;
+  return <Drawers H={H} all={all} query={query} go={set} />;
+}
+
+type Go = (patch: Record<string, string | null>) => void;
+
+function Drawers({ H, all, query, go }: { H: Hist; all: Career[]; query: URLSearchParams; go: Go }) {
   const first = H.seasons[0]!.year, last = H.seasons.at(-1)!;
-  const all = careers(H);
+  const tabParam = TABS.find(([t]) => t === query.get('tab'))?.[0];
+  const yearParam = Number(query.get('year')) || null;
+  const [openYears, setOpenYears] = useState<Set<number>>(() => new Set([yearParam ?? last.year]));
+  const [allOpen, setAllOpen] = useState(!!tabParam || !!query.get('vs'));
+  useEffect(() => {
+    if (!yearParam) return;
+    setOpenYears((o) => new Set(o).add(yearParam));
+    requestAnimationFrame(() => document.getElementById(`season-${yearParam}`)?.scrollIntoView({ block: 'start' }));
+  }, [yearParam]);
+  useEffect(() => { if (tabParam) setAllOpen(true); }, [tabParam]);
+  const toggle = (y: number, open: boolean) => setOpenYears((o) => { const n = new Set(o); if (open) n.add(y); else n.delete(y); return n; });
+  const tab = tabParam ?? 'champions';
   return (
-    <div className="grid grid-cols-1 gap-8">
+    <div className="grid grid-cols-1 gap-6">
       <section aria-label="Headline" className="grid gap-2">
         <p className="headline-sm">{H.seasons.length} seasons of Favre's Waffle House</p>
         <p className="max-w-[70ch] text-ink-2">
-          {first} to {last.year}{last.live ? ' (this season so far)' : ''}. {all.length} owners, {all.filter((c) => c.lifer).length} of them here {LIFER_SEASONS}+ seasons.
-          ESPN every year but 2024 and 2025 (Sleeper), where scores ran about a third higher, so points are compared with each season's league average.
+          {first} to {last.year}, {all.length} owners. Open a season below, or All seasons for titles, owners, luck, rivals and records.
         </p>
       </section>
-      <Seg label="History section" value={tab} options={TABS} onChange={(t) => set({ tab: t, owner: null, year: null, vs: null })} />
-      {tab === 'trophies' && <Trophies H={H} all={all} go={set} />}
-      {tab === 'owners' && <Owners H={H} all={all} owner={query.get('owner')} go={set} />}
-      {tab === 'luck' && <LuckTab H={H} all={all} year={Number(query.get('year')) || null} go={set} />}
-      {tab === 'rivals' && <Rivals H={H} all={all} pair={query.get('vs')} go={set} />}
-      {tab === 'records' && <RecordsTab H={H} go={set} />}
+      <div className="grid border-t-2 border-ink">
+        <Drawer id="all-seasons" open={allOpen} onToggle={setAllOpen} title="All seasons" meta={`${first}–${last.year}`} line="Champions, owners, luck, rivals and records">
+          <Seg label="All seasons section" value={tab} options={TABS} onChange={(t) => go({ tab: t, vs: null })} />
+          {tab === 'champions' && <Champions H={H} all={all} go={go} />}
+          {tab === 'owners' && <Owners H={H} all={all} go={go} />}
+          {tab === 'luck' && <LuckTab H={H} all={all} go={go} />}
+          {tab === 'rivals' && <Rivals H={H} all={all} pair={query.get('vs')} go={go} />}
+          {tab === 'records' && <RecordsTab H={H} go={go} />}
+        </Drawer>
+        {H.seasons.slice().reverse().map((s) => (
+          <Drawer key={s.year} id={`season-${s.year}`} open={openYears.has(s.year)} onToggle={(o) => toggle(s.year, o)} title={String(s.year)} meta={s.platform === 'Sleeper' ? 'Sleeper' : undefined} line={<SeasonLine H={H} s={s} />}>
+            <SeasonPanel H={H} s={s} go={go} />
+          </Drawer>
+        ))}
+      </div>
     </div>
   );
 }
 
-type Go = (patch: Record<string, string | null>) => void;
+function Drawer({ id, open, onToggle, title, meta, line, children }: { id: string; open: boolean; onToggle: (open: boolean) => void; title: string; meta?: string; line: ReactNode; children: ReactNode }) {
+  return (
+    <details id={id} className="group scroll-mt-4 border-b border-rule" open={open} onToggle={(e) => { const o = e.currentTarget.open; if (o !== open) onToggle(o); }}>
+      <summary className="flex min-h-14 cursor-pointer list-none items-center gap-x-4 py-2 hover:bg-sunk [&::-webkit-details-marker]:hidden">
+        <span className="w-24 shrink-0 font-display text-lg font-bold [font-stretch:85%]">{title}{meta && <span className="block text-xs font-normal text-ink-3 [font-stretch:100%]">{meta}</span>}</span>
+        <span className="min-w-0 flex-1 text-sm text-ink-2">{line}</span>
+        <span aria-hidden="true" className="shrink-0 pr-2 text-ink-3 transition-transform group-open:rotate-90">›</span>
+      </summary>
+      {open && <div className="grid grid-cols-1 gap-6 pt-2 pb-8">{children}</div>}
+    </details>
+  );
+}
 
 // ---------- Small pieces ----------
 function OwnerMark({ H, o }: { H: Hist; o: OwnerKey }) {
@@ -75,22 +117,25 @@ function OwnerMark({ H, o }: { H: Hist; o: OwnerKey }) {
   );
 }
 
-function Who({ H, o, go, sub }: { H: Hist; o: OwnerKey; go?: Go; sub?: ReactNode }) {
-  const own = H.owners.get(o);
-  const label = <span className="flex items-center gap-2"><OwnerMark H={H} o={o} /><span>{ownerName(H, o)}</span></span>;
+// An owner, or with `year` everyone who ran that team that season ("Tommy Teves & Nick Heisterkamp").
+function Who({ H, o, go, sub, year }: { H: Hist; o: OwnerKey; go?: Go; sub?: ReactNode; year?: number }) {
+  const people = year ? crew(H, o, year) : [o];
+  const name = (p: OwnerKey) => (go && !H.owners.get(p)?.filler
+    ? <button key={p} type="button" className="link text-left no-underline hover:underline" onClick={() => go({ owner: p })}>{ownerName(H, p)}</button>
+    : <span key={p}>{ownerName(H, p)}</span>);
   return (
     <span className="grid">
-      {go && !own?.filler ? <button type="button" className="link w-max text-left no-underline hover:underline" onClick={() => go({ tab: 'owners', owner: o, year: null, vs: null })}>{label}</button> : label}
+      <span className="flex items-center gap-2"><OwnerMark H={H} o={o} /><span>{people.map((p, i) => <span key={p}>{i > 0 && ' & '}{name(p)}</span>)}</span></span>
       {sub && <span className="pl-7 text-xs text-ink-3">{sub}</span>}
     </span>
   );
 }
+const names = (H: Hist, o: OwnerKey | undefined, year: number) => (o ? crew(H, o, year).map((p) => ownerName(H, p)).join(' & ') : '–');
 
 const rec = (w: number, l: number, t = 0) => `${w}-${l}${t ? `-${t}` : ''}`;
 const vsAvg = (index: number) => `${index >= 1 ? '+' : '−'}${Math.abs((index - 1) * 100).toFixed(0)}%`;
 const winPct = (w: number, l: number, t = 0) => (w + l + t ? ((w + t / 2) / (w + l + t)).toFixed(3).replace(/^0/, '') : '–');
 const Luck = ({ v }: { v: number }) => <span className={tone(v, 0.5)}>{signed(v)}</span>;
-const Sleeper = ({ s }: { s: Season }) => (s.platform === 'Sleeper' ? <span className="tag ml-2 text-ink-3">Sleeper</span> : null);
 const place = (n: number | null) => (n === null ? '–' : n === 1 ? '1st 🏆' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`);
 
 function Scroll({ children, min = '' }: { children: ReactNode; min?: string }) {
@@ -107,46 +152,96 @@ function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: Re
   );
 }
 
-// ---------- Trophies ----------
-function Trophies({ H, all, go }: { H: Hist; all: Career[]; go: Go }) {
+// ---------- One season ----------
+function SeasonLine({ H, s }: { H: Hist; s: Season }) {
+  if (s.live) {
+    const lead = s.rows[0];
+    const weeks = Math.max(0, ...s.games.map((g) => g.week));
+    return <>In progress · through Week {weeks}{lead ? <> · {names(H, lead.owner, s.year)} leads at {rec(lead.w, lead.l, lead.t)}</> : null}</>;
+  }
+  const team = s.rows.find((r) => r.owner === s.podium[0])?.team;
+  return <><span className="font-medium text-ink">🏆 {names(H, s.podium[0], s.year)}</span>{team && <span className="hidden text-ink-3 sm:inline"> · {team}</span>}<span className="block text-xs text-ink-3">over {names(H, s.podium[1], s.year)}</span></>;
+}
+
+function SeasonPanel({ H, s, go }: { H: Hist; s: Season; go: Go }) {
+  const a = seasonAwards(H, s);
+  const tags = new Map<OwnerKey, string[]>();
+  const tag = (o: OwnerKey | undefined, t: string) => o && tags.set(o, [...(tags.get(o) ?? []), t]);
+  tag(a.mostPoints.owner, 'Most points');
+  tag(a.luckiest.owner, 'Luckiest record');
+  tag(a.unluckiest.owner, 'Unluckiest record');
+  const weeks = Math.max(0, ...s.games.filter((g) => g.kind === 'regular').map((g) => g.week));
+  return (
+    <>
+      {!s.live && (
+        <div className="grid gap-x-8 gap-y-4 sm:grid-cols-3">
+          {s.podium.map((o, i) => {
+            const r = s.rows.find((x) => x.owner === o);
+            return <Stat key={o} label={['Champion', 'Runner-up', 'Third'][i]!} value={<Who H={H} o={o} go={go} year={s.year} />} sub={r ? `${r.team} · ${rec(r.w, r.l, r.t)}` : undefined} />;
+          })}
+        </div>
+      )}
+      <div className="grid gap-2">
+        <Scroll min="min-w-[44rem]">
+          <thead><tr><th className="l w-10">{s.live ? 'Now' : 'Final'}</th><th className="l stick">Team</th><th>W-L</th><th>PF</th><th title="Points per game against the league average">Pts vs avg</th><th title="Wins the weekly scores earned against the whole league">xW</th><th title="Wins minus expected wins">Luck</th><th className="l">Note</th></tr></thead>
+          <tbody>
+            {s.rows.map((r, i) => (
+              <tr key={r.owner}>
+                <td className="l n">{s.live ? i + 1 : r.finish === 1 ? '🏆' : r.finish ?? '–'}</td>
+                <td className="l stick"><Who H={H} o={r.owner} go={go} year={s.year} sub={r.team} /></td>
+                <td className="n">{rec(r.w, r.l, r.t)}</td>
+                <td className="n">{fmt(r.pf)}</td>
+                <td className="n">{vsAvg(r.index)}</td>
+                <td className="n text-ink-2">{fmt(r.xw)}</td>
+                <td className="n"><Luck v={r.luck} /></td>
+                <td className="l text-xs text-ink-3">{tags.get(r.owner)?.join(' · ')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </Scroll>
+        <p className="max-w-[70ch] text-xs text-ink-3">
+          {s.live ? `This season so far, ${weeks} weeks. ` : `${s.regularWeeks}-week regular season, ${s.playoffTeams} playoff teams. `}
+          {s.platform === 'Sleeper' ? 'Played on Sleeper, where scores ran about a third higher. ' : ''}
+          Luck is actual wins minus expected wins (xW).
+        </p>
+        {s.notes.map((n) => <p key={n} className="max-w-[70ch] text-xs text-ink-3">{n}</p>)}
+      </div>
+    </>
+  );
+}
+
+// ---------- All seasons: champions ----------
+function Champions({ H, all, go }: { H: Hist; all: Career[]; go: Go }) {
   const most = (f: (c: Career) => number) => { const m = Math.max(...all.map(f)); return { m, who: all.filter((c) => f(c) === m && m > 0) }; };
   const titles = most((c) => c.titles.length);
-  const brides = most((c) => c.runnerUps.length);
+  const finalsLost = most((c) => c.runnerUps.length);
   const ringless = most((c) => (c.titles.length ? 0 : c.seasons.filter((s) => !s.live).length));
   const drought = most((c) => (c.active && c.drought !== null ? c.drought : 0));
-  const lucky = [...all].sort((a, b) => b.luck - a.luck);
-  const names = (cs: Career[]) => cs.map((c) => c.name).join(', ');
+  const lucky = [...all].filter((c) => c.lifer).sort((a, b) => b.luck - a.luck);
+  const list = (cs: Career[]) => cs.map((c) => c.name).join(', ');
   const done = H.seasons.filter((s) => !s.live).slice().reverse();
-  const live = H.seasons.find((s) => s.live);
   const champLuck = done.filter((s) => (s.rows.find((r) => r.owner === s.podium[0])?.luck ?? 0) > 0).length;
   return (
     <>
-      <Section title="Hall of fame">
-        <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2 xl:grid-cols-3">
-          <Stat label="Most titles" value={`${titles.m} · ${names(titles.who)}`} />
-          <Stat label="Bridesmaid (most finals lost)" value={`${brides.m} · ${names(brides.who)}`} sub={brides.who.map((c) => `${c.titles.length} titles in ${c.titles.length + c.runnerUps.length} finals`).join('; ')} />
-          <Stat label="Ringless (most seasons, no title)" value={`${ringless.m} · ${names(ringless.who)}`} />
-          <Stat label="Longest active drought" value={`${drought.m} seasons · ${names(drought.who)}`} />
-          <Stat label="Horseshoe (luckiest career)" value={<>{lucky[0]!.name} <Luck v={lucky[0]!.luck} /></>} sub="more wins than their scores earned" />
-          <Stat label="Snakebitten (unluckiest career)" value={<>{lucky.at(-1)!.name} <Luck v={lucky.at(-1)!.luck} /></>} sub="fewer wins than their scores earned" />
-        </div>
-      </Section>
+      <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2 xl:grid-cols-3">
+        <Stat label="Most titles" value={`${titles.m} · ${list(titles.who)}`} />
+        <Stat label="Most finals lost" value={`${finalsLost.m} · ${list(finalsLost.who)}`} sub={finalsLost.who.map((c) => `${c.titles.length} titles in ${c.titles.length + c.runnerUps.length} finals`).join('; ')} />
+        <Stat label="Most seasons without a title" value={`${ringless.m} · ${list(ringless.who)}`} />
+        <Stat label="Longest active title drought" value={`${drought.m} seasons · ${list(drought.who)}`} />
+        <Stat label="Luckiest career" value={<>{lucky[0]!.name} <Luck v={lucky[0]!.luck} /></>} sub={`wins above what their scores earned (${LIFER_SEASONS}+ seasons)`} />
+        <Stat label="Unluckiest career" value={<>{lucky.at(-1)!.name} <Luck v={lucky.at(-1)!.luck} /></>} sub={`wins below what their scores earned (${LIFER_SEASONS}+ seasons)`} />
+      </div>
       <Section title="Champions" aside={`${champLuck} of ${done.length} champions had a lucky regular season`}>
-        <Scroll min="min-w-[44rem]">
-          <thead><tr><th className="l w-16">Year</th><th className="l stick">Champion</th><th className="l">Runner-up</th><th className="l">Third</th><th>Reg. season</th><th>Luck</th></tr></thead>
+        <Scroll min="min-w-[40rem]">
+          <thead><tr><th className="l w-16">Year</th><th className="l stick">Champion</th><th className="l">Runner-up</th><th>Reg. season</th><th>Luck</th></tr></thead>
           <tbody>
-            {live && (
-              <tr><td className="l n">{live.year}</td><td className="l stick text-ink-3" colSpan={3}>In progress · <button type="button" className="link" onClick={() => go({ tab: 'luck', year: String(live.year) })}>see this season's luck</button></td><td /><td /></tr>
-            )}
             {done.map((s) => {
               const c = s.rows.find((r) => r.owner === s.podium[0]);
-              const team = (o?: OwnerKey) => s.rows.find((r) => r.owner === o)?.team;
               return (
                 <tr key={s.year}>
-                  <td className="l n">{s.year}<Sleeper s={s} /></td>
-                  <td className="l stick font-medium">{s.podium[0] && <Who H={H} o={s.podium[0]} go={go} sub={team(s.podium[0])} />}</td>
-                  <td className="l">{s.podium[1] && <Who H={H} o={s.podium[1]} go={go} sub={team(s.podium[1])} />}</td>
-                  <td className="l">{s.podium[2] && <Who H={H} o={s.podium[2]} go={go} />}</td>
+                  <td className="l n"><button type="button" className="link" onClick={() => go({ year: String(s.year) })}>{s.year}</button></td>
+                  <td className="l stick font-medium">{s.podium[0] && <Who H={H} o={s.podium[0]} go={go} year={s.year} sub={c?.team} />}</td>
+                  <td className="l">{s.podium[1] && <Who H={H} o={s.podium[1]} go={go} year={s.year} />}</td>
                   <td className="n">{c ? rec(c.w, c.l, c.t) : '–'}</td>
                   <td className="n">{c ? <Luck v={c.luck} /> : '–'}</td>
                 </tr>
@@ -155,37 +250,15 @@ function Trophies({ H, all, go }: { H: Hist; all: Career[]; go: Go }) {
           </tbody>
         </Scroll>
       </Section>
-      <Section title="Season awards">
-        <Scroll min="min-w-[48rem]">
-          <thead><tr><th className="l w-16">Year</th><th className="l">🍀 Horseshoe (luckiest)</th><th className="l">💀 Snakebitten</th><th className="l">🚀 Points title</th><th className="l">🚽 Last place</th></tr></thead>
-          <tbody>
-            {H.seasons.slice().reverse().map((s) => {
-              const a = seasonAwards(H, s);
-              return (
-                <tr key={s.year}>
-                  <td className="l n">{s.year}{s.live ? '*' : ''}</td>
-                  <td className="l"><Who H={H} o={a.horseshoe.owner} go={go} sub={<>{rec(a.horseshoe.w, a.horseshoe.l, a.horseshoe.t)}, {signed(a.horseshoe.luck)} wins</>} /></td>
-                  <td className="l"><Who H={H} o={a.snakebitten.owner} go={go} sub={<>{rec(a.snakebitten.w, a.snakebitten.l, a.snakebitten.t)}, {signed(a.snakebitten.luck)} wins</>} /></td>
-                  <td className="l"><Who H={H} o={a.points.owner} go={go} sub={`${fmt(a.points.pf)} pts, ${vsAvg(a.points.index)} vs avg`} /></td>
-                  <td className="l">{a.last ? <Who H={H} o={a.last.owner} go={go} /> : <span className="text-ink-3">–</span>}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </Scroll>
-        <p className="text-xs text-ink-3">* this season so far.</p>
-      </Section>
     </>
   );
 }
 
 // ---------- Owners ----------
 type OKey = 'seasons' | 'win' | 'titles' | 'finals' | 'playoffs' | 'index' | 'luck';
-function Owners({ H, all, owner, go }: { H: Hist; all: Career[]; owner: string | null; go: Go }) {
+function Owners({ H, all, go }: { H: Hist; all: Career[]; go: Go }) {
   const [everyone, setEveryone] = useState(false);
   const [sort, setSort] = useState<OKey>('titles');
-  const c = owner ? all.find((x) => x.owner === owner) : undefined;
-  if (c) return <OwnerPage H={H} c={c} go={go} />;
   const val = (x: Career): number => ({
     seasons: x.seasons.length, win: (x.w + x.t / 2) / Math.max(1, x.w + x.l + x.t), titles: x.titles.length * 100 + x.runnerUps.length * 10 + x.thirds.length,
     finals: x.titles.length + x.runnerUps.length, playoffs: x.playoffs / Math.max(1, x.completed), index: x.index, luck: x.luck,
@@ -195,7 +268,7 @@ function Owners({ H, all, owner, go }: { H: Hist; all: Career[]; owner: string |
     <th aria-sort={sort === k ? 'descending' : 'none'}><button type="button" className="link -my-3 py-3 no-underline" onClick={() => setSort(k)}>{label}{sort === k ? ' ↓' : ''}</button></th>
   );
   return (
-    <Section title="Owners" aside={<Seg label="Owners shown" value={everyone ? 'all' : 'lifers'} options={[['lifers', `Lifers (${LIFER_SEASONS}+ seasons)`], ['all', 'Everyone']]} onChange={(v) => setEveryone(v === 'all')} />}>
+    <Section title="Career records" aside={<Seg label="Owners shown" value={everyone ? 'all' : 'lifers'} options={[['lifers', `Lifers (${LIFER_SEASONS}+ seasons)`], ['all', 'Everyone']]} onChange={(v) => setEveryone(v === 'all')} />}>
       <Scroll min="min-w-[52rem]">
         <thead><tr><th className="l stick">Owner</th>{th('seasons', 'Seasons')}<th>W-L</th>{th('win', 'Win %')}{th('playoffs', 'Playoffs')}{th('titles', 'Titles')}{th('finals', 'Finals')}{th('index', 'Pts vs avg')}{th('luck', 'Luck')}</tr></thead>
         <tbody>
@@ -230,7 +303,7 @@ function OwnerPage({ H, c, go }: { H: Hist; c: Career; go: Go }) {
   return (
     <>
       <div className="grid gap-3">
-        <button type="button" className="link w-max text-sm" onClick={() => go({ owner: null })}>← All owners</button>
+        <button type="button" className="link w-max text-sm" onClick={() => go({ owner: null })}>← History</button>
         <p className="headline-sm flex items-center gap-3">{c.name}</p>
         <p className="text-ink-2">
           {c.seasons[0]!.year} to {c.seasons.at(-1)!.year} · {c.seasons.length} seasons{c.lifer ? ' · lifer' : ''}{c.active ? '' : ' · no longer in the league'}
@@ -252,8 +325,8 @@ function OwnerPage({ H, c, go }: { H: Hist; c: Career; go: Go }) {
           <tbody>
             {c.seasons.slice().reverse().map((s) => (
               <tr key={s.year}>
-                <td className="l n">{s.year}{s.live ? '*' : ''}<Sleeper s={H.byYear.get(s.year)!} /></td>
-                <td className="l stick">{s.team}</td>
+                <td className="l n"><button type="button" className="link" title={`Open ${s.year}`} onClick={() => go({ owner: null, year: String(s.year) })}>{s.year}</button>{s.live ? '*' : ''}{H.byYear.get(s.year)!.platform === 'Sleeper' ? <span className="tag ml-2 text-ink-3">Sleeper</span> : null}</td>
+                <td className="l stick">{s.team}{s.with.length > 0 && <span className="block text-xs text-ink-3">with {s.with.map((o) => ownerName(H, o)).join(' & ')}</span>}</td>
                 <td className="n">{rec(s.w, s.l, s.t)}</td>
                 <td className="n">{s.live ? 'live' : place(s.finish)}</td>
                 <td className="n">{fmt(s.pf)}</td>
@@ -286,78 +359,31 @@ function OwnerPage({ H, c, go }: { H: Hist; c: Career; go: Go }) {
   );
 }
 
-// ---------- Luck ----------
-function LuckTab({ H, all, year, go }: { H: Hist; all: Career[]; year: number | null; go: Go }) {
+// ---------- All seasons: luck ----------
+function LuckTab({ H, all, go }: { H: Hist; all: Career[]; go: Go }) {
   const [everyone, setEveryone] = useState(false);
-  const s = year ? H.byYear.get(year) : undefined;
-  const picker = (
-    <label className="flex items-center gap-2 text-sm text-ink-3">
-      Season
-      <select className="field w-auto" value={s?.year ?? ''} onChange={(e) => go({ year: e.target.value || null })}>
-        <option value="">All time</option>
-        {H.seasons.slice().reverse().map((x) => <option key={x.year} value={x.year}>{x.year}{x.live ? ' (so far)' : ''}</option>)}
-      </select>
-    </label>
-  );
-  const method = (
-    <p className="max-w-[70ch] text-sm text-ink-2">
-      Luck is actual wins minus expected wins. Each week a score is compared with every other score that week: beating 8 of 11 is worth 8/11 of a win, whoever you actually played.
-      Over a season that adds up to expected wins (xW). Records are the official ones, so the 2012 stat correction counts as ESPN has it.
-    </p>
-  );
-  if (s) return <SeasonLuck H={H} s={s} picker={picker} method={method} go={go} />;
   const shown = all.filter((c) => everyone || c.lifer).sort((a, b) => b.luck - a.luck);
   const seasons = H.seasons.flatMap((x) => x.rows.filter((r) => !H.owners.get(r.owner)?.filler).map((r) => ({ ...r, year: x.year, live: x.live })));
   const bySeason = [...seasons].sort((a, b) => b.luck - a.luck);
   const line = (r: (typeof seasons)[number]) => (
     <li key={`${r.year}-${r.owner}`} className="flex items-center justify-between gap-3 border-b border-rule py-1.5">
-      <Who H={H} o={r.owner} go={go} sub={`${r.year}${r.live ? ' so far' : ''} · ${r.team}`} />
+      <Who H={H} o={r.owner} go={go} year={r.year} sub={`${r.year}${r.live ? ' so far' : ''} · ${r.team}`} />
       <span className="num shrink-0 text-right text-sm">{rec(r.w, r.l, r.t)} <span className="text-ink-3">xW {fmt(r.xw)}</span> <Luck v={r.luck} />{r.finish === 1 ? ' 🏆' : ''}</span>
     </li>
   );
   return (
     <>
-      <div className="flex flex-wrap items-end gap-4">{picker}</div>
       <Section title="Career luck" aside={<Seg label="Owners shown" value={everyone ? 'all' : 'lifers'} options={[['lifers', 'Lifers'], ['all', 'Everyone']]} onChange={(v) => setEveryone(v === 'all')} />}>
         <LuckBars rows={shown.map((c) => ({ key: c.owner, label: c.name, v: c.luck, title: `${c.name}: ${rec(c.w, c.l, c.t)}, ${fmt(c.xw)} expected wins over ${c.seasons.length} seasons` }))} />
-        {method}
+        <p className="max-w-[70ch] text-sm text-ink-2">
+          Luck is actual wins minus expected wins. Each week a score is compared with every other score that week: beating 8 of 11 is worth 8/11 of a win, whoever you actually played.
+          Over a season that adds up to expected wins (xW). Each season's drawer has its own luck column.
+        </p>
       </Section>
       <div className="grid gap-8 lg:grid-cols-2">
         <Section title="Luckiest seasons"><ol className="grid">{bySeason.slice(0, 10).map(line)}</ol></Section>
         <Section title="Unluckiest seasons"><ol className="grid">{bySeason.slice(-10).reverse().map(line)}</ol></Section>
       </div>
-    </>
-  );
-}
-
-function SeasonLuck({ H, s, picker, method, go }: { H: Hist; s: Season; picker: ReactNode; method: ReactNode; go: Go }) {
-  const rows = [...s.rows].sort((a, b) => b.luck - a.luck);
-  return (
-    <>
-      <div className="flex flex-wrap items-end gap-4">{picker}<button type="button" className="link text-sm" onClick={() => go({ year: null })}>All time</button></div>
-      <Section title={`${s.year}${s.live ? ' so far' : ''}: wins vs expected wins`} aside={s.platform === 'Sleeper' ? 'Sleeper season' : undefined}>
-        <Scatter H={H} rows={s.rows} />
-        {method}
-      </Section>
-      <Section title={`${s.year} luck table`}>
-        <Scroll min="min-w-[40rem]">
-          <thead><tr><th className="l stick">Owner</th><th>W-L</th><th>xW</th><th>Luck</th><th>All-play</th><th>Pts vs avg</th><th>Finish</th></tr></thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.owner}>
-                <td className="l stick"><Who H={H} o={r.owner} go={go} sub={r.team} /></td>
-                <td className="n">{rec(r.w, r.l, r.t)}</td>
-                <td className="n text-ink-2">{fmt(r.xw)}</td>
-                <td className="n"><Luck v={r.luck} /></td>
-                <td className="n text-ink-2">{rec(r.allPlay.w, r.allPlay.l, r.allPlay.t)}</td>
-                <td className="n">{vsAvg(r.index)}</td>
-                <td className="n">{s.live ? '–' : place(r.finish)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </Scroll>
-        {s.notes.map((n) => <p key={n} className="max-w-[70ch] text-sm text-ink-3">{n}</p>)}
-      </Section>
     </>
   );
 }
@@ -381,42 +407,6 @@ function LuckBars({ rows }: { rows: { key: string; label: string; v: number; tit
         );
       })}
     </ul>
-  );
-}
-
-// Actual wins against expected wins; points above the diagonal won more than they scored.
-function Scatter({ H, rows }: { H: Hist; rows: SeasonRow[] }) {
-  const W = 560, P = 36, max = Math.ceil(Math.max(...rows.map((r) => Math.max(r.w + r.t / 2, r.xw)), 1)) + 1;
-  const x = (v: number) => P + (v / max) * (W - P - 12), y = (v: number) => W - P - (v / max) * (W - P - 12);
-  const sorted = [...rows].sort((a, b) => b.luck - a.luck);
-  const label = new Set([sorted[0], sorted.at(-1)].map((r) => r?.owner)); // extremes only; hover and the table carry the rest
-  const ticks = Array.from({ length: max + 1 }, (_, i) => i).filter((i) => i % 2 === 0);
-  return (
-    <svg viewBox={`0 0 ${W} ${W}`} className="w-full max-w-xl" role="img" aria-label="Each team's actual wins against expected wins; the table below has the same numbers">
-      {ticks.map((t) => (
-        <g key={t} className="text-[11px]" fill="var(--ink-3)">
-          <line x1={x(t)} x2={x(t)} y1={y(0)} y2={y(max)} stroke="var(--rule)" />
-          <line x1={x(0)} x2={x(max)} y1={y(t)} y2={y(t)} stroke="var(--rule)" />
-          <text x={x(t)} y={y(0) + 16} textAnchor="middle" fontFamily="var(--font-mono)">{t}</text>
-          <text x={x(0) - 8} y={y(t) + 4} textAnchor="end" fontFamily="var(--font-mono)">{t}</text>
-        </g>
-      ))}
-      <line x1={x(0)} y1={y(0)} x2={x(max)} y2={y(max)} stroke="var(--ink-3)" strokeDasharray="4 4" />
-      <text x={x(max) - 4} y={y(max) + 16} textAnchor="end" className="text-[11px]" fill="var(--ink-3)">wins = expected</text>
-      <text x={(W + P) / 2} y={W - 4} textAnchor="middle" className="text-xs" fill="var(--ink-2)">Expected wins</text>
-      <text x={12} y={(W - P) / 2} textAnchor="middle" className="text-xs" fill="var(--ink-2)" transform={`rotate(-90 12 ${(W - P) / 2})`}>Actual wins</text>
-      {rows.map((r) => {
-        const cx = x(r.xw), cy = y(r.w + r.t / 2);
-        return (
-          <g key={r.owner}>
-            <circle cx={cx} cy={cy} r={6} fill={r.luck >= 0.5 ? 'var(--gain)' : r.luck <= -0.5 ? 'var(--loss)' : 'var(--ink-3)'} stroke="var(--paper)" strokeWidth={2}>
-              <title>{`${ownerName(H, r.owner)}: ${rec(r.w, r.l, r.t)}, ${fmt(r.xw)} expected, luck ${signed(r.luck)}`}</title>
-            </circle>
-            {label.has(r.owner) && <text x={cx > W * 0.6 ? cx - 10 : cx + 10} y={cy + 4} textAnchor={cx > W * 0.6 ? 'end' : 'start'} className="text-xs" fill="var(--ink)">{ownerName(H, r.owner)} {signed(r.luck)}</text>}
-          </g>
-        );
-      })}
-    </svg>
   );
 }
 
@@ -506,7 +496,7 @@ function RecordsTab({ H, go }: { H: Hist; go: Go }) {
   const plat = (y: number) => (H.byYear.get(y)?.platform === 'Sleeper' ? ' · Sleeper' : '');
   const game = (r: ScoreRec, value: ReactNode) => (
     <li key={`${r.year}-${r.week}-${r.owner}`} className="flex items-center justify-between gap-3 border-b border-rule py-1.5">
-      <Who H={H} o={r.owner} go={go} sub={`${r.year} Wk ${r.week}${r.kind === 'playoff' ? ' (playoffs)' : ''} vs ${ownerName(H, r.opp)}${plat(r.year)}`} />
+      <Who H={H} o={r.owner} go={go} year={r.year} sub={`${r.year} Wk ${r.week}${r.kind === 'playoff' ? ' (playoffs)' : ''} vs ${ownerName(H, r.opp)}${plat(r.year)}`} />
       <span className="num shrink-0 text-right text-sm">{value}</span>
     </li>
   );
@@ -516,7 +506,7 @@ function RecordsTab({ H, go }: { H: Hist; go: Go }) {
   const topHeart = [...heartCount].sort((a, b) => b[1] - a[1])[0];
   const seasonLine = (r: (typeof seasons)[number], v: ReactNode) => (
     <li key={`${r.s.year}-${r.owner}`} className="flex items-center justify-between gap-3 border-b border-rule py-1.5">
-      <Who H={H} o={r.owner} go={go} sub={`${r.s.year} · ${r.team}`} />
+      <Who H={H} o={r.owner} go={go} year={r.s.year} sub={`${r.s.year} · ${r.team}`} />
       <span className="num shrink-0 text-sm">{v}</span>
     </li>
   );

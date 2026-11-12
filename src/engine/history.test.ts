@@ -56,8 +56,8 @@ test('careers: titles, finals, droughts', () => {
   assert.equal(career(past, 'david-morris').runnerUps.length, 5);
   assert.equal(career(past, 'ryan-cooper').drought, null);
   assert.equal(career(past, 'travis-mattson').drought, 14);
-  assert.equal(careers(past).filter((c) => c.lifer).length, 9, 'Tim reaches 10 seasons in 2026');
-  assert.equal(careers(live).filter((c) => c.lifer).length, 10);
+  assert.equal(careers(past).filter((c) => c.lifer).length, 10, 'Nick counts his co-owned seasons; Tim reaches 10 in 2026');
+  assert.equal(careers(live).filter((c) => c.lifer).length, 11);
 });
 
 test('the live season joins from the league seed', () => {
@@ -90,4 +90,22 @@ test('Alex Teves through 2011, Tommy Teves from 2012 (aliases.csv)', () => {
   assert.deepEqual(alex.runnerUps, [2010]);
   assert.deepEqual(tommy.runnerUps, [2019]);
   assert.ok(career(live, 'tommy-teves').lifer, '15 seasons with 2026');
+});
+
+test('Nick Heisterkamp: his own team 2010-2018, co-owner of Tommy\'s from 2022 (coowners.csv)', () => {
+  const nick = career(live, 'nick-heisterkamp'), tommy = career(live, 'tommy-teves');
+  assert.deepEqual(nick.seasons.map((s) => s.year), [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2022, 2023, 2024, 2025, 2026]);
+  assert.deepEqual(nick.titles, [2012, 2017, 2024]);
+  assert.deepEqual(nick.thirds, [2011, 2015, 2018]);
+  assert.equal(`${career(past, 'nick-heisterkamp').w}-${career(past, 'nick-heisterkamp').l}`, '107-66');
+  assert.equal(nick.playoffs, 12);
+  assert.ok(nick.active);
+  assert.deepEqual(nick.seasons.at(-1)!.with, ['tommy-teves']);
+  assert.deepEqual(tommy.seasons.at(-1)!.with, ['nick-heisterkamp']);
+  assert.deepEqual(tommy.titles, [2016, 2024], 'Tommy keeps his own seasons');
+  // Before 2022 they played each other; from 2022 they are one team.
+  const h = headToHead(live, 'nick-heisterkamp', 'tommy-teves');
+  assert.ok(h.games.length > 0 && h.games.every((g) => g.year <= 2018));
+  const vsClint = headToHead(live, 'nick-heisterkamp', 'clint-h');
+  assert.ok(vsClint.games.some((g) => g.year >= 2022));
 });

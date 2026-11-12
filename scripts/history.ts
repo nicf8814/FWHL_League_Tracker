@@ -52,6 +52,14 @@ export function buildHistory(dir = 'data/history'): History {
     });
   }
   for (const name of extra.keys()) if (!owners.has(ownerKey(name))) errors.push(`owners.csv: ${name} is in no season`);
+  // coowners.csv: an owner who shares another owner's team for some seasons (from/to inclusive, to blank = on).
+  for (const r of table(dir, 'coowners.csv')) {
+    const o = owners.get(ownerKey(r.owner!)), team = ownerKey(r.team!);
+    if (!o) { errors.push(`coowners.csv: ${r.owner} is in no season`); continue; }
+    if (!owners.has(team)) { errors.push(`coowners.csv: ${r.team} is in no season`); continue; }
+    o.coOwns = [...(o.coOwns ?? []), { team, from: Number(r.from), ...(r.to ? { to: Number(r.to) } : {}) }];
+    if (r.note) o.note = o.note ? `${o.note} ${r.note}` : r.note;
+  }
 
   const currentYear = Math.max(...settings.map((s) => Number(s['Season Year'])));
   const seasons: HistSeason[] = [];
@@ -106,6 +114,9 @@ export function buildHistory(dir = 'data/history'): History {
       notes: fixes.map((f) => `Week ${f.week}: ${f.note}`),
     });
   }
+  for (const o of owners.values())
+    for (const c of o.coOwns ?? [])
+      for (const s of seasons) if (s.year >= c.from && (c.to === undefined || s.year <= c.to) && s.teams.some((t) => t.owner === o.key)) errors.push(`coowners.csv: ${o.name} has their own team in ${s.year}, inside his co-owned years`);
   if (errors.length) throw new Error(`history inputs do not add up:\n- ${errors.join('\n- ')}`);
   const teamNames = Object.fromEntries(standings.filter((r) => Number(r['Season Year']) === currentYear).map((r) => [ownerKey(r['Owner Name']!), clean(r['Team Name']!)]));
   return { version: 1, owners: [...owners.values()], seasons, current: { year: currentYear, teamNames } };
