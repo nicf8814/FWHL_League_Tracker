@@ -8,13 +8,14 @@ import {
 } from '../engine/history.ts';
 import { Empty, fmt, Mono, Section, Seg, signed, tone } from '../ui/components.tsx';
 import SeasonWeeks, { type WeekState } from './HistoryWeeks.tsx';
+import { DraftSearch, SeasonDraft } from './HistoryDrafts.tsx';
 
 // The page is a stack of drawers: one per season (newest first, the latest open) and an
 // "All seasons" drawer holding the all-time views. ?year=Y opens a season, ?tab= an all-time view,
 // ?owner= an owner's page, ?wk=<year>-<week>&m=<owner> a season's week and open game.
 const URL_ = `${import.meta.env.BASE_URL}seed/history.json`;
-type Tab = 'champions' | 'owners' | 'luck' | 'rivals' | 'records';
-const TABS: [Tab, string][] = [['champions', 'Champions'], ['owners', 'Owners'], ['luck', 'Luck'], ['rivals', 'Rivals'], ['records', 'Records']];
+type Tab = 'champions' | 'owners' | 'luck' | 'rivals' | 'records' | 'drafts';
+const TABS: [Tab, string][] = [['champions', 'Champions'], ['owners', 'Owners'], ['luck', 'Luck'], ['rivals', 'Rivals'], ['records', 'Records'], ['drafts', 'Drafts']];
 
 function useHistoryFile() {
   const [state, setState] = useState<HistoryFile | string | null>(null);
@@ -70,17 +71,18 @@ function Drawers({ H, all, query, go }: { H: Hist; all: Career[]; query: URLSear
       <section aria-label="Headline" className="grid gap-2">
         <p className="headline-sm">{H.seasons.length} seasons of Favre's Waffle House</p>
         <p className="max-w-[70ch] text-ink-2">
-          {first} to {last.year}, {all.length} owners. Open a season below, or All seasons for titles, owners, luck, rivals and records.
+          {first} to {last.year}, {all.length} owners. Open a season for its standings, weeks and draft, or All seasons for titles, owners, luck, rivals, records and every draft.
         </p>
       </section>
       <div className="grid border-t-2 border-ink">
-        <Drawer id="all-seasons" open={allOpen} onToggle={setAllOpen} title="All seasons" meta={`${first}–${last.year}`} line="Champions, owners, luck, rivals and records">
+        <Drawer id="all-seasons" open={allOpen} onToggle={setAllOpen} title="All seasons" meta={`${first}–${last.year}`} line="Champions, owners, luck, rivals, records and drafts">
           <Seg label="All seasons section" value={tab} options={TABS} onChange={(t) => go({ tab: t, vs: null })} />
           {tab === 'champions' && <Champions H={H} all={all} go={go} />}
           {tab === 'owners' && <Owners H={H} all={all} go={go} />}
           {tab === 'luck' && <LuckTab H={H} all={all} go={go} />}
           {tab === 'rivals' && <Rivals H={H} all={all} pair={query.get('vs')} go={go} />}
           {tab === 'records' && <RecordsTab H={H} go={go} />}
+          {tab === 'drafts' && <DraftSearch H={H} />}
         </Drawer>
         {H.seasons.slice().reverse().map((s) => (
           <Drawer key={s.year} id={`season-${s.year}`} open={openYears.has(s.year)} onToggle={(o) => toggle(s.year, o)} title={String(s.year)} meta={s.platform === 'Sleeper' ? 'Sleeper' : undefined} line={<SeasonLine H={H} s={s} />}>
@@ -168,14 +170,15 @@ function SeasonLine({ H, s }: { H: Hist; s: Season }) {
 const parseWk = (v: string | null) => { const m = v?.match(/^(\d{4})-(\d+)$/); return m ? { year: Number(m[1]), week: Number(m[2]) } : null; };
 
 function SeasonPanel({ H, s, go, weeks }: { H: Hist; s: Season; go: Go; weeks: WeekState | null }) {
-  const [view, setView] = useState<'standings' | 'weeks'>(weeks ? 'weeks' : 'standings');
+  const [view, setView] = useState<'standings' | 'weeks' | 'draft'>(weeks ? 'weeks' : 'standings');
   const [ws, setWs] = useState<WeekState>(weeks ?? { week: null, open: null });
   const toWeeks = (w: WeekState) => { setWs(w); go({ wk: `${s.year}-${w.week ?? 1}`, m: w.open }); };
+  const views: ['standings' | 'weeks' | 'draft', string][] = s.live ? [['standings', 'Standings'], ['draft', 'Draft']] : [['standings', 'Standings'], ['weeks', 'Week by week'], ['draft', 'Draft']];
   return (
     <>
-      {!s.live && <Seg label={`${s.year} view`} value={view} options={[['standings', 'Standings'], ['weeks', 'Week by week']]} onChange={(v) => { setView(v); if (v === 'standings') go({ wk: null, m: null }); }} />}
-      {view === 'weeks' && !s.live
-        ? <SeasonWeeks H={H} s={s} state={ws} onState={toWeeks} onOwner={(o) => go({ owner: o })} />
+      <Seg label={`${s.year} view`} value={view} options={views} onChange={(v) => { setView(v); if (v !== 'weeks') go({ wk: null, m: null }); }} />
+      {view === 'weeks' && !s.live ? <SeasonWeeks H={H} s={s} state={ws} onState={toWeeks} onOwner={(o) => go({ owner: o })} />
+        : view === 'draft' ? <SeasonDraft H={H} s={s} />
         : <SeasonStandings H={H} s={s} go={go} />}
     </>
   );

@@ -9,6 +9,8 @@ import { validateHistory } from '../src/data/history.ts';
 import { buildHistory, formatHistory } from './history.ts';
 import { validateLineups } from '../src/data/lineups.ts';
 import { buildLineups, formatLineups } from './lineups.ts';
+import { validateDrafts } from '../src/data/drafts.ts';
+import { buildDrafts, formatDrafts } from './drafts.ts';
 import { existsSync, mkdirSync, readdirSync } from 'node:fs';
 import {
   applyChart, applyProjections, applyResults, applyRosters, arizonaToday, dropFantasyPros, formatDataset, chartRowsFromCsv,
@@ -75,8 +77,7 @@ function checkHistory() {
 
 // public/seed/lineups/<year>.json must match what data/history/rosters builds today.
 const LINEUPS = 'public/seed/lineups';
-function checkLineups() {
-  const built = buildLineups(buildHistory());
+function checkLineups(built = buildLineups(buildHistory())) {
   const want = new Set(built.map((l) => `${l.year}.json`));
   const have = existsSync(LINEUPS) ? readdirSync(LINEUPS).filter((f) => f.endsWith('.json')) : [];
   for (const f of have) if (!want.has(f)) fail(`${LINEUPS}/${f} has no input. Run: npm run data -- lineups`);
@@ -89,12 +90,22 @@ function checkLineups() {
   return `${built.length} seasons (${built[0]?.year}-${built.at(-1)?.year}), up to date`;
 }
 
+// public/seed/drafts.json must match what data/history/drafts builds today.
+const DRAFTS = 'public/seed/drafts.json';
+function checkDrafts(h = buildHistory(), L = buildLineups(h)) {
+  const { drafts } = buildDrafts(h, 'data/history', L);
+  if (!existsSync(DRAFTS) || readFileSync(DRAFTS, 'utf8') !== formatDrafts(drafts)) fail(`${DRAFTS} is out of date with data/history/drafts. Run: npm run data -- drafts`);
+  const v = validateDrafts(readJson(DRAFTS));
+  if (!v.ok) fail(`${DRAFTS} is invalid:\n- ${v.errors.join('\n- ')}`);
+  return `${drafts.seasons.length} drafts, ${drafts.picks.length} picks, up to date`;
+}
+
 const today = opt('--today') ?? arizonaToday();
 try {
   switch (cmd) {
     case 'check': {
       const ds = load();
-      console.log(JSON.stringify({ valid: true, file, ...summary(ds), history: checkHistory(), lineups: checkLineups() }, null, 2));
+      console.log(JSON.stringify({ valid: true, file, ...summary(ds), history: checkHistory(), ...(() => { const h = buildHistory(), L = buildLineups(h); return { lineups: checkLineups(L), drafts: checkDrafts(h, L) }; })() }, null, 2));
       break;
     }
     case 'history': {
@@ -112,6 +123,14 @@ try {
       console.log(JSON.stringify({ written: !dry, dir: LINEUPS, seasons: built.map((l) => `${l.year} ${l.source} ${l.detail}: ${Object.keys(l.weeks).length} weeks, ${l.players.length} players`) }, null, 2));
       break;
     }
+    case 'drafts': {
+      const { drafts, report } = buildDrafts(buildHistory());
+      const v = validateDrafts(JSON.parse(formatDrafts(drafts)));
+      if (!v.ok) fail(`the drafts would be invalid:\n- ${v.errors.join('\n- ')}`);
+      if (!dry) writeFileSync(DRAFTS, formatDrafts(drafts));
+      console.log(JSON.stringify({ written: !dry, file: DRAFTS, picks: drafts.picks.length, players: drafts.players.length, unmatched: report.unmatched, seasons: report.seasons }, null, 2));
+      break;
+    }
     case 'results': { const ds = load(); finish(ds, applyResults(ds, readJson(rest[0]) as never, today)); break; }
     case 'projections': { const ds = load(); finish(ds, applyProjections(ds, readJson(rest[0]) as never, today, force)); break; }
     case 'rosters': { const ds = load(); finish(ds, applyRosters(ds, readJson(rest[0]) as never, today, force)); break; }
@@ -123,7 +142,7 @@ try {
     }
     case 'drop-fantasypros': { const ds = load(); finish(ds, dropFantasyPros(ds)); break; }
     default:
-      fail(`unknown command "${cmd ?? ''}". Use: check | results <json> | projections <json> | rosters <json> | chart <peaked|menton> <week> <csv> | history | lineups`);
+      fail(`unknown command "${cmd ?? ''}". Use: check | results <json> | projections <json> | rosters <json> | chart <peaked|menton> <week> <csv> | history | lineups | drafts`);
   }
 } catch (e) {
   fail(e instanceof Error ? e.message : String(e));

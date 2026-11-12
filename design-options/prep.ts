@@ -1,5 +1,5 @@
 // Design mockups only: builds the data the three History mockups embed. Reads the repo's history and
-// lineup files and the two draft exports in design-options/source/. Writes nothing outside design-options/.
+// lineup files and the two draft exports in data/history/drafts/. Writes nothing outside design-options/.
 //   node design-options/prep.ts   (run by design-options/build.ts)
 // shortcut: owner and Sleeper-account maps are inline here; the real build would read them from
 // data/history/accounts.csv (see design-options/README.md, Data plan). Revisit when a drafts command exists.
@@ -29,8 +29,8 @@ export function prep() {
   const raw = read<History>('public/seed/history.json');
   const ds = read<Dataset>('public/seed/fwhl-2026.json');
   const H: Hist = buildHist(raw, buildIndex(ds));
-  const espn = read<{ seasons: { season: number; picks: EspnPick[] }[] }>('design-options/source/espn-drafts-2010-2023-2026.json');
-  const sleeper = read<{ seasons: { season: string; budget: number; rounds: number; picks: SleeperPick[] }[] }>('design-options/source/sleeper-drafts-2024-2025.json');
+  const espn = read<{ seasons: { season: number; picks: EspnPick[] }[] }>('data/history/drafts/espn-2010-2023-2026.json');
+  const sleeper = read<{ seasons: { season: string; budget: number; rounds: number; picks: SleeperPick[] }[] }>('data/history/drafts/sleeper-2024-2025.json');
   const sleeperRosters = read<{ seasons: { season: string; weeks: { week: number; matchups: { teams: { roster_id: number; total_points: number; starters: { player_id: string | null; actual_points: number | null }[]; bench: { player_id: string | null; actual_points: number | null }[] }[] }[] }[] }[] }>('data/history/rosters/sleeper-2024-2025.json');
 
   const players: [string, string][] = [];

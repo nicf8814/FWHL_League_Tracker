@@ -8,7 +8,7 @@ Designs only. Nothing in `src/`, `public/` or `data/` changed. Open the three HT
 | `option-b-owner-season-grid.html` | B. Owner by Season Grid: owners down, seasons across, one metric at a time |
 | `option-c-search-desk.html` | C. Search Desk: search every draft, filters, a player page across years |
 
-Rebuild after editing: `node design-options/build.ts` (reads `public/seed/history.json`, `public/seed/fwhl-2026.json`, `data/history/rosters/sleeper-2024-2025.json` and the two draft exports in `design-options/source/`).
+Rebuild after editing: `node design-options/build.ts` (reads `public/seed/history.json`, `public/seed/fwhl-2026.json`, `data/history/rosters/sleeper-2024-2025.json` and the two draft exports in `data/history/drafts/`).
 
 ## What I read first
 
