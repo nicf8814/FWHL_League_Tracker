@@ -9,6 +9,7 @@ import { buildDraftBook, ordinal, posRank, REPLACEMENT, type DraftBook, type Dra
 import { crewName, ownerName, type Hist, type Season } from '../engine/history.ts';
 import { Empty, fmt, Seg, Sheet, signed, tone } from '../ui/components.tsx';
 import { Filters } from '../ui/filters.tsx';
+import { DataTable, TableBar, useTable, type Col } from '../ui/table.tsx';
 
 // ---------- loading ----------
 let file: Promise<Drafts | string> | null = null;
@@ -62,6 +63,38 @@ export function ValueHelp({ label = 'How value is worked out' }: { label?: strin
         <p className="mt-3 text-sm text-ink-2">Example: in 2020 the 12th TE scored 84. Kelce scored 208, 124 over. That draft paid $0.45 a point, so he was worth $1 + 124 × $0.45 = $56. He cost $49: value +$7.</p>
         <p className="mt-2 text-xs text-ink-3">Hindsight: it shows how a pick turned out, not whether it was a good bet at the time. Keepers are judged against their keeper price. Tap anywhere to close.</p>
       </div>
+    </>
+  );
+}
+
+// The search results: the filters above set the rows, this ranks and sorts them and exports the view.
+function PickTable({ H, book, rows, onPlayer }: { H: Hist; book: DraftBook; rows: DraftPick[]; onPlayer: (p: number) => void }) {
+  const [limit, setLimit] = useState(PAGE);
+  const cols = useMemo<Col<DraftPick>[]>(() => [
+    {
+      id: 'name', label: 'Player', left: true, fixed: true, className: 'min-w-[11rem] !h-auto py-1.5', value: (x) => x.name,
+      cell: (x) => (
+        <>
+          <span className="flex items-center gap-2"><PosTag pos={x.pos} /><button type="button" className="link max-w-36 truncate sm:max-w-48" onClick={() => onPlayer(x.player)}>{x.name}</button>{x.keeper && <KeeperTag />}</span>
+          <span className="block max-w-48 truncate pl-[2.6rem] text-xs text-ink-3 md:hidden">{x.year} · {crewName(H, x.owner, x.year)}</span>
+        </>
+      ),
+    },
+    { id: 'year', label: 'Year', left: true, className: 'hidden md:table-cell', value: (x) => x.year },
+    { id: 'owner', label: 'Drafted by', left: true, className: 'hidden md:table-cell', value: (x) => crewName(H, x.owner, x.year) },
+    { id: 'price', label: 'Paid', value: (x) => x.price, cell: (x) => <b className="font-semibold">${x.price}</b> },
+    { id: 'proj', label: 'Proj', className: 'hidden text-ink-3 md:table-cell', value: (x) => x.proj, cell: (x) => (x.proj === null ? '–' : `${fmt(x.proj, 0)}${book.seasons.get(x.year)?.proj === 'sleeper' ? '‡' : ''}`) },
+    { id: 'pts', label: 'Pts', value: (x) => x.pts, cell: (x) => (x.pts === null ? <span className="text-ink-3">–</span> : <>{fmt(x.pts, 0)}<span className="text-ink-3">{ptsMark(book.seasons.get(x.year))}</span></>) },
+    { id: 'value', label: 'Value', value: (x) => x.value, cell: (x) => <Value v={x.value} /> },
+    { id: 'round', label: 'Round', hidden: true, value: (x) => x.round },
+    { id: 'overall', label: 'Pick', hidden: true, value: (x) => x.overall },
+  ], [H, book, onPlayer]);
+  const t = useTable('draft-search', cols, rows, { id: 'value', dir: -1 });
+  return (
+    <>
+      <TableBar t={t} noun="picks" file="fwhl-draft-picks" />
+      <DataTable t={t} rowKey={(x) => String(x.i)} stickyId="name" limit={limit} minWidth="md:min-w-[40rem]" empty="No pick matches these filters." />
+      {t.sorted.length > limit && <button type="button" className="btn justify-self-start" onClick={() => setLimit((l) => l + PAGE)}>Show {Math.min(PAGE, t.sorted.length - limit)} more</button>}
     </>
   );
 }
@@ -233,9 +266,8 @@ export function DraftSearch({ H }: { H: Hist }) {
   const { settings } = useLeague();
   const [f, setF] = useState<Filter>(START);
   const [q, setQ] = useState('');
-  const [page, setPage] = useState(0);
   const [player, setPlayer] = useState<number | null>(null);
-  useEffect(() => { const t = setTimeout(() => { setF((x) => ({ ...x, q })); setPage(0); }, 200); return () => clearTimeout(t); }, [q]);
+  useEffect(() => { const t = setTimeout(() => setF((x) => ({ ...x, q })), 200); return () => clearTimeout(t); }, [q]);
   const rows = useMemo(() => {
     if (!book || typeof book === 'string') return [];
     const last = book.years.at(-1)!;
@@ -259,8 +291,7 @@ export function DraftSearch({ H }: { H: Hist }) {
   const owners = [...new Set(book.picks.map((x) => x.owner))].filter((o) => !H.owners.get(o)?.filler).sort((a, b) => ownerName(H, a).localeCompare(ownerName(H, b)));
   const players = new Set(rows.map((x) => x.player));
   const one = f.q && players.size === 1 ? rows[0] : undefined;
-  const set = (p: Partial<Filter>) => { setF((x) => ({ ...x, ...p })); setPage(0); };
-  const pages = Math.max(1, Math.ceil(rows.length / PAGE));
+  const set = (p: Partial<Filter>) => setF((x) => ({ ...x, ...p }));
   const last = book.years.at(-1)!;
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-5">
@@ -273,7 +304,7 @@ export function DraftSearch({ H }: { H: Hist }) {
       </div>
       <Filters
         changed={JSON.stringify({ ...f, q: '' }) !== JSON.stringify({ ...START, q: '' })}
-        onReset={() => { setF((x) => ({ ...START, q: x.q })); setPage(0); }}
+        onReset={() => setF((x) => ({ ...START, q: x.q }))}
         summary={<><span className="num font-semibold text-ink">{rows.length.toLocaleString()}</span> of {book.picks.length.toLocaleString()} picks · {players.size.toLocaleString()} player{players.size === 1 ? '' : 's'}</>}
         fields={[
           { id: 'pos', label: 'Position', value: f.pos, onChange: (v) => set({ pos: v }), options: [['any', 'All positions'], ['QB', 'QB'], ['RB', 'RB'], ['WR', 'WR'], ['TE', 'TE'], ['K', 'K'], ['D/ST', 'D/ST']] },
@@ -287,33 +318,7 @@ export function DraftSearch({ H }: { H: Hist }) {
         <>
           <span className="flex items-center gap-2 justify-self-end text-sm text-ink-3">How is value worked out? <ValueHelp /></span>
           {one && <button type="button" className="btn btn-primary justify-self-start" onClick={() => setPlayer(one.player)}>Open {one.name}'s draft history ›</button>}
-          <div className="-mx-4 overflow-x-auto md:mx-0">
-            <table className="tbl md:min-w-[40rem]">
-              <caption className="sr-only">Matching draft picks</caption>
-              <thead><tr><th className="l stick">Player</th><th className="l hidden md:table-cell">Year</th><th className="l hidden md:table-cell">Drafted by</th><th>Paid</th><th className="hidden md:table-cell" title="Projected season points where recorded: ESPN preseason (2018 on), or Sleeper pulled after the season (‡)">Proj</th><th>Pts</th><th title="Worth minus price paid">Value</th></tr></thead>
-              <tbody>
-                {rows.slice(page * PAGE, page * PAGE + PAGE).map((x) => {
-                  const s = book.seasons.get(x.year);
-                  return (
-                    <tr key={x.i}>
-                      <td className="l stick !h-auto py-1.5"><span className="flex items-center gap-2"><PosTag pos={x.pos} /><button type="button" className="link max-w-36 truncate sm:max-w-48" onClick={() => setPlayer(x.player)}>{x.name}</button>{x.keeper && <KeeperTag />}</span><span className="block max-w-48 truncate pl-[2.6rem] text-xs text-ink-3 md:hidden">{x.year} · {crewName(H, x.owner, x.year)}</span></td>
-                      <td className="l n hidden md:table-cell">{x.year}</td>
-                      <td className="l hidden md:table-cell">{crewName(H, x.owner, x.year)}</td>
-                      <td className="n font-semibold">${x.price}</td>
-                      <td className="n hidden text-ink-3 md:table-cell">{x.proj === null ? '–' : `${fmt(x.proj, 0)}${s?.proj === 'sleeper' ? '‡' : ''}`}</td>
-                      <td className="n">{x.pts === null ? <span className="text-ink-3">–</span> : <>{fmt(x.pts, 0)}<span className="text-ink-3">{ptsMark(s)}</span></>}</td>
-                      <td className="n"><Value v={x.value} /></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <nav className="flex flex-wrap items-center gap-2 text-sm" aria-label="Result pages">
-            <button type="button" className="btn btn-quiet" disabled={page <= 0} onClick={() => setPage(page - 1)}>‹ Prev</button>
-            <span className="num">Page {page + 1} of {pages}</span>
-            <button type="button" className="btn btn-quiet" disabled={page >= pages - 1} onClick={() => setPage(page + 1)}>Next ›</button>
-          </nav>
+          <PickTable H={H} book={book} rows={rows} onPlayer={setPlayer} />
           <p className="max-w-[70ch] text-xs text-ink-3">Proj: ESPN preseason points (2018 on, few in 2023); ‡ Sleeper, pulled after the season. * Sleeper years: points while on a league roster. † This season: to date. – means not recorded. Tap a player for every season he was drafted.</p>
         </>
       )}

@@ -4,9 +4,10 @@ import { useLeague } from '../data/store.tsx';
 import { validateHistory, type History as HistoryFile, type OwnerKey } from '../data/history.ts';
 import {
   buildHist, careers, crew, headToHead, LIFER_SEASONS, ownerName, records, seasonAwards,
-  type Career, type Hist, type ScoreRec, type Season,
+  type Career, type CareerSeason, type Game, type H2H, type Hist, type ScoreRec, type Season,
 } from '../engine/history.ts';
 import { Empty, fmt, Mono, Section, Seg, signed, tone } from '../ui/components.tsx';
+import { DataTable, TableBar, useTable, type Col, type FilterDef } from '../ui/table.tsx';
 import SeasonWeeks, { type WeekState } from './HistoryWeeks.tsx';
 import { DraftSearch, SeasonDraft } from './HistoryDrafts.tsx';
 import { OwnerTrades, SeasonTrades, TradeSearch } from './HistoryTrades.tsx';
@@ -95,7 +96,7 @@ function Browser({ H, all, query, go }: { H: Hist; all: Career[]; query: URLSear
           {view === 'trading' && <Traders H={H} onOwner={(o: OwnerKey) => go({ owner: o })} />}
           {view === 'keepers' && <KeeperSkill H={H} onOwner={(o: OwnerKey) => go({ owner: o })} />}
           {view === 'drafts' && <DraftSearch H={H} />}
-          {view === 'trades' && <TradeSearch H={H} onOwner={(o: OwnerKey) => go({ owner: o })} />}
+          {view === 'trades' && <TradeSearch H={H} />}
         </>}
     </div>
   );
@@ -240,62 +241,64 @@ function Champions({ H, all, go }: { H: Hist; all: Career[]; go: Go }) {
         <Stat label="Luckiest career" value={<>{lucky[0]!.name} <Luck v={lucky[0]!.luck} /></>} sub={`wins above what their scores earned (${LIFER_SEASONS}+ seasons)`} />
         <Stat label="Unluckiest career" value={<>{lucky.at(-1)!.name} <Luck v={lucky.at(-1)!.luck} /></>} sub={`wins below what their scores earned (${LIFER_SEASONS}+ seasons)`} />
       </div>
-      <Section title="Champions" aside={`${champLuck} of ${done.length} champions had a lucky regular season`}>
-        <Scroll min="min-w-[40rem]">
-          <thead><tr><th className="l w-16">Year</th><th className="l stick">Champion</th><th className="l">Runner-up</th><th>Reg. season</th><th>Luck</th></tr></thead>
-          <tbody>
-            {done.map((s) => {
-              const c = s.rows.find((r) => r.owner === s.podium[0]);
-              return (
-                <tr key={s.year}>
-                  <td className="l n"><button type="button" className="link" onClick={() => go({ season: String(s.year), view: 'standings' })}>{s.year}</button></td>
-                  <td className="l stick font-medium">{s.podium[0] && <Who H={H} o={s.podium[0]} go={go} year={s.year} sub={c?.team} />}</td>
-                  <td className="l">{s.podium[1] && <Who H={H} o={s.podium[1]} go={go} year={s.year} />}</td>
-                  <td className="n">{c ? rec(c.w, c.l, c.t) : '–'}</td>
-                  <td className="n">{c ? <Luck v={c.luck} /> : '–'}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </Scroll>
-      </Section>
+      <ChampionTable H={H} done={done} go={go} champLuck={champLuck} />
     </>
   );
 }
 
-// ---------- Owners ----------
-type OKey = 'seasons' | 'win' | 'titles' | 'finals' | 'playoffs' | 'index' | 'luck';
-function Owners({ H, all, go }: { H: Hist; all: Career[]; go: Go }) {
-  const [everyone, setEveryone] = useState(false);
-  const [sort, setSort] = useState<OKey>('titles');
-  const val = (x: Career): number => ({
-    seasons: x.seasons.length, win: (x.w + x.t / 2) / Math.max(1, x.w + x.l + x.t), titles: x.titles.length * 100 + x.runnerUps.length * 10 + x.thirds.length,
-    finals: x.titles.length + x.runnerUps.length, playoffs: x.playoffs / Math.max(1, x.completed), index: x.index, luck: x.luck,
-  })[sort];
-  const rows = all.filter((x) => everyone || x.lifer).sort((a, b) => val(b) - val(a) || b.seasons.length - a.seasons.length);
-  const th = (k: OKey, label: string) => (
-    <th aria-sort={sort === k ? 'descending' : 'none'}><button type="button" className="link -my-3 py-3 no-underline" onClick={() => setSort(k)}>{label}{sort === k ? ' ↓' : ''}</button></th>
+function ChampionTable({ H, done, go, champLuck }: { H: Hist; done: Season[]; go: Go; champLuck: number }) {
+  const champ = (s: Season) => s.rows.find((r) => r.owner === s.podium[0]);
+  const filters = useMemo<FilterDef<Season>[]>(() => [
+    { id: 'owner', label: 'Champion', options: [['all', 'Everyone'], ...[...H.owners.values()].filter((o) => !o.filler).map((o) => [o.key, o.name] as [string, string])], test: (s, v) => s.podium[0] === v },
+    { id: 'platform', label: 'Platform', options: [['all', 'Both'], ['ESPN', 'ESPN'], ['Sleeper', 'Sleeper']], test: (s, v) => s.platform === v },
+    { id: 'luck', label: 'Regular season', options: [['all', 'Any'], ['lucky', 'Lucky'], ['unlucky', 'Unlucky']], test: (s, v) => ((champ(s)?.luck ?? 0) > 0) === (v === 'lucky') },
+  ], [H]);
+  const cols = useMemo<Col<Season>[]>(() => [
+    { id: 'year', label: 'Year', left: true, fixed: true, value: (s) => s.year, cell: (s) => <button type="button" className="link num" onClick={() => go({ season: String(s.year), view: 'standings' })}>{s.year}</button> },
+    { id: 'champion', label: 'Champion', left: true, className: 'min-w-[10rem] font-medium', value: (s) => (s.podium[0] ? ownerName(H, s.podium[0]) : ''), cell: (s) => (s.podium[0] ? <Who H={H} o={s.podium[0]} go={go} year={s.year} sub={champ(s)?.team} /> : '–') },
+    { id: 'runner', label: 'Runner-up', left: true, className: 'min-w-[9rem]', value: (s) => (s.podium[1] ? ownerName(H, s.podium[1]) : ''), cell: (s) => (s.podium[1] ? <Who H={H} o={s.podium[1]} go={go} year={s.year} /> : '–') },
+    { id: 'record', label: 'Reg. season', value: (s) => { const c = champ(s); return c ? c.w + c.t / 2 : null; }, cell: (s) => { const c = champ(s); return c ? rec(c.w, c.l, c.t) : '–'; } },
+    { id: 'pf', label: 'PF', hidden: true, value: (s) => champ(s)?.pf ?? null, cell: (s) => fmt(champ(s)?.pf) },
+    { id: 'luck', label: 'Luck', value: (s) => champ(s)?.luck ?? null, cell: (s) => { const c = champ(s); return c ? <Luck v={c.luck} /> : '–'; } },
+    { id: 'platform', label: 'Platform', left: true, hidden: true, className: 'text-ink-2', value: (s) => s.platform },
+  ], [H, go]);
+  const t = useTable('champions', cols, done, { id: 'year', dir: -1 }, { filters });
+  return (
+    <Section title="Champions" aside={`${champLuck} of ${done.length} champions had a lucky regular season`}>
+      <TableBar t={t} noun="titles" file="fwhl-champions" />
+      <DataTable t={t} rowKey={(s) => String(s.year)} stickyId="champion" minWidth="min-w-[40rem]" empty="No season matches these filters." />
+    </Section>
   );
+}
+
+// ---------- Owners ----------
+function Owners({ H, all, go }: { H: Hist; all: Career[]; go: Go }) {
+  const filters = useMemo<FilterDef<Career>[]>(() => [
+    { id: 'who', label: 'Owners shown', options: [['lifers', `Lifers (${LIFER_SEASONS}+ seasons)`], ['all', 'Everyone'], ['active', 'In the league now']], test: (c, v) => (v === 'all' ? true : c.active) },
+    { id: 'titles', label: 'Titles', options: [['all', 'Any'], ['won', 'Has won one'], ['none', 'Never won']], test: (c, v) => (v === 'won' ? c.titles.length > 0 : c.titles.length === 0) },
+  ], []);
+  const search = useMemo(() => ({ label: 'Find an owner', placeholder: 'Name', of: (c: Career) => c.name }), []);
+  const cols = useMemo<Col<Career>[]>(() => [
+    { id: 'owner', label: 'Owner', left: true, fixed: true, className: 'min-w-[9rem] font-medium', value: (c) => c.name, cell: (c) => <Who H={H} o={c.owner} go={go} /> },
+    { id: 'seasons', label: 'Seasons', value: (c) => c.seasons.length },
+    { id: 'rec', label: 'W-L', value: (c) => c.w + c.t / 2, cell: (c) => rec(c.w, c.l, c.t) },
+    { id: 'win', label: 'Win %', value: (c) => (c.w + c.l + c.t ? (c.w + c.t / 2) / (c.w + c.l + c.t) : null), cell: (c) => winPct(c.w, c.l, c.t) },
+    { id: 'playoffs', label: 'Playoffs', value: (c) => c.playoffs / Math.max(1, c.completed), cell: (c) => `${c.playoffs}/${c.completed}` },
+    { id: 'titles', label: 'Titles', value: (c) => c.titles.length * 100 + c.runnerUps.length * 10 + c.thirds.length, cell: (c) => <b className="font-semibold">{c.titles.length || <span className="font-normal text-ink-3">0</span>}</b> },
+    { id: 'finals', label: 'Finals', value: (c) => c.titles.length + c.runnerUps.length },
+    { id: 'index', label: 'Pts vs avg', value: (c) => c.index, cell: (c) => vsAvg(c.index) },
+    { id: 'luck', label: 'Luck', value: (c) => c.luck, cell: (c) => <Luck v={c.luck} /> },
+    { id: 'drought', label: 'Drought', hidden: true, value: (c) => c.drought, cell: (c) => (c.drought === null ? 'never won' : String(c.drought)) },
+  ], [H, go]);
+  // Lifers first, like the old Seg did; the filter flips it to everyone.
+  const lifers = useMemo(() => all.filter((c) => c.lifer), [all]);
+  const [everyone, setEveryone] = useState(false);
+  const rows = everyone ? all : lifers;
+  const t = useTable('owner-careers', cols, rows, { id: 'titles', dir: -1 }, { filters: useMemo(() => filters.slice(1), [filters]), search });
   return (
     <Section title="Career records" aside={<Seg label="Owners shown" value={everyone ? 'all' : 'lifers'} options={[['lifers', `Lifers (${LIFER_SEASONS}+ seasons)`], ['all', 'Everyone']]} onChange={(v) => setEveryone(v === 'all')} />}>
-      <Scroll min="min-w-[52rem]">
-        <thead><tr><th className="l stick">Owner</th>{th('seasons', 'Seasons')}<th>W-L</th>{th('win', 'Win %')}{th('playoffs', 'Playoffs')}{th('titles', 'Titles')}{th('finals', 'Finals')}{th('index', 'Pts vs avg')}{th('luck', 'Luck')}</tr></thead>
-        <tbody>
-          {rows.map((x) => (
-            <tr key={x.owner}>
-              <td className="l stick font-medium"><Who H={H} o={x.owner} go={go} /></td>
-              <td className="n">{x.seasons.length}</td>
-              <td className="n">{rec(x.w, x.l, x.t)}</td>
-              <td className="n">{winPct(x.w, x.l, x.t)}</td>
-              <td className="n">{x.playoffs}/{x.completed}</td>
-              <td className="n font-semibold">{x.titles.length || <span className="font-normal text-ink-3">0</span>}</td>
-              <td className="n">{x.titles.length + x.runnerUps.length}</td>
-              <td className="n">{vsAvg(x.index)}</td>
-              <td className="n"><Luck v={x.luck} /></td>
-            </tr>
-          ))}
-        </tbody>
-      </Scroll>
+      <TableBar t={t} noun="owners" file="fwhl-owner-careers" />
+      <DataTable t={t} rowKey={(c) => c.owner} stickyId="owner" minWidth="min-w-[52rem]" empty="No owner matches these filters." />
       <p className="max-w-[70ch] text-sm text-ink-2">
         Records are regular season. Playoffs counts finished seasons inside the playoff field. Pts vs avg is points per game against that season's league average.
         Luck is wins minus the wins their weekly scores earned against the whole league. Pick an owner to open their page.
@@ -328,44 +331,58 @@ function OwnerPage({ H, c, go }: { H: Hist; c: Career; go: Go }) {
       <Section title="Luck by season" aside="Right of center: more wins than the scores earned">
         <LuckBars rows={c.seasons.map((s) => ({ key: String(s.year), label: `${s.year}${s.live ? '*' : ''}`, v: s.luck, title: `${s.year}: ${rec(s.w, s.l, s.t)}, ${fmt(s.xw)} expected wins` }))} />
       </Section>
-      <Section title="Season by season">
-        <Scroll min="min-w-[46rem]">
-          <thead><tr><th className="l w-16">Year</th><th className="l stick">Team</th><th>W-L</th><th>Finish</th><th>PF</th><th>Pts vs avg</th><th>xW</th><th>Luck</th></tr></thead>
-          <tbody>
-            {c.seasons.slice().reverse().map((s) => (
-              <tr key={s.year}>
-                <td className="l n"><button type="button" className="link" title={`Open ${s.year}`} onClick={() => go({ owner: null, season: String(s.year), view: 'standings' })}>{s.year}</button>{s.live ? '*' : ''}{H.byYear.get(s.year)!.platform === 'Sleeper' ? <span className="tag ml-2 text-ink-3">Sleeper</span> : null}</td>
-                <td className="l stick">{s.team}{s.with.length > 0 && <span className="block text-xs text-ink-3">with {s.with.map((o) => ownerName(H, o)).join(' & ')}</span>}</td>
-                <td className="n">{rec(s.w, s.l, s.t)}</td>
-                <td className="n">{s.live ? 'live' : place(s.finish)}</td>
-                <td className="n">{fmt(s.pf)}</td>
-                <td className="n">{vsAvg(s.index)}</td>
-                <td className="n text-ink-2">{fmt(s.xw)}</td>
-                <td className="n"><Luck v={s.luck} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </Scroll>
-      </Section>
+      <OwnerSeasons H={H} c={c} go={go} />
       <OwnerTrades H={H} owner={c.owner} />
-      <Section title="Head to head" aside="Regular season and playoffs, 4+ games">
-        <Scroll min="min-w-[34rem]">
-          <thead><tr><th className="l stick">Opponent</th><th>Games</th><th>W-L</th><th>Win %</th><th>Playoffs</th><th>Avg score</th></tr></thead>
-          <tbody>
-            {rivals.map(({ x, h }) => (
-              <tr key={x.owner}>
-                <td className="l stick"><Who H={H} o={x.owner} go={go} /></td>
-                <td className="n">{h.games.length}</td>
-                <td className={`n ${h.w > h.l ? 'text-gain' : h.w < h.l ? 'text-loss' : ''}`}>{rec(h.w, h.l, h.t)}</td>
-                <td className="n">{winPct(h.w, h.l, h.t)}</td>
-                <td className="n">{h.playoffW + h.playoffL ? rec(h.playoffW, h.playoffL) : '–'}</td>
-                <td className="n text-ink-2">{fmt(h.pf / h.games.length)} – {fmt(h.pa / h.games.length)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </Scroll>
-      </Section>
+      <OwnerH2H H={H} rivals={rivals} go={go} />
     </>
+  );
+}
+
+function OwnerSeasons({ H, c, go }: { H: Hist; c: Career; go: Go }) {
+  const filters = useMemo<FilterDef<CareerSeason>[]>(() => [
+    { id: 'platform', label: 'Platform', options: [['all', 'Both'], ['ESPN', 'ESPN'], ['Sleeper', 'Sleeper']], test: (s, v) => H.byYear.get(s.year)?.platform === v },
+    { id: 'result', label: 'Finish', options: [['all', 'Any'], ['title', 'Won it'], ['podium', 'Top 3'], ['winning', 'Winning record']], test: (s, v) => (v === 'title' ? s.finish === 1 : v === 'podium' ? (s.finish ?? 99) <= 3 : s.w > s.l) },
+  ], [H]);
+  const cols = useMemo<Col<CareerSeason>[]>(() => [
+    { id: 'year', label: 'Year', left: true, fixed: true, value: (s) => s.year, cell: (s) => <><button type="button" className="link num" title={`Open ${s.year}`} onClick={() => go({ owner: null, season: String(s.year), view: 'standings' })}>{s.year}</button>{s.live ? '*' : ''}{H.byYear.get(s.year)!.platform === 'Sleeper' ? <span className="tag ml-2 text-ink-3">Sleeper</span> : null}</> },
+    { id: 'team', label: 'Team', left: true, className: 'min-w-[10rem]', value: (s) => s.team, cell: (s) => <>{s.team}{s.with.length > 0 && <span className="block text-xs text-ink-3">with {s.with.map((o) => ownerName(H, o)).join(' & ')}</span>}</> },
+    { id: 'rec', label: 'W-L', value: (s) => s.w + s.t / 2, cell: (s) => rec(s.w, s.l, s.t) },
+    { id: 'finish', label: 'Finish', value: (s) => (s.live ? null : s.finish), cell: (s) => (s.live ? 'live' : place(s.finish)) },
+    { id: 'pf', label: 'PF', value: (s) => s.pf, cell: (s) => fmt(s.pf) },
+    { id: 'index', label: 'Pts vs avg', value: (s) => s.index, cell: (s) => vsAvg(s.index) },
+    { id: 'xw', label: 'xW', className: 'text-ink-2', value: (s) => s.xw, cell: (s) => fmt(s.xw) },
+    { id: 'luck', label: 'Luck', value: (s) => s.luck, cell: (s) => <Luck v={s.luck} /> },
+  ], [H, go]);
+  const t = useTable('owner-seasons', cols, c.seasons, { id: 'year', dir: -1 }, { filters });
+  return (
+    <Section title="Season by season">
+      <TableBar t={t} noun="seasons" file={`fwhl-${c.owner}-seasons`} />
+      <DataTable t={t} rowKey={(s) => String(s.year)} stickyId="team" minWidth="min-w-[46rem]" empty="No season matches these filters." />
+    </Section>
+  );
+}
+
+type Rival = { x: Career; h: H2H };
+function OwnerH2H({ H, rivals, go }: { H: Hist; rivals: Rival[]; go: Go }) {
+  const filters = useMemo<FilterDef<Rival>[]>(() => [
+    { id: 'side', label: 'Record', options: [['all', 'Everyone'], ['up', 'Winning against'], ['down', 'Losing against']], test: (r, v) => (v === 'up' ? r.h.w > r.h.l : r.h.l > r.h.w) },
+    { id: 'playoff', label: 'Playoffs', options: [['all', 'All games'], ['met', 'Met in the playoffs']], test: (r) => r.h.playoffW + r.h.playoffL > 0 },
+  ], []);
+  const search = useMemo(() => ({ label: 'Find an opponent', placeholder: 'Name', of: (r: Rival) => r.x.name }), []);
+  const cols = useMemo<Col<Rival>[]>(() => [
+    { id: 'opp', label: 'Opponent', left: true, fixed: true, className: 'min-w-[9rem]', value: (r) => r.x.name, cell: (r) => <Who H={H} o={r.x.owner} go={go} /> },
+    { id: 'games', label: 'Games', value: (r) => r.h.games.length },
+    { id: 'rec', label: 'W-L', value: (r) => r.h.w - r.h.l, cell: (r) => <span className={r.h.w > r.h.l ? 'text-gain' : r.h.w < r.h.l ? 'text-loss' : ''}>{rec(r.h.w, r.h.l, r.h.t)}</span> },
+    { id: 'win', label: 'Win %', value: (r) => (r.h.games.length ? (r.h.w + r.h.t / 2) / r.h.games.length : null), cell: (r) => winPct(r.h.w, r.h.l, r.h.t) },
+    { id: 'playoffs', label: 'Playoffs', value: (r) => r.h.playoffW - r.h.playoffL, cell: (r) => (r.h.playoffW + r.h.playoffL ? rec(r.h.playoffW, r.h.playoffL) : '–') },
+    { id: 'avg', label: 'Avg score', className: 'text-ink-2', value: (r) => r.h.pf / Math.max(1, r.h.games.length), cell: (r) => `${fmt(r.h.pf / r.h.games.length)} – ${fmt(r.h.pa / r.h.games.length)}` },
+  ], [H, go]);
+  const t = useTable('owner-h2h', cols, rivals, { id: 'games', dir: -1 }, { filters, search });
+  return (
+    <Section title="Head to head" aside="Regular season and playoffs, 4+ games">
+      <TableBar t={t} noun="opponents" file="fwhl-head-to-head" />
+      <DataTable t={t} rowKey={(r) => r.x.owner} stickyId="opp" minWidth="min-w-[34rem]" empty="No opponent matches these filters." />
+    </Section>
   );
 }
 
@@ -374,13 +391,6 @@ function LuckTab({ H, all, go }: { H: Hist; all: Career[]; go: Go }) {
   const [everyone, setEveryone] = useState(false);
   const shown = all.filter((c) => everyone || c.lifer).sort((a, b) => b.luck - a.luck);
   const seasons = H.seasons.flatMap((x) => x.rows.filter((r) => !H.owners.get(r.owner)?.filler).map((r) => ({ ...r, year: x.year, live: x.live })));
-  const bySeason = [...seasons].sort((a, b) => b.luck - a.luck);
-  const line = (r: (typeof seasons)[number]) => (
-    <li key={`${r.year}-${r.owner}`} className="flex items-center justify-between gap-3 border-b border-rule py-1.5">
-      <Who H={H} o={r.owner} go={go} year={r.year} sub={`${r.year}${r.live ? ' so far' : ''} · ${r.team}`} />
-      <span className="num shrink-0 text-right text-sm">{rec(r.w, r.l, r.t)} <span className="text-ink-3">xW {fmt(r.xw)}</span> <Luck v={r.luck} />{r.finish === 1 ? ' 🏆' : ''}</span>
-    </li>
-  );
   return (
     <>
       <Section title="Career luck" aside={<Seg label="Owners shown" value={everyone ? 'all' : 'lifers'} options={[['lifers', 'Lifers'], ['all', 'Everyone']]} onChange={(v) => setEveryone(v === 'all')} />}>
@@ -390,11 +400,39 @@ function LuckTab({ H, all, go }: { H: Hist; all: Career[]; go: Go }) {
           Over a season that adds up to expected wins (xW). Each season's drawer has its own luck column.
         </p>
       </Section>
-      <div className="grid gap-8 lg:grid-cols-2">
-        <Section title="Luckiest seasons"><ol className="grid">{bySeason.slice(0, 10).map(line)}</ol></Section>
-        <Section title="Unluckiest seasons"><ol className="grid">{bySeason.slice(-10).reverse().map(line)}</ol></Section>
-      </div>
+      <SeasonLuckTable H={H} rows={seasons} go={go} />
     </>
+  );
+}
+
+// Every owner-season in the league, rankable by any column.
+type LuckRow = ReturnType<typeof seasonRows>[number];
+const seasonRows = (H: Hist) => H.seasons.flatMap((x) => x.rows.filter((r) => !H.owners.get(r.owner)?.filler).map((r) => ({ ...r, year: x.year, live: x.live })));
+
+function SeasonLuckTable({ H, rows, go }: { H: Hist; rows: LuckRow[]; go: Go }) {
+  const years = useMemo(() => [...new Set(rows.map((r) => r.year))].sort((a, b) => b - a), [rows]);
+  const filters = useMemo<FilterDef<LuckRow>[]>(() => [
+    { id: 'year', label: 'Season', options: [['all', 'All seasons'], ...years.map((y) => [String(y), String(y)] as [string, string])], test: (r, v) => r.year === Number(v) },
+    { id: 'owner', label: 'Owner', options: [['all', 'Everyone'], ...[...H.owners.values()].filter((o) => !o.filler).map((o) => [o.key, o.name] as [string, string])], test: (r, v) => r.owner === v },
+    { id: 'luck', label: 'Luck', options: [['all', 'Any'], ['lucky', 'Lucky'], ['unlucky', 'Unlucky']], test: (r, v) => (r.luck > 0) === (v === 'lucky') },
+  ], [H, years]);
+  const search = useMemo(() => ({ label: 'Find a team', placeholder: 'Team name', of: (r: LuckRow) => `${r.team} ${ownerName(H, r.owner)}` }), [H]);
+  const cols = useMemo<Col<LuckRow>[]>(() => [
+    { id: 'owner', label: 'Owner', left: true, fixed: true, className: 'min-w-[10rem]', value: (r) => ownerName(H, r.owner), cell: (r) => <Who H={H} o={r.owner} go={go} year={r.year} sub={`${r.year}${r.live ? ' so far' : ''} · ${r.team}`} /> },
+    { id: 'year', label: 'Season', value: (r) => r.year },
+    { id: 'rec', label: 'W-L', value: (r) => r.w + r.t / 2, cell: (r) => rec(r.w, r.l, r.t) },
+    { id: 'xw', label: 'xW', className: 'text-ink-2', value: (r) => r.xw, cell: (r) => fmt(r.xw) },
+    { id: 'luck', label: 'Luck', value: (r) => r.luck, cell: (r) => <Luck v={r.luck} /> },
+    { id: 'pf', label: 'PF', value: (r) => r.pf, cell: (r) => fmt(r.pf) },
+    { id: 'index', label: 'Pts vs avg', value: (r) => r.index, cell: (r) => vsAvg(r.index) },
+    { id: 'finish', label: 'Finish', value: (r) => r.finish, cell: (r) => (r.live ? 'live' : place(r.finish)) },
+  ], [H, go]);
+  const t = useTable('season-luck', cols, rows, { id: 'luck', dir: -1 }, { filters, search });
+  return (
+    <Section title="Every season by luck" aside={`${rows.length} owner-seasons`}>
+      <TableBar t={t} noun="seasons" file="fwhl-season-luck" />
+      <DataTable t={t} rowKey={(r) => `${r.year}-${r.owner}`} stickyId="owner" limit={100} minWidth="min-w-[46rem]" empty="No season matches these filters." />
+    </Section>
   );
 }
 
@@ -543,6 +581,43 @@ function RecordsTab({ H, go }: { H: Hist; go: Go }) {
         <Section title="Best scoring seasons"><ol className="grid">{[...seasons].sort((a, b) => b.index - a.index).slice(0, 10).map((r) => seasonLine(r, <>{fmt(r.pf)} <span className="block text-xs text-ink-3">{vsAvg(r.index)} vs avg</span></>))}</ol></Section>
         <Section title="Best records"><ol className="grid">{[...seasons].sort((a, b) => b.w - a.w || a.l - b.l || b.pf - a.pf).slice(0, 10).map((r) => seasonLine(r, <>{rec(r.w, r.l, r.t)} <span className="block text-xs text-ink-3">{place(r.finish)}</span></>))}</ol></Section>
       </div>
+      <EveryGame H={H} go={go} />
     </>
+  );
+}
+
+// The lists above are the highlights; this is the whole record book, rankable and filterable.
+interface GameRow { year: number; week: number; kind: Game['kind']; owner: OwnerKey; opp: OwnerKey; pts: number; oppPts: number; won: boolean | null; index: number }
+function EveryGame({ H, go }: { H: Hist; go: Go }) {
+  const rows = useMemo<GameRow[]>(() => H.seasons.flatMap((s) => s.games.flatMap((g) => ([
+    { year: s.year, week: g.week, kind: g.kind, owner: g.home, opp: g.away, pts: g.hs, oppPts: g.as, won: g.winner === null ? null : g.winner === g.home, index: s.avg ? g.hs / s.avg : 0 },
+    { year: s.year, week: g.week, kind: g.kind, owner: g.away, opp: g.home, pts: g.as, oppPts: g.hs, won: g.winner === null ? null : g.winner === g.away, index: s.avg ? g.as / s.avg : 0 },
+  ] as GameRow[])).filter((r) => !H.owners.get(r.owner)?.filler)), [H]);
+  const years = useMemo(() => [...new Set(rows.map((r) => r.year))].sort((a, b) => b - a), [rows]);
+  const filters = useMemo<FilterDef<GameRow>[]>(() => [
+    { id: 'year', label: 'Season', options: [['all', 'All seasons'], ...years.map((y) => [String(y), String(y)] as [string, string])], test: (r, v) => r.year === Number(v) },
+    { id: 'owner', label: 'Owner', options: [['all', 'Everyone'], ...[...H.owners.values()].filter((o) => !o.filler).map((o) => [o.key, o.name] as [string, string])], test: (r, v) => r.owner === v },
+    { id: 'kind', label: 'Game', options: [['all', 'All games'], ['regular', 'Regular season'], ['playoff', 'Playoffs'], ['consolation', 'Consolation']], test: (r, v) => r.kind === v },
+    { id: 'result', label: 'Result', options: [['all', 'Win or loss'], ['w', 'Wins'], ['l', 'Losses']], test: (r, v) => (v === 'w' ? r.won === true : r.won === false) },
+  ], [H, years]);
+  const search = useMemo(() => ({ label: 'Find an owner', placeholder: 'Name', of: (r: GameRow) => `${ownerName(H, r.owner)} ${ownerName(H, r.opp)}` }), [H]);
+  const cols = useMemo<Col<GameRow>[]>(() => [
+    { id: 'owner', label: 'Owner', left: true, fixed: true, className: 'min-w-[10rem]', value: (r) => ownerName(H, r.owner), cell: (r) => <Who H={H} o={r.owner} go={go} year={r.year} sub={`${r.year} Wk ${r.week}${r.kind === 'playoff' ? ' · playoffs' : ''}`} /> },
+    { id: 'pts', label: 'Points', value: (r) => r.pts, cell: (r) => <b className="font-semibold">{fmt(r.pts, 2)}</b> },
+    { id: 'index', label: 'vs avg', value: (r) => r.index, cell: (r) => `${r.index.toFixed(2)}×` },
+    { id: 'opp', label: 'Opponent', left: true, className: 'min-w-[9rem]', value: (r) => ownerName(H, r.opp), cell: (r) => <Who H={H} o={r.opp} go={go} year={r.year} /> },
+    { id: 'oppPts', label: 'Opp pts', className: 'text-ink-2', value: (r) => r.oppPts, cell: (r) => fmt(r.oppPts, 2) },
+    { id: 'margin', label: 'Margin', value: (r) => r.pts - r.oppPts, cell: (r) => <span className={tone(r.pts - r.oppPts, 0.01)}>{signed(r.pts - r.oppPts, 2)}</span> },
+    { id: 'result', label: 'Result', left: true, value: (r) => (r.won === null ? 'T' : r.won ? 'W' : 'L') },
+    { id: 'year', label: 'Season', hidden: true, value: (r) => r.year },
+    { id: 'week', label: 'Week', hidden: true, value: (r) => r.week },
+  ], [H, go]);
+  const t = useTable('every-game', cols, rows, { id: 'pts', dir: -1 }, { filters, search });
+  return (
+    <Section title="Every game" aside={`${rows.length.toLocaleString()} team-games since ${H.seasons[0]!.year}`}>
+      <p className="max-w-[70ch] text-sm text-ink-2">One row per team per game. Sort any column, narrow it with the filters, and the ranking follows what is left.</p>
+      <TableBar t={t} noun="team-games" file="fwhl-every-game" />
+      <DataTable t={t} rowKey={(r, i) => `${r.year}-${r.week}-${r.owner}-${i}`} stickyId="owner" limit={100} minWidth="min-w-[52rem]" empty="No game matches these filters." />
+    </Section>
   );
 }
