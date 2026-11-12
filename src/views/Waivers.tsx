@@ -43,7 +43,7 @@ export default function Waivers() {
   const best = t.sorted[0];
   return (
     <Section title={mine ? 'Best pickups for your lineup' : `Best pickups for ${teamName(idx, me)}`} aside={`Top ${POOL} free agents by value`}>
-      <p className="headline-sm">{best && best.gain >= 0.1 ? `Add ${idx.players.get(best.p)?.name}, +${best.gain.toFixed(1)} a week` : 'Nobody beats your bench right now'}</p>
+      <p className="headline-sm">{best && best.gain >= 0.1 ? `Add ${idx.players.get(best.p)?.name}, +${best.gain.toFixed(1)} a week` : `Nobody beats ${mine ? 'your' : 'this'} bench right now`}</p>
       <p className="max-w-[70ch] text-sm text-ink-2">Pts/wk is how much {mine ? 'your' : 'this'} best lineup gains through the rest of the season and playoffs if you add him and cut the player shown. It counts byes and injury returns, so a stash can rank high with no points this week.</p>
       <TableBar t={t} noun="free agents" file={`fwhl-waivers-wk${idx.currentWeek}`} />
       <DataTable t={t} rowKey={(r) => r.p} minWidth="min-w-[40rem]" empty="No free agent matches these filters." />

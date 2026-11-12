@@ -5,7 +5,6 @@ import { chartAvgAt, chartHistory, teamName } from '../engine/league.ts';
 import { fmt, PlayerName, PosMark, Seg, signed } from '../ui/components.tsx';
 import { DataTable, TableBar, useTable, type Col, type FilterDef } from '../ui/table.tsx';
 import { usePlayerSheet } from './PlayerSheet.tsx';
-import { useFull } from '../ui/detail.ts';
 
 const PAGE = 100;
 // Ready-made column sets (Nov 11, item D). The column chooser still makes a custom one.
@@ -20,7 +19,6 @@ export default function Players() {
   const { idx, values: V, base, settings } = useLeague();
   const open = usePlayerSheet();
   const [limit, setLimit] = useState(PAGE);
-  const full = useFull();
   // FEAT-14: compare chart values with an earlier week.
   const hist = useMemo(() => chartHistory(idx.ds), [idx]);
   const chartWeeks = useMemo(() => [...new Set([...hist.peaked.keys(), ...hist.menton.keys()])].sort((a, b) => a - b), [hist]);
@@ -72,7 +70,7 @@ export default function Players() {
   return (
     <div className="grid grid-cols-1 gap-4">
       <Seg label="Columns" value={view} options={[['simple', 'Simple'], ['charts', 'Charts'], ['keepers', 'Keepers'], ...(view === 'custom' ? [['custom', 'Custom'] as const] : [])] as const} onChange={(v) => v !== 'custom' && t.setHidden(cols.filter((c) => !PLAYER_VIEWS[v].includes(c.id)).map((c) => c.id))} />
-      <TableBar t={t} noun="players" file={full ? `fwhl-players-wk${idx.currentWeek}` : undefined}>
+      <TableBar t={t} noun="players" file={`fwhl-players-wk${idx.currentWeek}`}>
         {view === 'charts' && (
           <label className="grid min-w-0 gap-1 text-xs font-semibold uppercase tracking-wider text-ink-3">
             Chart moves since
