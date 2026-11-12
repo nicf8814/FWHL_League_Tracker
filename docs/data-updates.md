@@ -144,3 +144,18 @@ npm run data -- history [--dry-run]
 The build stops if a season's games do not reproduce the official records (unless `corrections.csv` explains it) or if the podium disagrees with the final ranks. `npm run data:check` fails while `history.json` is out of date with the CSVs.
 
 After a season ends: export the new CSVs over the old ones, add any new owner to `owners.csv` (with `team2026` updated for the new season's ids if they change), run the command, then the usual checks. Code changes go through a pull request, the data refresh straight to `main`.
+
+### Weekly lineups
+
+Each season drawer on the History page has a **Week by week** view: pick a week, open a game for both lineups side by side, unfold the bench, tap a player for his season. It reads `public/seed/lineups/<year>.json`, one file per past season, loaded only when that view opens. Built, never edited by hand:
+
+```bash
+npm run data -- lineups [--dry-run]
+```
+
+- `data/history/rosters/espn-2010-2023.json` and `sleeper-2024-2025.json`: the roster exports, as received.
+- Each export team is matched to its owner in `history.json` by its weekly scores (within a point and a half for Sleeper, whose own scores run slightly off the league export), so the exports' owner names never matter. The build stops if a team can't be matched.
+- 2010-2017: ESPN kept weekly starters only (no bench or projections); the file adds each team's end-of-season roster with season totals. 2010-2011 have weeks where a starter is missing, flagged as "starters add to".
+- Gaps show as gaps: an empty lineup slot reads "Empty slot", a game without a lineup says so, and a box score whose starters don't add up to the league record shows both numbers (some Sleeper playoff weeks).
+
+`npm run data:check` fails while the files are out of date with the exports. A new season's export goes in `data/history/rosters/` (extend `scripts/lineups.ts` for a new file name), then run the command.

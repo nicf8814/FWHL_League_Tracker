@@ -7,6 +7,9 @@ import { validateDataset } from '../src/data/validate.ts';
 import { buildIndex, freshness } from '../src/engine/league.ts';
 import { validateHistory } from '../src/data/history.ts';
 import { buildHistory, formatHistory } from './history.ts';
+import { validateLineups } from '../src/data/lineups.ts';
+import { buildLineups, formatLineups } from './lineups.ts';
+import { existsSync, mkdirSync, readdirSync } from 'node:fs';
 import {
   applyChart, applyProjections, applyResults, applyRosters, arizonaToday, dropFantasyPros, formatDataset, chartRowsFromCsv,
   type ChartRow, type Report,
@@ -70,12 +73,28 @@ function checkHistory() {
   return `${v.value.seasons.length} past seasons, up to date`;
 }
 
+// public/seed/lineups/<year>.json must match what data/history/rosters builds today.
+const LINEUPS = 'public/seed/lineups';
+function checkLineups() {
+  const built = buildLineups(buildHistory());
+  const want = new Set(built.map((l) => `${l.year}.json`));
+  const have = existsSync(LINEUPS) ? readdirSync(LINEUPS).filter((f) => f.endsWith('.json')) : [];
+  for (const f of have) if (!want.has(f)) fail(`${LINEUPS}/${f} has no input. Run: npm run data -- lineups`);
+  for (const l of built) {
+    const p = `${LINEUPS}/${l.year}.json`;
+    if (!existsSync(p) || readFileSync(p, 'utf8') !== formatLineups(l)) fail(`${p} is out of date with data/history/rosters. Run: npm run data -- lineups`);
+    const v = validateLineups(readJson(p), l.year);
+    if (!v.ok) fail(`${p} is invalid:\n- ${v.errors.join('\n- ')}`);
+  }
+  return `${built.length} seasons (${built[0]?.year}-${built.at(-1)?.year}), up to date`;
+}
+
 const today = opt('--today') ?? arizonaToday();
 try {
   switch (cmd) {
     case 'check': {
       const ds = load();
-      console.log(JSON.stringify({ valid: true, file, ...summary(ds), history: checkHistory() }, null, 2));
+      console.log(JSON.stringify({ valid: true, file, ...summary(ds), history: checkHistory(), lineups: checkLineups() }, null, 2));
       break;
     }
     case 'history': {
@@ -84,6 +103,13 @@ try {
       if (!v.ok) fail(`the history would be invalid:\n- ${v.errors.join('\n- ')}`);
       if (!dry) writeFileSync(HISTORY, formatHistory(h));
       console.log(JSON.stringify({ written: !dry, file: HISTORY, seasons: `${h.seasons[0]?.year}-${h.seasons.at(-1)?.year}`, owners: h.owners.length, games: h.seasons.reduce((n, s) => n + s.games.length, 0), notes: h.seasons.flatMap((s) => s.notes.map((n) => `${s.year} ${n}`)) }, null, 2));
+      break;
+    }
+    case 'lineups': {
+      const built = buildLineups(buildHistory());
+      for (const l of built) { const v = validateLineups(JSON.parse(formatLineups(l)), l.year); if (!v.ok) fail(`${l.year} lineups would be invalid:\n- ${v.errors.join('\n- ')}`); }
+      if (!dry) { mkdirSync(LINEUPS, { recursive: true }); for (const l of built) writeFileSync(`${LINEUPS}/${l.year}.json`, formatLineups(l)); }
+      console.log(JSON.stringify({ written: !dry, dir: LINEUPS, seasons: built.map((l) => `${l.year} ${l.source} ${l.detail}: ${Object.keys(l.weeks).length} weeks, ${l.players.length} players`) }, null, 2));
       break;
     }
     case 'results': { const ds = load(); finish(ds, applyResults(ds, readJson(rest[0]) as never, today)); break; }
@@ -97,7 +123,7 @@ try {
     }
     case 'drop-fantasypros': { const ds = load(); finish(ds, dropFantasyPros(ds)); break; }
     default:
-      fail(`unknown command "${cmd ?? ''}". Use: check | results <json> | projections <json> | rosters <json> | chart <peaked|menton> <week> <csv> | history`);
+      fail(`unknown command "${cmd ?? ''}". Use: check | results <json> | projections <json> | rosters <json> | chart <peaked|menton> <week> <csv> | history | lineups`);
   }
 } catch (e) {
   fail(e instanceof Error ? e.message : String(e));
