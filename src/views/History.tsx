@@ -7,10 +7,11 @@ import {
   type Career, type Hist, type ScoreRec, type Season,
 } from '../engine/history.ts';
 import { Empty, fmt, Mono, Section, Seg, signed, tone } from '../ui/components.tsx';
+import SeasonWeeks, { type WeekState } from './HistoryWeeks.tsx';
 
 // The page is a stack of drawers: one per season (newest first, the latest open) and an
 // "All seasons" drawer holding the all-time views. ?year=Y opens a season, ?tab= an all-time view,
-// ?owner= an owner's page.
+// ?owner= an owner's page, ?wk=<year>-<week>&m=<owner> a season's week and open game.
 const URL_ = `${import.meta.env.BASE_URL}seed/history.json`;
 type Tab = 'champions' | 'owners' | 'luck' | 'rivals' | 'records';
 const TABS: [Tab, string][] = [['champions', 'Champions'], ['owners', 'Owners'], ['luck', 'Luck'], ['rivals', 'Rivals'], ['records', 'Records']];
@@ -52,7 +53,8 @@ type Go = (patch: Record<string, string | null>) => void;
 function Drawers({ H, all, query, go }: { H: Hist; all: Career[]; query: URLSearchParams; go: Go }) {
   const first = H.seasons[0]!.year, last = H.seasons.at(-1)!;
   const tabParam = TABS.find(([t]) => t === query.get('tab'))?.[0];
-  const yearParam = Number(query.get('year')) || null;
+  const wk = parseWk(query.get('wk'));
+  const yearParam = Number(query.get('year')) || wk?.year || null;
   const [openYears, setOpenYears] = useState<Set<number>>(() => new Set([yearParam ?? last.year]));
   const [allOpen, setAllOpen] = useState(!!tabParam || !!query.get('vs'));
   useEffect(() => {
@@ -82,7 +84,7 @@ function Drawers({ H, all, query, go }: { H: Hist; all: Career[]; query: URLSear
         </Drawer>
         {H.seasons.slice().reverse().map((s) => (
           <Drawer key={s.year} id={`season-${s.year}`} open={openYears.has(s.year)} onToggle={(o) => toggle(s.year, o)} title={String(s.year)} meta={s.platform === 'Sleeper' ? 'Sleeper' : undefined} line={<SeasonLine H={H} s={s} />}>
-            <SeasonPanel H={H} s={s} go={go} />
+            <SeasonPanel H={H} s={s} go={go} weeks={wk?.year === s.year ? { week: wk.week, open: query.get('m') } : null} />
           </Drawer>
         ))}
       </div>
@@ -98,7 +100,7 @@ function Drawer({ id, open, onToggle, title, meta, line, children }: { id: strin
         <span className="min-w-0 flex-1 text-sm text-ink-2">{line}</span>
         <span aria-hidden="true" className="shrink-0 pr-2 text-ink-3 transition-transform group-open:rotate-90">›</span>
       </summary>
-      {open && <div className="grid grid-cols-1 gap-6 pt-2 pb-8">{children}</div>}
+      {open && <div className="grid grid-cols-[minmax(0,1fr)] gap-6 pt-2 pb-8">{children}</div>}
     </details>
   );
 }
@@ -163,7 +165,23 @@ function SeasonLine({ H, s }: { H: Hist; s: Season }) {
   return <><span className="font-medium text-ink">🏆 {names(H, s.podium[0], s.year)}</span>{team && <span className="hidden text-ink-3 sm:inline"> · {team}</span>}<span className="block text-xs text-ink-3">over {names(H, s.podium[1], s.year)}</span></>;
 }
 
-function SeasonPanel({ H, s, go }: { H: Hist; s: Season; go: Go }) {
+const parseWk = (v: string | null) => { const m = v?.match(/^(\d{4})-(\d+)$/); return m ? { year: Number(m[1]), week: Number(m[2]) } : null; };
+
+function SeasonPanel({ H, s, go, weeks }: { H: Hist; s: Season; go: Go; weeks: WeekState | null }) {
+  const [view, setView] = useState<'standings' | 'weeks'>(weeks ? 'weeks' : 'standings');
+  const [ws, setWs] = useState<WeekState>(weeks ?? { week: null, open: null });
+  const toWeeks = (w: WeekState) => { setWs(w); go({ wk: `${s.year}-${w.week ?? 1}`, m: w.open }); };
+  return (
+    <>
+      {!s.live && <Seg label={`${s.year} view`} value={view} options={[['standings', 'Standings'], ['weeks', 'Week by week']]} onChange={(v) => { setView(v); if (v === 'standings') go({ wk: null, m: null }); }} />}
+      {view === 'weeks' && !s.live
+        ? <SeasonWeeks H={H} s={s} state={ws} onState={toWeeks} onOwner={(o) => go({ owner: o })} />
+        : <SeasonStandings H={H} s={s} go={go} />}
+    </>
+  );
+}
+
+function SeasonStandings({ H, s, go }: { H: Hist; s: Season; go: Go }) {
   const a = seasonAwards(H, s);
   const tags = new Map<OwnerKey, string[]>();
   const tag = (o: OwnerKey | undefined, t: string) => o && tags.set(o, [...(tags.get(o) ?? []), t]);
