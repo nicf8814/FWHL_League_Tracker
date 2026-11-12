@@ -120,3 +120,11 @@ test('Sleeper brackets: invented playoff-week games dropped, the missing 10th-pl
   assert.equal(tenth.length, 1);
   assert.equal(tenth[0]!.winner, 'clint-helling');
 });
+
+test('2024-25 scores are Sleeper\'s own (sleeper-scores.csv)', () => {
+  const g = past.byYear.get(2025)!.games.filter((x) => x.week === 12);
+  const clint = g.find((x) => x.home === 'clint-h' || x.away === 'clint-h')!;
+  assert.deepEqual([clint.hs, clint.as].sort(), [91.13, 125.77].sort());
+  const ty = g.find((x) => x.home === 'ty-carlson' || x.away === 'ty-carlson')!;
+  assert.deepEqual([ty.hs, ty.as].sort(), [127.7, 95.22].sort());
+});

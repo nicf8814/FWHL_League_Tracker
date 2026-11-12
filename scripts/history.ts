@@ -44,6 +44,17 @@ export function buildHistory(dir = 'data/history'): History {
   }
   for (const r of standings) r['Owner Name'] = who(r['Owner Name']!, yearOf(r));
   for (const r of matchups) { r['Home Owner'] = who(r['Home Owner']!, yearOf(r)); r['Away Owner'] = who(r['Away Owner']!, yearOf(r)); }
+  // sleeper-scores.csv: Sleeper's own score for every 2024-25 game, from the Sleeper roster export
+  // (data/history/rosters). The league export's Sleeper scores run up to about 2 points off.
+  const sleeperScore = new Map(table(dir, 'sleeper-scores.csv').map((r) => [`${r.season}|${r.week}|${r.owner}`, Number(r.score)]));
+  for (const r of matchups) {
+    if (!SLEEPER_YEARS.includes(yearOf(r))) continue;
+    for (const side of ['Home', 'Away']) {
+      const v = sleeperScore.get(`${yearOf(r)}|${r['Week Number']}|${r[`${side} Owner`]}`);
+      if (v === undefined) { if (Number(r[`${side} Score`]) && r['Home Owner'] !== r['Away Owner']) errors.push(`sleeper-scores.csv: no score for ${yearOf(r)} Week ${r['Week Number']} ${r[`${side} Owner`]}`); continue; }
+      r[`${side} Score`] = String(v);
+    }
+  }
   for (const r of champs) for (const p of ['1st', '2nd', '3rd']) if (r[`${p} Place Owner`]) r[`${p} Place Owner`] = who(r[`${p} Place Owner`]!, yearOf(r));
   for (const r of corrections) { r.winner = who(r.winner!, Number(r.season)); r.loser = who(r.loser!, Number(r.season)); }
 
