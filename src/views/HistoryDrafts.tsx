@@ -8,6 +8,7 @@ import type { OwnerKey } from '../data/history.ts';
 import { buildDraftBook, ordinal, posRank, REPLACEMENT, type DraftBook, type DraftPick } from '../engine/drafts.ts';
 import { crewName, ownerName, type Hist, type Season } from '../engine/history.ts';
 import { Empty, fmt, Seg, Sheet, signed, tone } from '../ui/components.tsx';
+import { Filters } from '../ui/filters.tsx';
 
 // ---------- loading ----------
 let file: Promise<Drafts | string> | null = null;
@@ -227,14 +228,6 @@ const QUICK: [string, string, Partial<Filter>][] = [
 ];
 const PAGE = 25;
 
-function InlineSelect({ id, value, options, onChange, label }: { id: string; value: string; options: [string, string][]; onChange: (v: string) => void; label: string }) {
-  return (
-    <select id={id} aria-label={label} className="inline-select" value={value} onChange={(e) => onChange(e.target.value)}>
-      {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-    </select>
-  );
-}
-
 export function DraftSearch({ H }: { H: Hist }) {
   const book = useDraftBook(H);
   const { settings } = useLeague();
@@ -278,35 +271,36 @@ export function DraftSearch({ H }: { H: Hist }) {
         <span className="text-xs font-semibold uppercase tracking-wider text-ink-3">Quick questions</span>
         <div className="flex flex-wrap gap-2">{quick.map(([k, l, p]) => <button key={k} type="button" className={`btn ${active === k ? 'btn-primary' : ''}`} aria-pressed={active === k} onClick={() => set(p)}>{l}</button>)}</div>
       </div>
-      <p className="text-base leading-[2.9rem] text-ink-2">
-        Showing <InlineSelect id="dpos" label="Position" value={f.pos} onChange={(v) => set({ pos: v })} options={[['any', 'every position'], ['QB', 'quarterbacks'], ['RB', 'running backs'], ['WR', 'receivers'], ['TE', 'tight ends'], ['K', 'kickers'], ['D/ST', 'defenses']]} />
-        {' '}drafted by <InlineSelect id="downer" label="Owner" value={f.owner} onChange={(v) => set({ owner: v })} options={[['', 'anyone'], ...owners.map((o) => [o, ownerName(H, o)] as [string, string])]} />
-        {' '}in <InlineSelect id="dseasons" label="Seasons" value={f.seasons} onChange={(v) => set({ seasons: v })} options={[['all', 'every season'], ['last5', 'the last 5 seasons'], ['2018on', '2018 on (full data)'], ...book.years.slice().reverse().map((y) => [String(y), y === last && book.seasons.get(y)?.pts === 'to-date' ? `${y} (so far)` : String(y)] as [string, string])]} />,
-        {' '}<InlineSelect id="dkeep" label="Keepers" value={f.keepers} onChange={(v) => set({ keepers: v as Filter['keepers'] })} options={[['out', 'leaving out keepers'], ['in', 'including keepers'], ['only', 'keepers only']]} />,
-        {' '}<InlineSelect id="dsort" label="Order" value={f.sort} onChange={(v) => set({ sort: v as Sort })} options={[['best', 'best value first'], ['worst', 'worst value first'], ['price', 'priciest first'], ['points', 'most points first'], ['newest', 'newest first']]} />.
-        {' '}<button type="button" className="link text-sm" onClick={() => { setQ(''); setF(START); setPage(0); }}>Reset</button>
-      </p>
+      <Filters
+        changed={JSON.stringify({ ...f, q: '' }) !== JSON.stringify({ ...START, q: '' })}
+        onReset={() => { setF((x) => ({ ...START, q: x.q })); setPage(0); }}
+        summary={<><span className="num font-semibold text-ink">{rows.length.toLocaleString()}</span> of {book.picks.length.toLocaleString()} picks · {players.size.toLocaleString()} player{players.size === 1 ? '' : 's'}</>}
+        fields={[
+          { id: 'pos', label: 'Position', value: f.pos, onChange: (v) => set({ pos: v }), options: [['any', 'All positions'], ['QB', 'QB'], ['RB', 'RB'], ['WR', 'WR'], ['TE', 'TE'], ['K', 'K'], ['D/ST', 'D/ST']] },
+          { id: 'owner', label: 'Drafted by', value: f.owner, onChange: (v) => set({ owner: v }), options: [['', 'Anyone'], ...owners.map((o) => [o, ownerName(H, o)] as [string, string])] },
+          { id: 'seasons', label: 'Seasons', value: f.seasons, onChange: (v) => set({ seasons: v }), options: [['all', 'All seasons'], ['last5', 'Last 5 seasons'], ['2018on', '2018 on (full data)'], ...book.years.slice().reverse().map((y) => [String(y), y === last && book.seasons.get(y)?.pts === 'to-date' ? `${y} (so far)` : String(y)] as [string, string])] },
+          { id: 'keepers', label: 'Keepers', value: f.keepers, onChange: (v) => set({ keepers: v as Filter['keepers'] }), options: [['out', 'Leave out'], ['in', 'Include'], ['only', 'Keepers only']] },
+          { id: 'sort', label: 'Order', value: f.sort, onChange: (v) => set({ sort: v as Sort }), options: [['best', 'Best value'], ['worst', 'Worst value'], ['price', 'Priciest'], ['points', 'Most points'], ['newest', 'Newest']] },
+        ]}
+      />
       {!rows.length ? <Empty>No picks match{f.q ? ` “${f.q}”` : ''} with these settings.</Empty> : (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-ink-2" aria-live="polite"><span className="num font-semibold">{rows.length.toLocaleString()}</span> of {book.picks.length.toLocaleString()} picks · {players.size.toLocaleString()} player{players.size === 1 ? '' : 's'}</p>
-            <span className="flex items-center gap-2 text-sm text-ink-3">How is value worked out? <ValueHelp /></span>
-          </div>
+          <span className="flex items-center gap-2 justify-self-end text-sm text-ink-3">How is value worked out? <ValueHelp /></span>
           {one && <button type="button" className="btn btn-primary justify-self-start" onClick={() => setPlayer(one.player)}>Open {one.name}'s draft history ›</button>}
           <div className="-mx-4 overflow-x-auto md:mx-0">
-            <table className="tbl min-w-[40rem]">
+            <table className="tbl md:min-w-[40rem]">
               <caption className="sr-only">Matching draft picks</caption>
-              <thead><tr><th className="l stick">Player</th><th className="l">Year</th><th className="l">Drafted by</th><th>Paid</th><th title="Projected season points where recorded: ESPN preseason (2018 on), or Sleeper pulled after the season (‡)">Proj</th><th>Pts</th><th title="Worth minus price paid">Value</th></tr></thead>
+              <thead><tr><th className="l stick">Player</th><th className="l hidden md:table-cell">Year</th><th className="l hidden md:table-cell">Drafted by</th><th>Paid</th><th className="hidden md:table-cell" title="Projected season points where recorded: ESPN preseason (2018 on), or Sleeper pulled after the season (‡)">Proj</th><th>Pts</th><th title="Worth minus price paid">Value</th></tr></thead>
               <tbody>
                 {rows.slice(page * PAGE, page * PAGE + PAGE).map((x) => {
                   const s = book.seasons.get(x.year);
                   return (
                     <tr key={x.i}>
-                      <td className="l stick"><span className="flex items-center gap-2"><PosTag pos={x.pos} /><button type="button" className="link max-w-48 truncate" onClick={() => setPlayer(x.player)}>{x.name}</button>{x.keeper && <KeeperTag />}</span></td>
-                      <td className="l n">{x.year}</td>
-                      <td className="l">{crewName(H, x.owner, x.year)}</td>
+                      <td className="l stick !h-auto py-1.5"><span className="flex items-center gap-2"><PosTag pos={x.pos} /><button type="button" className="link max-w-36 truncate sm:max-w-48" onClick={() => setPlayer(x.player)}>{x.name}</button>{x.keeper && <KeeperTag />}</span><span className="block max-w-48 truncate pl-[2.6rem] text-xs text-ink-3 md:hidden">{x.year} · {crewName(H, x.owner, x.year)}</span></td>
+                      <td className="l n hidden md:table-cell">{x.year}</td>
+                      <td className="l hidden md:table-cell">{crewName(H, x.owner, x.year)}</td>
                       <td className="n font-semibold">${x.price}</td>
-                      <td className="n text-ink-3">{x.proj === null ? '–' : `${fmt(x.proj, 0)}${s?.proj === 'sleeper' ? '‡' : ''}`}</td>
+                      <td className="n hidden text-ink-3 md:table-cell">{x.proj === null ? '–' : `${fmt(x.proj, 0)}${s?.proj === 'sleeper' ? '‡' : ''}`}</td>
                       <td className="n">{x.pts === null ? <span className="text-ink-3">–</span> : <>{fmt(x.pts, 0)}<span className="text-ink-3">{ptsMark(s)}</span></>}</td>
                       <td className="n"><Value v={x.value} /></td>
                     </tr>
@@ -356,7 +350,7 @@ export function SeasonDraft({ H, s }: { H: Hist; s: Season }) {
     <div className="grid grid-cols-[minmax(0,1fr)] gap-5">
       <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
         <label className="grid gap-1 text-sm text-ink-3">Team
-          <select className="field w-auto min-w-64 text-ink" value={owner} onChange={(e) => setOwner(e.target.value)}>
+          <select className="field w-full text-ink sm:w-auto sm:min-w-64" value={owner} onChange={(e) => setOwner(e.target.value)}>
             {s.rows.map((r, i) => <option key={r.owner} value={r.owner}>{s.live ? i + 1 : r.finish}. {crewName(H, r.owner, s.year)} · {r.team}</option>)}
           </select>
         </label>
@@ -370,16 +364,16 @@ export function SeasonDraft({ H, s }: { H: Hist; s: Season }) {
       </div>
       {ds.notes.map((n) => <p key={n} className="max-w-[70ch] border-l-[3px] border-accent py-1 pl-3 text-sm text-ink-2"><span className="font-semibold">Partial data for {s.year}.</span> {n}</p>)}
       <div className="-mx-4 overflow-x-auto md:mx-0">
-        <table className="tbl min-w-[42rem]">
+        <table className="tbl md:min-w-[42rem]">
           <caption className="sr-only">{crewName(H, owner, s.year)} {s.year} draft</caption>
-          <thead><tr><th className="l stick">Player</th><th>Paid</th><th title={refTitle(ds)}>{refLabel(ds)}</th>{hasProj && <th title={projSource(ds)}>Proj</th>}<th>Pts</th><th title="Worth minus price paid">Value</th><th title="Weeks this team started him; an arrow shows where he went">Starts</th></tr></thead>
+          <thead><tr><th className="l stick">Player</th><th>Paid</th><th className="hidden md:table-cell" title={refTitle(ds)}>{refLabel(ds)}</th>{hasProj && <th className="hidden md:table-cell" title={projSource(ds)}>Proj</th>}<th>Pts</th><th title="Worth minus price paid">Value</th><th title="Weeks this team started him; an arrow shows where he went">Starts</th></tr></thead>
           <tbody>
             {ps.map((x) => (
               <tr key={x.i}>
-                <td className="l stick"><span className="flex items-center gap-2"><PosTag pos={x.pos} /><button type="button" className="link max-w-48 truncate" onClick={() => setPlayer(x.player)}>{x.name}</button>{x.keeper && <KeeperTag />}</span></td>
+                <td className="l stick"><span className="flex items-center gap-2"><PosTag pos={x.pos} /><button type="button" className="link max-w-32 truncate sm:max-w-48" onClick={() => setPlayer(x.player)}>{x.name}</button>{x.keeper && <KeeperTag />}</span></td>
                 <td className="n font-semibold">${x.price}</td>
-                <td className="n text-ink-3">{x.ref === null ? '–' : `$${Math.round(x.ref)}`}</td>
-                {hasProj && <td className="n text-ink-3">{x.proj === null ? '–' : fmt(x.proj, 0)}</td>}
+                <td className="n hidden text-ink-3 md:table-cell">{x.ref === null ? '–' : `$${Math.round(x.ref)}`}</td>
+                {hasProj && <td className="n hidden text-ink-3 md:table-cell">{x.proj === null ? '–' : fmt(x.proj, 0)}</td>}
                 <td className="n">{x.pts === null ? <span className="text-ink-3">–</span> : <>{fmt(x.pts, 0)}<span className="text-ink-3">{ptsMark(ds)}</span></>}</td>
                 <td className="n"><Value v={x.value} /></td>
                 <td className="n">{starts(x)}</td>

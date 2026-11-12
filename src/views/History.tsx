@@ -9,13 +9,16 @@ import {
 import { Empty, fmt, Mono, Section, Seg, signed, tone } from '../ui/components.tsx';
 import SeasonWeeks, { type WeekState } from './HistoryWeeks.tsx';
 import { DraftSearch, SeasonDraft } from './HistoryDrafts.tsx';
+import { OwnerTrades, SeasonTrades, TradeSearch } from './HistoryTrades.tsx';
 
-// The page is a stack of drawers: one per season (newest first, the latest open) and an
-// "All seasons" drawer holding the all-time views. ?year=Y opens a season, ?tab= an all-time view,
-// ?owner= an owner's page, ?wk=<year>-<week>&m=<owner> a season's week and open game.
+// Pick a season (or All seasons) and what to show from two dropdowns; the page below fills in.
+// ?season=all|<year>&view=<section>; ?owner= an owner's page; ?wk=<year>-<week>&m=<owner> a week and
+// open game. Older links (?tab=, ?year=) still land in the right place.
 const URL_ = `${import.meta.env.BASE_URL}seed/history.json`;
-type Tab = 'champions' | 'owners' | 'luck' | 'rivals' | 'records' | 'drafts';
-const TABS: [Tab, string][] = [['champions', 'Champions'], ['owners', 'Owners'], ['luck', 'Luck'], ['rivals', 'Rivals'], ['records', 'Records'], ['drafts', 'Drafts']];
+type Tab = 'champions' | 'owners' | 'luck' | 'rivals' | 'records' | 'drafts' | 'trades';
+const TABS: [Tab, string][] = [['champions', 'Champions'], ['owners', 'Owners'], ['luck', 'Luck'], ['rivals', 'Rivals'], ['records', 'Records'], ['drafts', 'Drafts'], ['trades', 'Trades']];
+type SeasonView = 'standings' | 'weeks' | 'draft' | 'trades';
+const seasonViews = (s: Season): [SeasonView, string][] => [['standings', 'Standings'], ...(s.live ? [] : [['weeks', 'Week by week'] as [SeasonView, string]]), ['draft', 'Draft'], ['trades', 'Trades']];
 
 function useHistoryFile() {
   const [state, setState] = useState<HistoryFile | string | null>(null);
@@ -46,64 +49,51 @@ export default function HistoryView() {
   const owner = query.get('owner');
   const c = owner ? all.find((x) => x.owner === owner) : undefined;
   if (c) return <div className="grid grid-cols-1 gap-8"><OwnerPage H={H} c={c} go={set} /></div>;
-  return <Drawers H={H} all={all} query={query} go={set} />;
+  return <Browser H={H} all={all} query={query} go={set} />;
 }
 
 type Go = (patch: Record<string, string | null>) => void;
 
-function Drawers({ H, all, query, go }: { H: Hist; all: Career[]; query: URLSearchParams; go: Go }) {
+function Browser({ H, all, query, go }: { H: Hist; all: Career[]; query: URLSearchParams; go: Go }) {
   const first = H.seasons[0]!.year, last = H.seasons.at(-1)!;
-  const tabParam = TABS.find(([t]) => t === query.get('tab'))?.[0];
   const wk = parseWk(query.get('wk'));
-  const yearParam = Number(query.get('year')) || wk?.year || null;
-  const [openYears, setOpenYears] = useState<Set<number>>(() => new Set([yearParam ?? last.year]));
-  const [allOpen, setAllOpen] = useState(!!tabParam || !!query.get('vs'));
-  useEffect(() => {
-    if (!yearParam) return;
-    setOpenYears((o) => new Set(o).add(yearParam));
-    requestAnimationFrame(() => document.getElementById(`season-${yearParam}`)?.scrollIntoView({ block: 'start' }));
-  }, [yearParam]);
-  useEffect(() => { if (tabParam) setAllOpen(true); }, [tabParam]);
-  const toggle = (y: number, open: boolean) => setOpenYears((o) => { const n = new Set(o); if (open) n.add(y); else n.delete(y); return n; });
-  const tab = tabParam ?? 'champions';
+  const seasonParam = query.get('season') ?? query.get('year') ?? (wk ? String(wk.year) : query.get('tab') || query.get('vs') ? 'all' : 'all');
+  const s = seasonParam === 'all' ? undefined : H.byYear.get(Number(seasonParam));
+  const views: [string, string][] = s ? seasonViews(s) : TABS;
+  const raw = query.get('view') ?? (s ? (wk ? 'weeks' : 'standings') : query.get('tab') ?? 'champions');
+  const view = views.find(([v]) => v === raw)?.[0] ?? views[0]![0];
+  const pick = (season: string) => go({ season, view: season === 'all' ? (TABS.some(([t]) => t === view) ? view : 'champions') : (['standings', 'weeks', 'draft', 'trades'].includes(view) ? view : 'standings'), year: null, tab: null, wk: null, m: null, vs: null });
   return (
-    <div className="grid grid-cols-1 gap-6">
-      <section aria-label="Headline" className="grid gap-2">
-        <p className="headline-sm">{H.seasons.length} seasons of Favre's Waffle House</p>
-        <p className="max-w-[70ch] text-ink-2">
-          {first} to {last.year}, {all.length} owners. Open a season for its standings, weeks and draft, or All seasons for titles, owners, luck, rivals, records and every draft.
-        </p>
-      </section>
-      <div className="grid border-t-2 border-ink">
-        <Drawer id="all-seasons" open={allOpen} onToggle={setAllOpen} title="All seasons" meta={`${first}–${last.year}`} line="Champions, owners, luck, rivals, records and drafts">
-          <Seg label="All seasons section" value={tab} options={TABS} onChange={(t) => go({ tab: t, vs: null })} />
-          {tab === 'champions' && <Champions H={H} all={all} go={go} />}
-          {tab === 'owners' && <Owners H={H} all={all} go={go} />}
-          {tab === 'luck' && <LuckTab H={H} all={all} go={go} />}
-          {tab === 'rivals' && <Rivals H={H} all={all} pair={query.get('vs')} go={go} />}
-          {tab === 'records' && <RecordsTab H={H} go={go} />}
-          {tab === 'drafts' && <DraftSearch H={H} />}
-        </Drawer>
-        {H.seasons.slice().reverse().map((s) => (
-          <Drawer key={s.year} id={`season-${s.year}`} open={openYears.has(s.year)} onToggle={(o) => toggle(s.year, o)} title={String(s.year)} meta={s.platform === 'Sleeper' ? 'Sleeper' : undefined} line={<SeasonLine H={H} s={s} />}>
-            <SeasonPanel H={H} s={s} go={go} weeks={wk?.year === s.year ? { week: wk.week, open: query.get('m') } : null} />
-          </Drawer>
-        ))}
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-5">
+      <div className="grid gap-1">
+        <h1 className="headline-sm">League history</h1>
+        <p className="text-sm text-ink-2">{H.seasons.length} seasons, {first} to {last.year} · {all.length} owners</p>
       </div>
+      <div className="grid grid-cols-2 gap-3 border-y-2 border-ink py-3 sm:flex sm:flex-wrap sm:items-end">
+        <label className="grid gap-1 text-xs font-semibold uppercase tracking-wider text-ink-3">Season
+          <select className="field text-base font-semibold normal-case tracking-normal text-ink sm:w-56" value={s ? String(s.year) : 'all'} onChange={(e) => pick(e.target.value)}>
+            <option value="all">All seasons</option>
+            {H.seasons.slice().reverse().map((x) => <option key={x.year} value={x.year}>{x.year}{x.live ? ' (in progress)' : x.platform === 'Sleeper' ? ' (Sleeper)' : ''}</option>)}
+          </select>
+        </label>
+        <label className="grid gap-1 text-xs font-semibold uppercase tracking-wider text-ink-3">Show
+          <select className="field text-base font-semibold normal-case tracking-normal text-ink sm:w-56" value={view} onChange={(e) => go({ view: e.target.value, tab: null, wk: null, m: null, vs: null })}>
+            {views.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </label>
+        {s && <p className="col-span-2 min-w-0 text-sm text-ink-2 sm:col-span-1 sm:pb-2.5"><SeasonLine H={H} s={s} /></p>}
+      </div>
+      {s ? <SeasonPanel key={s.year} H={H} s={s} go={go} view={view as SeasonView} weeks={wk?.year === s.year ? { week: wk.week, open: query.get('m') } : null} />
+        : <>
+          {view === 'champions' && <Champions H={H} all={all} go={go} />}
+          {view === 'owners' && <Owners H={H} all={all} go={go} />}
+          {view === 'luck' && <LuckTab H={H} all={all} go={go} />}
+          {view === 'rivals' && <Rivals H={H} all={all} pair={query.get('vs')} go={go} />}
+          {view === 'records' && <RecordsTab H={H} go={go} />}
+          {view === 'drafts' && <DraftSearch H={H} />}
+          {view === 'trades' && <TradeSearch H={H} onOwner={(o: OwnerKey) => go({ owner: o })} />}
+        </>}
     </div>
-  );
-}
-
-function Drawer({ id, open, onToggle, title, meta, line, children }: { id: string; open: boolean; onToggle: (open: boolean) => void; title: string; meta?: string; line: ReactNode; children: ReactNode }) {
-  return (
-    <details id={id} className="group scroll-mt-4 border-b border-rule" open={open} onToggle={(e) => { const o = e.currentTarget.open; if (o !== open) onToggle(o); }}>
-      <summary className="flex min-h-14 cursor-pointer list-none items-center gap-x-4 py-2 hover:bg-sunk [&::-webkit-details-marker]:hidden">
-        <span className="w-24 shrink-0 font-display text-lg font-bold [font-stretch:85%]">{title}{meta && <span className="block text-xs font-normal text-ink-3 [font-stretch:100%]">{meta}</span>}</span>
-        <span className="min-w-0 flex-1 text-sm text-ink-2">{line}</span>
-        <span aria-hidden="true" className="shrink-0 pr-2 text-ink-3 transition-transform group-open:rotate-90">›</span>
-      </summary>
-      {open && <div className="grid grid-cols-[minmax(0,1fr)] gap-6 pt-2 pb-8">{children}</div>}
-    </details>
   );
 }
 
@@ -169,19 +159,13 @@ function SeasonLine({ H, s }: { H: Hist; s: Season }) {
 
 const parseWk = (v: string | null) => { const m = v?.match(/^(\d{4})-(\d+)$/); return m ? { year: Number(m[1]), week: Number(m[2]) } : null; };
 
-function SeasonPanel({ H, s, go, weeks }: { H: Hist; s: Season; go: Go; weeks: WeekState | null }) {
-  const [view, setView] = useState<'standings' | 'weeks' | 'draft'>(weeks ? 'weeks' : 'standings');
+function SeasonPanel({ H, s, go, view, weeks }: { H: Hist; s: Season; go: Go; view: SeasonView; weeks: WeekState | null }) {
   const [ws, setWs] = useState<WeekState>(weeks ?? { week: null, open: null });
   const toWeeks = (w: WeekState) => { setWs(w); go({ wk: `${s.year}-${w.week ?? 1}`, m: w.open }); };
-  const views: ['standings' | 'weeks' | 'draft', string][] = s.live ? [['standings', 'Standings'], ['draft', 'Draft']] : [['standings', 'Standings'], ['weeks', 'Week by week'], ['draft', 'Draft']];
-  return (
-    <>
-      <Seg label={`${s.year} view`} value={view} options={views} onChange={(v) => { setView(v); if (v !== 'weeks') go({ wk: null, m: null }); }} />
-      {view === 'weeks' && !s.live ? <SeasonWeeks H={H} s={s} state={ws} onState={toWeeks} onOwner={(o) => go({ owner: o })} />
-        : view === 'draft' ? <SeasonDraft H={H} s={s} />
-        : <SeasonStandings H={H} s={s} go={go} />}
-    </>
-  );
+  if (view === 'weeks' && !s.live) return <SeasonWeeks H={H} s={s} state={ws} onState={toWeeks} onOwner={(o) => go({ owner: o })} />;
+  if (view === 'draft') return <SeasonDraft H={H} s={s} />;
+  if (view === 'trades') return <SeasonTrades H={H} s={s} />;
+  return <SeasonStandings H={H} s={s} go={go} />;
 }
 
 function SeasonStandings({ H, s, go }: { H: Hist; s: Season; go: Go }) {
@@ -244,7 +228,7 @@ function Champions({ H, all, go }: { H: Hist; all: Career[]; go: Go }) {
   const champLuck = done.filter((s) => (s.rows.find((r) => r.owner === s.podium[0])?.luck ?? 0) > 0).length;
   return (
     <>
-      <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-5 xl:grid-cols-3">
         <Stat label="Most titles" value={`${titles.m} · ${list(titles.who)}`} />
         <Stat label="Most finals lost" value={`${finalsLost.m} · ${list(finalsLost.who)}`} sub={finalsLost.who.map((c) => `${c.titles.length} titles in ${c.titles.length + c.runnerUps.length} finals`).join('; ')} />
         <Stat label="Most seasons without a title" value={`${ringless.m} · ${list(ringless.who)}`} />
@@ -260,7 +244,7 @@ function Champions({ H, all, go }: { H: Hist; all: Career[]; go: Go }) {
               const c = s.rows.find((r) => r.owner === s.podium[0]);
               return (
                 <tr key={s.year}>
-                  <td className="l n"><button type="button" className="link" onClick={() => go({ year: String(s.year) })}>{s.year}</button></td>
+                  <td className="l n"><button type="button" className="link" onClick={() => go({ season: String(s.year), view: 'standings' })}>{s.year}</button></td>
                   <td className="l stick font-medium">{s.podium[0] && <Who H={H} o={s.podium[0]} go={go} year={s.year} sub={c?.team} />}</td>
                   <td className="l">{s.podium[1] && <Who H={H} o={s.podium[1]} go={go} year={s.year} />}</td>
                   <td className="n">{c ? rec(c.w, c.l, c.t) : '–'}</td>
@@ -346,7 +330,7 @@ function OwnerPage({ H, c, go }: { H: Hist; c: Career; go: Go }) {
           <tbody>
             {c.seasons.slice().reverse().map((s) => (
               <tr key={s.year}>
-                <td className="l n"><button type="button" className="link" title={`Open ${s.year}`} onClick={() => go({ owner: null, year: String(s.year) })}>{s.year}</button>{s.live ? '*' : ''}{H.byYear.get(s.year)!.platform === 'Sleeper' ? <span className="tag ml-2 text-ink-3">Sleeper</span> : null}</td>
+                <td className="l n"><button type="button" className="link" title={`Open ${s.year}`} onClick={() => go({ owner: null, season: String(s.year), view: 'standings' })}>{s.year}</button>{s.live ? '*' : ''}{H.byYear.get(s.year)!.platform === 'Sleeper' ? <span className="tag ml-2 text-ink-3">Sleeper</span> : null}</td>
                 <td className="l stick">{s.team}{s.with.length > 0 && <span className="block text-xs text-ink-3">with {s.with.map((o) => ownerName(H, o)).join(' & ')}</span>}</td>
                 <td className="n">{rec(s.w, s.l, s.t)}</td>
                 <td className="n">{s.live ? 'live' : place(s.finish)}</td>
@@ -359,6 +343,7 @@ function OwnerPage({ H, c, go }: { H: Hist; c: Career; go: Go }) {
           </tbody>
         </Scroll>
       </Section>
+      <OwnerTrades H={H} owner={c.owner} />
       <Section title="Head to head" aside="Regular season and playoffs, 4+ games">
         <Scroll min="min-w-[34rem]">
           <thead><tr><th className="l stick">Opponent</th><th>Games</th><th>W-L</th><th>Win %</th><th>Playoffs</th><th>Avg score</th></tr></thead>
