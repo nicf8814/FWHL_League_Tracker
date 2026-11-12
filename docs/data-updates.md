@@ -161,3 +161,20 @@ npm run data -- lineups [--dry-run]
 - Gaps show as gaps: an empty lineup slot reads "Empty slot", a game without a lineup says so, and a box score whose starters don't add up to the league record shows both numbers.
 
 `npm run data:check` fails while the files are out of date with the exports. A new season's export goes in `data/history/rosters/` (extend `scripts/lineups.ts` for a new file name), then run the command.
+
+### Draft history
+
+The History page shows every auction since 2010: a **Drafts** tab in All seasons (search, quick questions, filters written as one sentence), a **Draft** view in each season (pick a team for its roster, prices, points, value and weekly starts), and a player history sheet behind every player name. It reads `public/seed/drafts.json` (about 70 KB compressed), loaded only when a draft view opens. Built, never edited by hand:
+
+```bash
+npm run data -- drafts [--dry-run]
+```
+
+- `data/history/drafts/espn-2010-2023-2026.json` and `sleeper-2024-2025.json`: the draft exports, as received.
+- `accounts.csv`: draft names that differ from the history owner names. ESPN rows (season blank = every season) cover "Clint Helling", "Nic Ferrara" and the co-owned team; Sleeper rows map each season's display name (`nicf8814`, `braejones12`, ...). The build stops on any name it can't place, so a new Sleeper account gets a row here.
+- `draft-notes.csv`: one line per season where the data is partial (no keeper flags in 2010, no ESPN average value in 2017 and 2019, Sleeper's keeper flag and projections in 2024-25). Shown on that season's draft.
+- Players match across ESPN and Sleeper by name without punctuation or suffix, plus position.
+- Weekly starts and Sleeper season points come from the lineups the same build makes (weeks 1-17, points while on a league roster).
+- Value is worked out in the browser (`src/engine/drafts.ts`), so the 2026 draft's points and starts follow each weekly results push without rebuilding this file. The page explains the method behind the (i) button.
+
+The dry run lists unmatched owners, keepers per season and each season's team spend range. `npm run data:check` fails while `drafts.json` is out of date. After a season's draft: add the export (extend `scripts/drafts.ts` for a new file name), add any new account to `accounts.csv`, run the command, then the usual checks.
