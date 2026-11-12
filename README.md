@@ -19,6 +19,8 @@ Requires Node 22.18 or newer (the tests run TypeScript directly).
 
 ## What's in it
 
+Four sections: **My Team** (the live season, with a dropdown in the header that points the team pages at any team), **Trades**, **History** (everything finished) and **Settings**.
+
 | View | What it does |
 | --- | --- |
 | Trade finder | Pick a position you need, tag your players Sell / Open / Keep (or in bulk), add players you want. Finds offers the other manager should accept, ranked by points per week your lineup gains; says what each partner needs. Pin or hide offers. Runs in a worker. Retired after the deadline. |
@@ -28,10 +30,14 @@ Requires Node 22.18 or newer (the tests run TypeScript directly).
 | Waivers | Free agents ranked by what they add to your lineup after the cut. |
 | Keepers | 2027 keeper calls: auction worth at the player's points rank vs his keeper cost, best set per team, league bargains. |
 | Standings | This week for your team, records, PF, PA, max PF, efficiency, playoff odds (10,000 simulated seasons) by record path and the points-for seed, odds trend, weekly results with the Weeks 12-14 top-6 rule. |
+| History | 2010 to now: champions, career records, all-time players, trading careers, keeper calls, luck, rivals, records, drafts and trades. |
+| Export | Pick any of 17 datasets and download them as CSV, plus the full JSON backup. |
 | Players | Every valued player with total points; search, sort any column, choose columns, export CSV, chart moves since any week. Each player's sheet has his chart-value trend. |
-| Teams | Any roster by position with role, pts/wk and value. |
+| Roster | Any team's roster with role, pts/wk and value; the header dropdown picks the team. |
 | Data & settings | Your team, theme, data sources and gaps, injury return weeks, value engine presets, chart import, backup export / import / reset. |
 | How it works | The methodology in plain words. |
+
+Every data table works the same way: dropdown filters and a search box above it, rows ranked 1 through X after whatever is filtered and sorted, a click on any column header to sort, one **Reset** that puts the sort, columns, filters and search back where they started, and **Export CSV** of exactly what is on screen (`src/ui/table.tsx`).
 
 Ctrl/⌘ K (or /) opens a palette for pages, players, teams and actions; `?` lists the keyboard shortcuts. The app installs to a home screen and works offline.
 
@@ -51,6 +57,9 @@ Engine (src/engine)              Pure TypeScript, no DOM. Tested with Node.
   ├─ finder.ts   trade search and team needs (runs in finder.worker.ts via finderClient.ts)
   ├─ replay.ts   trade tracker and what-ifs: grades, records with and without, the chain of trades
   ├─ keepers.ts  2027 keeper calls
+  ├─ careers.ts  all-time players and championship rosters
+  ├─ traders.ts  trading careers from the history file plus this season
+  ├─ keeperSkill.ts  who picks the right keepers, from the draft history
   └─ sim.ts      season simulation (runs in sim.worker.ts via simClient.ts)
   │
 Repository (src/data/repository.ts)   loadDataset / saveDataset / resetDataset / settings / saved trades
@@ -79,6 +88,8 @@ To add a real backend later, write another `Repository` with the same methods (d
 | `usage` (optional) | playerId | unused; held FantasyPros volume vs production for the dropped Buy & sell volume flags |
 
 `meta.sources` carries an as-of stamp per source; the app shows each one and flags it when it gets old.
+
+Five more files ship beside it, built from `data/history` and read only by the History pages: `history.json` (seasons and results since 2010), `lineups/<year>.json` (weekly lineups), `drafts.json` (every auction pick), `trades.json` (every past-season trade, graded) and `careers.json` (every player's season-by-season FWHL career, with the championship rosters). `npm run data -- careers` rebuilds the last one; `npm run data:check` fails if any of them drifts from its inputs.
 
 **Weekly refresh.** Scheduled tasks read ESPN in a browser, write an input file, and run `npm run data -- <command>`, which validates everything and refuses bad data. Trade charts come from images transcribed to CSV. Each update is a commit to `main`, and the deploy re-checks the data before publishing. Formats and steps: [docs/data-updates.md](docs/data-updates.md). A browser that imported its own file keeps it only until newer data is deployed.
 
