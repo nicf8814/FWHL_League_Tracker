@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import type { PlayerId } from '../data/schema.ts';
 import { useLeague } from '../data/store.tsx';
+import { useViewTeam } from '../app/viewTeam.ts';
+import { teamName } from '../engine/league.ts';
 import { fmt, PlayerName, PosMark, Section, signed, tone, Empty } from '../ui/components.tsx';
 import { DataTable, TableBar, useTable, type Col, type FilterDef } from '../ui/table.tsx';
 import { usePlayerSheet } from './PlayerSheet.tsx';
@@ -13,7 +15,8 @@ interface Row { p: PlayerId; gain: number; drop: PlayerId | null }
 export default function Waivers() {
   const { idx, values: V, base, settings } = useLeague();
   const open = usePlayerSheet();
-  const me = settings.myTeamId;
+  const { team, mine } = useViewTeam();
+  const me = settings.myTeamId === null && !idx.teams.has(team) ? null : team;
   const rows = useMemo<Row[]>(() => {
     if (me === null) return [];
     const fas = [...idx.stats.keys()].filter((p) => !idx.owner.has(p) && idx.players.has(p)).sort((a, b) => V.bv(b) - V.bv(a)).slice(0, POOL);
@@ -39,9 +42,9 @@ export default function Waivers() {
   if (me === null) return <Empty>Pick your team in Data &amp; settings to rank free agents for your lineup.</Empty>;
   const best = t.sorted[0];
   return (
-    <Section title="Best pickups for your lineup" aside={`Top ${POOL} free agents by value`}>
+    <Section title={mine ? 'Best pickups for your lineup' : `Best pickups for ${teamName(idx, me)}`} aside={`Top ${POOL} free agents by value`}>
       <p className="headline-sm">{best && best.gain >= 0.1 ? `Add ${idx.players.get(best.p)?.name}, +${best.gain.toFixed(1)} a week` : 'Nobody beats your bench right now'}</p>
-      <p className="max-w-[70ch] text-sm text-ink-2">Pts/wk is how much your best lineup gains through the rest of the season and playoffs if you add him and cut the player shown. It counts byes and injury returns, so a stash can rank high with no points this week.</p>
+      <p className="max-w-[70ch] text-sm text-ink-2">Pts/wk is how much {mine ? 'your' : 'this'} best lineup gains through the rest of the season and playoffs if you add him and cut the player shown. It counts byes and injury returns, so a stash can rank high with no points this week.</p>
       <TableBar t={t} noun="free agents" file={`fwhl-waivers-wk${idx.currentWeek}`} />
       <DataTable t={t} rowKey={(r) => r.p} minWidth="min-w-[40rem]" empty="No free agent matches these filters." />
     </Section>

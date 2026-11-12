@@ -20,7 +20,7 @@ function loadTrades(): Promise<Trades | string> {
     .catch((e) => { file = null; return `Could not load the trade history (${e instanceof Error ? e.message : e}).`; });
   return file;
 }
-function useTrades(): Trades | string | null {
+export function useTrades(): Trades | string | null {
   const [t, setT] = useState<Trades | string | null>(null);
   useEffect(() => { let live = true; loadTrades().then((v) => live && setT(v)); return () => { live = false; }; }, []);
   return t;

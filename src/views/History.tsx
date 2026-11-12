@@ -10,13 +10,14 @@ import { Empty, fmt, Mono, Section, Seg, signed, tone } from '../ui/components.t
 import SeasonWeeks, { type WeekState } from './HistoryWeeks.tsx';
 import { DraftSearch, SeasonDraft } from './HistoryDrafts.tsx';
 import { OwnerTrades, SeasonTrades, TradeSearch } from './HistoryTrades.tsx';
+import { AllTimePlayers, KeeperSkill, Traders } from './HistoryManagers.tsx';
 
 // Pick a season (or All seasons) and what to show from two dropdowns; the page below fills in.
 // ?season=all|<year>&view=<section>; ?owner= an owner's page; ?wk=<year>-<week>&m=<owner> a week and
 // open game. Older links (?tab=, ?year=) still land in the right place.
 const URL_ = `${import.meta.env.BASE_URL}seed/history.json`;
-type Tab = 'champions' | 'owners' | 'luck' | 'rivals' | 'records' | 'drafts' | 'trades';
-const TABS: [Tab, string][] = [['champions', 'Champions'], ['owners', 'Owners'], ['luck', 'Luck'], ['rivals', 'Rivals'], ['records', 'Records'], ['drafts', 'Drafts'], ['trades', 'Trades']];
+type Tab = 'champions' | 'owners' | 'players' | 'trading' | 'keepers' | 'luck' | 'rivals' | 'records' | 'drafts' | 'trades';
+const TABS: [Tab, string][] = [['champions', 'Champions'], ['owners', 'Owners'], ['players', 'All-time players'], ['trading', 'Trading'], ['keepers', 'Keepers'], ['luck', 'Luck'], ['rivals', 'Rivals'], ['records', 'Records'], ['drafts', 'Drafts'], ['trades', 'Trades']];
 type SeasonView = 'standings' | 'weeks' | 'draft' | 'trades';
 const seasonViews = (s: Season): [SeasonView, string][] => [['standings', 'Standings'], ...(s.live ? [] : [['weeks', 'Week by week'] as [SeasonView, string]]), ['draft', 'Draft'], ['trades', 'Trades']];
 
@@ -90,6 +91,9 @@ function Browser({ H, all, query, go }: { H: Hist; all: Career[]; query: URLSear
           {view === 'luck' && <LuckTab H={H} all={all} go={go} />}
           {view === 'rivals' && <Rivals H={H} all={all} pair={query.get('vs')} go={go} />}
           {view === 'records' && <RecordsTab H={H} go={go} />}
+          {view === 'players' && <AllTimePlayers H={H} />}
+          {view === 'trading' && <Traders H={H} onOwner={(o: OwnerKey) => go({ owner: o })} />}
+          {view === 'keepers' && <KeeperSkill H={H} onOwner={(o: OwnerKey) => go({ owner: o })} />}
           {view === 'drafts' && <DraftSearch H={H} />}
           {view === 'trades' && <TradeSearch H={H} onOwner={(o: OwnerKey) => go({ owner: o })} />}
         </>}

@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
-import type { TeamId } from '../data/schema.ts';
+import { useMemo } from 'react';
 import { useLeague } from '../data/store.tsx';
+import { useViewTeam } from '../app/viewTeam.ts';
 import { keeperCalls, keeperSet, type KeeperCall, type KeeperLabel } from '../engine/keepers.ts';
 import { teamName } from '../engine/league.ts';
-import { Empty, fmt, PlayerName, PosMark, Section, TeamSelect } from '../ui/components.tsx';
+import { Empty, fmt, PlayerName, PosMark, Section } from '../ui/components.tsx';
 import { DataTable, TableBar, useTable, type Col, type FilterDef } from '../ui/table.tsx';
 import { usePlayerSheet } from './PlayerSheet.tsx';
 
@@ -15,8 +15,8 @@ const LABEL: Record<KeeperLabel, [string, string]> = {
 };
 
 export default function Keepers() {
-  const { idx, settings, base } = useLeague();
-  const [team, setTeam] = useState<TeamId>(settings.myTeamId ?? idx.teamIds[0]!);
+  const { idx, base } = useLeague();
+  const { team } = useViewTeam();
   const calls = useMemo(() => keeperCalls(base), [base]);
   const slots = idx.ds.season.keeper.slots;
   const roster = idx.roster.get(team) ?? [];
@@ -27,8 +27,8 @@ export default function Keepers() {
     <div className="grid grid-cols-1 gap-10">
       <Section title="2027 keepers" aside={`${slots} keeper slots per team`}>
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="w-full max-w-xs"><TeamSelect label="Team" value={team} onChange={(t) => t !== null && setTeam(t)} /></div>
           <div className="grid gap-1">
+            <p className="text-sm text-ink-3">{teamName(idx, team)}</p>
             <p className="headline-sm">{set.length ? `Keep ${set.map((p) => idx.players.get(p)?.name.split(' ').slice(-1)[0]).join(' and ')}` : 'Nobody worth a slot'}</p>
             {set.length > 0 && <p className="text-sm text-ink-2"><span className="num">{money(set.reduce((s, p) => s + (calls.get(p)?.surplus ?? 0), 0))}</span> under what they'd cost at auction</p>}
           </div>
