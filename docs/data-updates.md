@@ -11,6 +11,7 @@ npm run data -- projections input.json  [--dry-run]       # task 2, before Thurs
 npm run data -- rosters     input.json  [--dry-run]       # task 3, any time
 npm run data -- chart peaked|menton <week> chart.csv [--dry-run]
 npm run data -- drop-fantasypros [--dry-run]                # one time: remove the old FantasyPros data
+npm run data -- careers     [--dry-run]                   # rebuild public/seed/careers.json from the lineup files
 ```
 
 `--dry-run` prints the report without writing. `--force` skips the "too much changed" checks (only when the change is real). Each run prints a JSON report: `changes`, `created` (new players), `espnIdsAdded`, `unmatched` (names it could not place), `warnings`, and a summary of the dataset after the change.
@@ -194,3 +195,19 @@ npm run data -- trades [--dry-run]
 
 The dry run lists each season's trades, how many were found from rosters, and any player who never shows on his new team (usually a second trade the same week, or injured reserve). `npm run data:check` fails while `trades.json` is out of date.
 
+### All-time players
+
+History → All seasons → **All-time players** ranks every career since 2010 and counts who turns up on the most championship rosters; **Trading** and **Keepers** on the same dropdown total every trade and every kept player per manager. The players page reads `public/seed/careers.json` (about 280 KB), built and never edited by hand:
+
+```bash
+npm run data -- careers [--dry-run]
+```
+
+- Built from the weekly lineup files (`public/seed/lineups/<year>.json`), so it follows whatever `npm run data -- lineups` produced; no new inputs of its own.
+- One row per player per team per season: points as a starter, weeks started, bench points, weeks rostered, and whether he was on that season's championship roster.
+- The ranking number is **points scored while in an FWHL starting lineup**, because it is the only number all 16 finished seasons have: ESPN kept starters only for 2010-2017, so bench points and weeks rostered are null before 2018 and the page marks those columns as partial.
+- A player counts for a title if he was on the champion's roster at the end of that season: the last week of lineups, or the end-of-season roster the starters-only seasons carry instead. Champions come from `championships.csv` through `history.json`.
+- One player is one career across seasons and platforms through the same name-and-position key the drafts use (`playerKey`). Two different players with the same name and position would merge; none in the data today.
+- The live season is **not** in the file. The page adds it from the league seed each time it opens, so a weekly results push moves the all-time numbers with no rebuild.
+
+Trading and Keepers need no file of their own: they total `trades.json` (plus this season's trades, graded live) and the keeper picks already in `drafts.json`. `npm run data:check` fails while `careers.json` is out of date with the lineup files.

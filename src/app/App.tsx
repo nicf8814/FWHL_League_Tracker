@@ -7,6 +7,7 @@ import { href, useRoute, type Route } from './router.ts';
 import { Shortcuts, type Command } from './Palette.tsx';
 import { getTheme, nextTheme, setTheme } from '../ui/theme.ts';
 import { getDetail, setDetail, useDetail } from '../ui/detail.ts';
+import { useViewTeam } from './viewTeam.ts';
 
 const Finder = lazy(() => import('../views/Finder.tsx'));
 const Analyzer = lazy(() => import('../views/Analyzer.tsx'));
@@ -21,23 +22,27 @@ const Market = lazy(() => import('../views/Market.tsx'));
 const Waivers = lazy(() => import('../views/Waivers.tsx'));
 const Home = lazy(() => import('../views/Home.tsx'));
 const History = lazy(() => import('../views/History.tsx'));
+const ExportData = lazy(() => import('../views/ExportData.tsx'));
 
-// Four sections (Nov 11, item B), each a few pages shown as tabs. Phones get the sections in the
-// bottom bar; desktops list them in the rail.
+// Four sections, each a few pages shown as tabs. Phones get the sections in the bottom bar;
+// desktops list them in the rail. Nov 12, item 4: the live season sits in My Team (with a dropdown
+// to look at any team) and everything finished lives in History.
 type Page = { route: Route; label: string };
 type Section = { id: string; label: string; icon: string; pages: Page[] };
 const SECTIONS: Section[] = [
-  { id: 'team', label: 'My Team', icon: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z', pages: [{ route: 'home', label: 'Home' }, { route: 'waivers', label: 'Waivers' }, { route: 'keepers', label: 'Keepers' }] },
+  { id: 'team', label: 'My Team', icon: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z', pages: [{ route: 'home', label: 'Home' }, { route: 'teams', label: 'Roster' }, { route: 'standings', label: 'Standings' }, { route: 'players', label: 'Players' }, { route: 'waivers', label: 'Waivers' }, { route: 'keepers', label: 'Keepers' }] },
   { id: 'trades', label: 'Trades', icon: 'M7 7h13l-3-3M17 17H4l3 3', pages: [{ route: 'finder', label: 'Finder' }, { route: 'analyzer', label: 'Analyzer' }, { route: 'tracker', label: 'Tracker' }, { route: 'market', label: 'Buy & sell' }] },
-  { id: 'league', label: 'League', icon: 'M4 20V10M10 20V4M16 20v-7M22 20H2', pages: [{ route: 'standings', label: 'Standings' }, { route: 'history', label: 'History' }, { route: 'players', label: 'Players' }, { route: 'teams', label: 'Teams' }] },
-  { id: 'settings', label: 'Settings', icon: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1', pages: [{ route: 'data', label: 'Data & settings' }, { route: 'method', label: 'How it works' }] },
+  { id: 'history', label: 'History', icon: 'M12 8v5l3 2M3 12a9 9 0 1 0 2.6-6.4M3 4v4h4', pages: [{ route: 'history', label: 'History' }] },
+  { id: 'settings', label: 'Settings', icon: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1', pages: [{ route: 'data', label: 'Data & settings' }, { route: 'export', label: 'Export' }, { route: 'method', label: 'How it works' }] },
 ];
+// The pages that show one team, so the header's team dropdown belongs on them.
+const TEAM_PAGES = new Set<Route>(['home', 'teams', 'waivers', 'keepers']);
 // FEAT-11: after the deadline the finder is retired.
 const sectionsFor = (passed: boolean) => (passed ? SECTIONS.map((x) => ({ ...x, pages: x.pages.filter((p) => p.route !== 'finder') })) : SECTIONS);
 const sectionOf = (r: Route) => SECTIONS.find((x) => x.pages.some((p) => p.route === r))!;
 export const PAGES = SECTIONS.flatMap((x) => x.pages);
 const SHORT: Record<string, string> = { espn: 'ESPN', peaked: 'Peaked', menton: 'Menton' };
-const VIEWS: Record<Route, React.ComponentType> = { home: Home, finder: Finder, analyzer: Analyzer, tracker: Tracker, standings: Standings, history: History, players: Players, teams: Teams, data: DataSettings, method: Method, keepers: Keepers, market: Market, waivers: Waivers };
+const VIEWS: Record<Route, React.ComponentType> = { home: Home, finder: Finder, analyzer: Analyzer, tracker: Tracker, standings: Standings, history: History, players: Players, teams: Teams, data: DataSettings, method: Method, keepers: Keepers, market: Market, waivers: Waivers, export: ExportData };
 
 const EXTRA: Command[] = [
   { id: 'theme', label: 'Switch light / dark', group: 'Actions', run: () => setTheme(nextTheme(getTheme())) },
@@ -76,7 +81,8 @@ export function App() {
           <header className="sticky top-0 z-20 border-b border-rule bg-paper pt-[env(safe-area-inset-top)]">
             <div className="mx-auto flex h-14 max-w-[90rem] items-center gap-3 px-4 md:px-6 lg:px-8">
               <Wordmark className="lg:hidden" />
-              <span className="min-w-0 flex-1 truncate font-display text-lg font-extrabold [font-stretch:85%] lg:text-xl">{sec.label}</span>
+              <span className="min-w-0 truncate font-display text-lg font-extrabold [font-stretch:85%] lg:text-xl">{sec.label}</span>
+              {TEAM_PAGES.has(route) && !retired ? <TeamPicker /> : <span className="flex-1" />}
               <span className={`num hidden text-xs md:inline ${dl.days <= 7 && !dl.passed ? 'text-loss' : 'text-ink-3'}`}>{dl.label}</span>
               <DetailSwitch />
             </div>
@@ -113,6 +119,24 @@ export function App() {
       <MyTeamGate />
       <Shortcuts nav={sections.flatMap((x) => x.pages)} extra={EXTRA} />
     </PlayerSheetProvider>
+  );
+}
+
+// Whose team the My Team pages show (Nov 12, item 4). Your own team is the default everywhere.
+function TeamPicker() {
+  const { idx, settings } = useLeague();
+  const { team, mine, setTeam } = useViewTeam();
+  return (
+    <label className="flex min-w-0 flex-1 items-center gap-2">
+      <span className="sr-only">Team to show</span>
+      <select
+        className={`field h-9 min-w-0 max-w-[13rem] py-0 text-sm font-medium ${mine ? '' : 'border-accent'}`}
+        value={team}
+        onChange={(e) => setTeam(Number(e.target.value))}
+      >
+        {idx.ds.teams.map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === settings.myTeamId ? ' (mine)' : ''}</option>)}
+      </select>
+    </label>
   );
 }
 

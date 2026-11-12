@@ -20,7 +20,7 @@ function loadTrades(): Promise<Trades | string> {
     .catch((e) => { file = null; return `Could not load the trade history (${e instanceof Error ? e.message : e}).`; });
   return file;
 }
-function useTrades(): Trades | string | null {
+export function useTrades(): Trades | string | null {
   const [t, setT] = useState<Trades | string | null>(null);
   useEffect(() => { let live = true; loadTrades().then((v) => live && setT(v)); return () => { live = false; }; }, []);
   return t;
@@ -161,7 +161,7 @@ function Line({ label, note, children }: { label: string; note: string; children
 
 // ---------- All seasons: every trade ----------
 type Order = 'newest' | 'lopsided' | 'playoffs';
-export function TradeSearch({ H, onOwner }: { H: Hist; onOwner: (o: OwnerKey) => void }) {
+export function TradeSearch({ H }: { H: Hist }) {
   const data = useTrades();
   const { settings } = useLeague();
   const START = { owner: '', season: 'all', source: 'all', order: 'newest' as Order };
@@ -198,36 +198,12 @@ export function TradeSearch({ H, onOwner }: { H: Hist; onOwner: (o: OwnerKey) =>
         ]}
       />
       <TradeList H={H} data={data} list={list} empty="No trades match these filters." />
-      <OwnerBoard H={H} data={data} onOwner={onOwner} />
+      <p className="text-sm text-ink-2">Every manager's trading record — grade, value and points gained — is under <b className="font-medium text-ink">Trading</b> in the Show dropdown above.</p>
     </div>
   );
 }
 
 // Trade records by owner: won = C+ or better, lost = C- or worse.
-function OwnerBoard({ H, data, onOwner }: { H: Hist; data: Trades; onOwner: (o: OwnerKey) => void }) {
-  const rows = useMemo(() => {
-    const m = new Map<OwnerKey, { n: number; w: number; l: number; sum: number }>();
-    for (const t of data.trades) if (graded(t)) for (const s of t.sides) {
-      if (H.owners.get(s.owner)?.filler) continue;
-      const r = m.get(s.owner) ?? { n: 0, w: 0, l: 0, sum: 0 };
-      r.n++; if (won(s)) r.w++; if (lost(s)) r.l++; r.sum += s.score ?? 0; m.set(s.owner, r);
-    }
-    return [...m].sort((a, b) => b[1].sum / b[1].n - a[1].sum / a[1].n);
-  }, [data, H]);
-  return (
-    <section className="grid gap-3">
-      <div className="flex items-baseline justify-between gap-3 border-b border-ink pb-1.5"><h2 className="text-lg">Trade records</h2><span className="text-sm text-ink-3">won = C+ or better</span></div>
-      <div className="-mx-4 overflow-x-auto md:mx-0">
-        <table className="tbl">
-          <thead><tr><th className="l stick">Owner</th><th>Trades</th><th>Won</th><th>Lost</th><th title="Average grade score, 0 = even">Avg</th></tr></thead>
-          <tbody>{rows.map(([o, r]) => (
-            <tr key={o}><td className="l stick"><button type="button" className="link" onClick={() => onOwner(o)}>{ownerName(H, o)}</button></td><td className="n">{r.n}</td><td className="n text-gain">{r.w}</td><td className="n text-loss">{r.l}</td><td className="n">{signed(r.sum / r.n, 2)}</td></tr>
-          ))}</tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
 
 // ---------- one season ----------
 export function SeasonTrades({ H, s }: { H: Hist; s: Season; onOwner?: (o: OwnerKey) => void }) {

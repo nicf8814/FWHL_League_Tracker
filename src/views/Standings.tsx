@@ -4,36 +4,61 @@ import { bestActual, standings, teamName, type StandingRow } from '../engine/lea
 import { luck, type Luck } from '../engine/luck.ts';
 import { rank6 } from '../engine/sim.ts';
 import { fmt, Mono, pct, Section, signed, tone } from '../ui/components.tsx';
+import { DataTable, TableBar, useTable, type Col, type FilterDef } from '../ui/table.tsx';
 import { ThisWeek } from './ThisWeek.tsx';
 import { useFull } from '../ui/detail.ts';
 
-type Key = 'seed' | 'pf' | 'pa' | 'maxPf' | 'luck' | 'odds';
-const COLS: [Key, string][] = [['seed', 'Seed'], ['pf', 'PF'], ['pa', 'PA'], ['maxPf', 'Max PF'], ['odds', 'Playoffs']];
+const SIMPLE = ['team', 'rec', 'pf', 'luck', 'odds'];
 
 export default function Standings() {
   const { idx, sim, settings } = useLeague();
   const rows = useMemo(() => standings(idx), [idx]);
   const L = useMemo(() => luck(idx.teamIds, idx.games, idx.ds.season.top6Weeks), [idx]);
   const history = useSimHistory();
-  const [sort, setSort] = useState<{ k: Key; dir: 1 | -1 }>({ k: 'seed', dir: 1 });
-  const val = (r: StandingRow): number =>
-    sort.k === 'seed' ? -r.seed : sort.k === 'odds' ? (sim?.odds[r.teamId] ?? 0) + r.pf / 1e7 : sort.k === 'maxPf' ? r.maxPf ?? -1 : sort.k === 'luck' ? L.get(r.teamId)!.luck : r[sort.k];
-  const sorted = [...rows].sort((a, b) => sort.dir * (val(b) - val(a)));
   const byRecord = idx.ds.season.seedsByRecord;
-  const click = (k: Key) => setSort((s) => (s.k === k && k !== 'seed' ? { k, dir: s.dir === 1 ? -1 : 1 } : { k, dir: 1 }));
-  const th = (k: Key, label: string, cls = '') => (
-    <th className={cls} aria-sort={sort.k === k ? (sort.dir === 1 ? 'descending' : 'ascending') : 'none'}>
-      <button type="button" className="link -my-3 py-3 no-underline" onClick={() => click(k)}>{label}{sort.k === k && k !== 'seed' ? (sort.dir === 1 ? ' ↓' : ' ↑') : ''}</button>
-    </th>
-  );
-
   const full = useFull();
+
+  const filters = useMemo<FilterDef<StandingRow>[]>(() => [
+    {
+      id: 'picture', label: 'Playoff picture',
+      options: [['all', 'Every team'], ['in', 'In (99%+)'], ['bubble', 'On the bubble'], ['out', 'Long shots']],
+      test: (r, v) => { const o = sim?.odds[r.teamId] ?? 0; return v === 'in' ? o >= 0.99 : v === 'bubble' ? o < 0.99 && o >= 0.25 : o < 0.25; },
+    },
+    { id: 'record', label: 'Record', options: [['all', 'Any record'], ['win', 'Winning'], ['lose', 'Losing']], test: (r, v) => (v === 'win' ? r.w > r.l : r.l > r.w) },
+  ], [sim]);
+  const search = useMemo(() => ({ label: 'Find a team', placeholder: 'Team name', of: (r: StandingRow) => teamName(idx, r.teamId) }), [idx]);
+
+  const cols = useMemo<Col<StandingRow>[]>(() => {
+    const lk = (r: StandingRow) => L.get(r.teamId)!;
+    return [
+      { id: 'team', label: 'Team', left: true, fixed: true, className: 'min-w-[10rem]', value: (r) => teamName(idx, r.teamId), cell: (r) => <span className="flex items-center gap-2 font-medium"><Mono team={r.teamId} size="sm" />{teamName(idx, r.teamId)}</span> },
+      { id: 'seed', label: 'Seed', value: (r) => r.seed, cell: (r) => `#${r.seed}` },
+      { id: 'rec', label: 'W-L', value: (r) => r.w + r.t / 2 + r.pf / 1e7, cell: (r) => `${r.w}-${r.l}${r.t ? `-${r.t}` : ''}` },
+      { id: 'pf', label: 'PF', value: (r) => r.pf, cell: (r) => fmt(r.pf) },
+      { id: 'pa', label: 'PA', value: (r) => r.pa, cell: (r) => fmt(r.pa) },
+      { id: 'maxPf', label: 'Max PF', value: (r) => r.maxPf, cell: (r) => fmt(r.maxPf) },
+      { id: 'eff', label: 'Eff', value: (r) => r.efficiency, cell: (r) => (r.efficiency === null ? '–' : `${Math.round(r.efficiency * 100)}%`) },
+      { id: 'xw', label: 'xW', className: 'text-ink-2', value: (r) => lk(r).xw, cell: (r) => fmt(lk(r).xw) },
+      { id: 'luck', label: 'Luck', value: (r) => lk(r).luck, cell: (r) => <span className={tone(lk(r).luck, 0.5)}>{signed(lk(r).luck)}</span> },
+      { id: 'allplay', label: 'All-play', className: 'text-ink-2', value: (r) => lk(r).allPlay.w, cell: (r) => `${lk(r).allPlay.w}-${lk(r).allPlay.l}${lk(r).allPlay.t ? `-${lk(r).allPlay.t}` : ''}` },
+      {
+        id: 'odds', label: 'Playoffs', value: (r) => sim?.odds[r.teamId] ?? null,
+        cell: (r) => (sim ? <span className="inline-flex items-center justify-end gap-2"><span className="meter w-16 sm:w-24" aria-hidden="true"><span className={pctTone(sim.odds[r.teamId]!)} style={{ width: `${Math.max(2, sim.odds[r.teamId]! * 100)}%` }} /></span><span className="w-11 font-semibold">{pct(sim.odds[r.teamId])}</span></span> : '…'),
+      },
+      { id: 'byRecord', label: `Top ${byRecord} by record`, className: 'text-ink-2', value: (r) => sim?.byRecord[r.teamId] ?? null, cell: (r) => (sim ? pct(sim.byRecord[r.teamId]) : '…') },
+      { id: 'byPf', label: `Seed ${byRecord + 1} by PF`, className: 'text-ink-2', value: (r) => sim?.byPf[r.teamId] ?? null, cell: (r) => (sim ? pct(sim.byPf[r.teamId]) : '…') },
+      { id: 'spark', label: 'Odds by week', left: true, value: (r) => sim?.odds[r.teamId] ?? null, cell: (r) => <Spark values={history ? Array.from({ length: idx.scoresThrough }, (_, i) => history[i + 1]?.[r.teamId] ?? null) : []} /> },
+    ];
+  }, [idx, L, sim, history, byRecord]);
+
+  // Simple and Full keep their own column choice, so the detail switch always changes what you see.
+  const t = useTable(full ? 'standings.full' : 'standings.simple', cols, rows, { id: 'seed', dir: 1 }, { filters, search, shown: full ? undefined : SIMPLE });
+
   // Headline (Nov 11, item E): who's in, and the bubble.
   const locks = sim ? rows.filter((r) => sim.odds[r.teamId]! >= 0.99).sort((a, b) => a.seed - b.seed) : [];
   const bubble = sim ? rows.filter((r) => sim.odds[r.teamId]! < 0.99 && sim.odds[r.teamId]! >= 0.25).sort((a, b) => sim.odds[b.teamId]! - sim.odds[a.teamId]!) : [];
   const names = (rs: StandingRow[]) => rs.map((r) => teamName(idx, r.teamId)).join(', ').replace(/, ([^,]*)$/, ' and $1');
   const words = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'];
-  const pctTone = (o: number) => (o >= 0.9 ? 'bg-gain' : o >= 0.3 ? 'bg-accent' : 'bg-loss');
   return (
     <div className="grid grid-cols-1 gap-10">
       {sim && (
@@ -52,59 +77,22 @@ export default function Standings() {
           Luck is wins minus expected wins (xW). Each week your score is compared with all 11 others: beating 8 of them is worth 8/11 of a win, whoever you actually played.
           Top 6 weeks have no opponent, so they add no luck. {lucky(L, idx)}
         </p>}
-        <div className="-mx-4 overflow-x-auto md:mx-0">
-          <table className={`tbl ${full ? 'min-w-[56rem]' : 'max-w-3xl'}`}>
-            <thead>
-              <tr>
-                {th('seed', '#', 'l w-10')}
-                <th className="l stick">Team</th>
-                <th>W-L</th>
-                {COLS.slice(1, full ? 4 : 2).map(([k, l]) => th(k, l))}
-                {full && <th>Eff</th>}
-                {full && <th title="Expected wins: the record your weekly scores earned against the whole league">xW</th>}
-                {th('luck', 'Luck')}
-                {full && <th title="Record if you played every team every week">All-play</th>}
-                {th('odds', 'Playoffs')}
-                {full && <><th>Top {byRecord} by record</th>
-                <th>Seed {byRecord + 1} by PF</th>
-                <th className="l">Odds by week</th></>}
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((r) => {
-                const cut = sort.k === 'seed' && r.seed === byRecord + 1;
-                const mine = r.teamId === settings.myTeamId;
-                return (
-                  <tr key={r.teamId} className={`${mine ? 'bg-primary-soft' : ''} ${cut ? '[&>td]:border-b-ink' : ''}`}>
-                    <td className="l n text-ink-3">{r.seed}</td>
-                    <td className={`l stick ${mine ? '!bg-primary-soft' : ''}`}>
-                      <span className="flex items-center gap-2 font-medium"><Mono team={r.teamId} size="sm" />{teamName(idx, r.teamId)}</span>
-                    </td>
-                    <td className="n">{r.w}-{r.l}{r.t ? `-${r.t}` : ''}</td>
-                    <td className="n">{fmt(r.pf)}</td>
-                    {full && <><td className="n">{fmt(r.pa)}</td>
-                    <td className="n">{fmt(r.maxPf)}</td>
-                    <td className="n">{r.efficiency === null ? '–' : `${Math.round(r.efficiency * 100)}%`}</td>
-                    <td className="n text-ink-2">{fmt(L.get(r.teamId)!.xw)}</td></>}
-                    <td className={`n ${tone(L.get(r.teamId)!.luck, 0.5)}`}>{signed(L.get(r.teamId)!.luck)}</td>
-                    {full && <td className="n text-ink-2">{L.get(r.teamId)!.allPlay.w}-{L.get(r.teamId)!.allPlay.l}{L.get(r.teamId)!.allPlay.t ? `-${L.get(r.teamId)!.allPlay.t}` : ''}</td>}
-                    <td className="n font-semibold">
-                      {sim ? <span className="inline-flex items-center justify-end gap-2"><span className="meter w-16 sm:w-24" aria-hidden="true"><span className={pctTone(sim.odds[r.teamId]!)} style={{ width: `${Math.max(2, sim.odds[r.teamId]! * 100)}%` }} /></span><span className="w-11">{pct(sim.odds[r.teamId])}</span></span> : '…'}
-                    </td>
-                    {full && <><td className="n text-ink-2">{sim ? pct(sim.byRecord[r.teamId]) : '…'}</td>
-                    <td className="n text-ink-2">{sim ? pct(sim.byPf[r.teamId]) : '…'}</td>
-                    <td className="l"><Spark values={history ? Array.from({ length: idx.scoresThrough }, (_, i) => history[i + 1]?.[r.teamId] ?? null) : []} /></td></>}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <TableBar t={t} noun="teams" file={`fwhl-standings-wk${idx.scoresThrough}`} />
+        <DataTable
+          t={t}
+          rowKey={(r) => String(r.teamId)}
+          stickyId="team"
+          minWidth={full ? 'min-w-[56rem]' : 'max-w-3xl'}
+          rowClass={(r) => (r.teamId === settings.myTeamId ? 'bg-primary-soft' : '')}
+          empty="No team matches these filters."
+        />
       </Section>
       <Week />
     </div>
   );
 }
+
+const pctTone = (o: number) => (o >= 0.9 ? 'bg-gain' : o >= 0.3 ? 'bg-accent' : 'bg-loss');
 
 function Spark({ values }: { values: (number | null)[] }) {
   const W = 88, H = 22;
