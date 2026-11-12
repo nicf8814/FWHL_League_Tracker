@@ -1722,7 +1722,6 @@
     [15,"tommy-teves","travis-mattson",170.05,106.45],
     [15,"chandler-hovik","ryan-cooper",62.65,96.75],
     [15,"clint-helling","tim-goebel",99.7,116.15],
-    [15,"david-morris","nicholas-ferrara",94.3,102.7],
     [16,"vincent-brunoforte","grant-gosselin",156.15,114.75],
     [16,"tommy-teves","ty-carlson",199,124.75],
     [16,"clint-h","travis-mattson",82.85,84.55],
@@ -1731,8 +1730,6 @@
     [16,"david-morris","clint-helling",184.15,105.25],
     [17,"tommy-teves","vincent-brunoforte",192.75,87.05],
     [17,"ty-carlson","grant-gosselin",129.6,92.15],
-    [17,"clint-h","travis-mattson",90.25,90.05],
-    [17,"tim-goebel","ryan-cooper",49.75,87.2],
     [17,"david-morris","nicholas-ferrara",115.8,132.55],
     [17,"clint-helling","chandler-hovik",122.3,140.15]
    ]},
@@ -1840,7 +1837,6 @@
     [15,"tommy-teves","tim-goebel",74.2,77.85],
     [15,"clint-h","ty-carlson",118.85,143.3],
     [15,"vincent-brunoforte","grant-gosselin",145.85,125],
-    [15,"clint-helling","ryan-cooper",40.7,104.25],
     [16,"tim-goebel","nicholas-ferrara",123.8,114.1],
     [16,"david-morris","chris-walker",133.75,131.8],
     [16,"tommy-teves","travis-mattson",121.1,103.25],
@@ -1849,10 +1845,8 @@
     [16,"ryan-cooper","grant-gosselin",126.5,142.45],
     [17,"david-morris","tim-goebel",79,147.1],
     [17,"chris-walker","nicholas-ferrara",119.4,160.8],
-    [17,"tommy-teves","travis-mattson",82.1,69.95],
-    [17,"clint-helling","vincent-brunoforte",36.6,69],
-    [17,"ty-carlson","grant-gosselin",49.3,72.95],
-    [17,"clint-h","ryan-cooper",101.75,124.65]
+    [17,"clint-h","ryan-cooper",101.75,124.65],
+    [17,"grant-gosselin","clint-helling",76.68,83.18]
    ]}
  ]
 }

@@ -138,6 +138,7 @@ npm run data -- history [--dry-run]
 - `championships.csv`, `matchups.csv`, `settings.csv`, `standings.csv`, `teams.csv`: the league export, as downloaded.
 - `owners.csv`: who each owner name is. `team2026` links an owner to their team id in the league seed; `filler` marks a spot someone ran to fill the league (Clint's 2024-25 second team), which counts in that season but in no one's career; `note` shows on the owner's page. Ty Carlson's two ESPN ids merge because the export uses his name.
 - `aliases.csv`: seasons where an export name belongs to someone else. From 2012, "Alex Teves" is Tommy Teves. Applied before anything else, so the export CSVs stay as downloaded.
+- `bracket-fixes.csv`: playoff-week games the export got wrong, checked against the platform's bracket. In 2024-25 the export invented games for Sleeper teams with a bye or already placed, and left out the 2025 10th-place game. `drop` removes a game, `add` adds one with its scores; the build stops if a row doesn't apply.
 - `coowners.csv`: an owner who shares another owner's team (from/to inclusive, `to` blank = still). From 2022 Nick Heisterkamp co-owns Tommy Teves's team, so those seasons, titles and games count in both careers. The team stays under Tommy's name in the season tables, with Nick shown alongside.
 - `corrections.csv`: games where the official result differs from the box score (2012 Week 13, Wes over Cooper). Records follow the official result, and scores stay as played.
 
@@ -156,6 +157,6 @@ npm run data -- lineups [--dry-run]
 - `data/history/rosters/espn-2010-2023.json` and `sleeper-2024-2025.json`: the roster exports, as received.
 - Each export team is matched to its owner in `history.json` by its weekly scores (within a point and a half for Sleeper, whose own scores run slightly off the league export), so the exports' owner names never matter. The build stops if a team can't be matched.
 - 2010-2017: ESPN kept weekly starters only (no bench or projections); the file adds each team's end-of-season roster with season totals. 2010-2011 have weeks where a starter is missing, flagged as "starters add to".
-- Gaps show as gaps: an empty lineup slot reads "Empty slot", a game without a lineup says so, and a box score whose starters don't add up to the league record shows both numbers (some Sleeper playoff weeks).
+- Gaps show as gaps: an empty lineup slot reads "Empty slot", a game without a lineup says so, and a box score whose starters don't add up to the league record shows both numbers.
 
 `npm run data:check` fails while the files are out of date with the exports. A new season's export goes in `data/history/rosters/` (extend `scripts/lineups.ts` for a new file name), then run the command.
