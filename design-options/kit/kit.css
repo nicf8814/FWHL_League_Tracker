@@ -83,3 +83,44 @@ details.fold > summary::-webkit-details-marker { display: none; }
 .empty { border: 1px dashed var(--rule-strong); padding: 1.5rem 1rem; text-align: center; color: var(--ink-3); font-size: var(--text-sm); }
 .partial { border-left: 3px solid var(--accent); padding: .25rem 0 .25rem .75rem; font-size: var(--text-sm); color: var(--ink-2); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Player history chart: one column per season, one metric, the number written on every bar */
+.pv-grid { display: grid; gap: 2px; }
+.pv-col { display: grid; grid-template-rows: auto auto; justify-items: stretch; padding: .25rem 0 0; border-radius: var(--radius-sm); transition: background-color var(--dur-hover) var(--ease-snap); }
+button.pv-col:hover { background: var(--sunk); }
+.pv-col.on { background: var(--sunk); box-shadow: inset 0 -2px 0 var(--ink); }
+.pv-bars { position: relative; }
+.pv-zero { position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid var(--rule-strong); }
+.pv-bar { position: absolute; left: 22%; right: 22%; background: var(--ink-3); }
+.pv-bar.up { background: var(--gain); }
+.pv-bar.down { background: var(--loss); }
+.pv-bar.flat { background: var(--ink-3); }
+.pv-col.on .pv-bar.flat { background: var(--ink); }
+.pv-lab { position: absolute; left: 0; right: 0; text-align: center; font-size: var(--text-xs); line-height: 1rem; white-space: nowrap; }
+.pv-tick { position: absolute; left: 8%; right: 8%; border-top: 2px solid var(--accent-ink); }
+.pv-tick.sleeper { border-top-style: dashed; }
+.pv-none { position: absolute; inset: auto 0 .25rem; text-align: center; }
+.pv-yr { text-align: center; padding: .25rem 0; color: var(--ink-2); }
+.pv-band { margin-top: 2px; }
+.pv-run { font-size: var(--text-xs); line-height: 1rem; padding: .25rem .25rem; border-top: 2px solid var(--ink); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
+.pv-run.gap { border-top-color: var(--rule); }
+.pv-dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 0 2.5rem; margin: 0; }
+.pv-dl > div { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--rule); min-height: 3.25rem; padding: .375rem 0; align-items: center; font-size: var(--text-sm); }
+.pv-dl dd { font-size: var(--text-base); }
+.pv-dl dt { color: var(--ink-3); }
+.pv-dl dd { margin: 0; text-align: right; }
+
+/* Sentence filters: the whole filter reads as one line of plain words */
+.sentence { font-size: var(--text-base); line-height: 2.9rem; color: var(--ink-2); }
+.sentence select { min-height: 2.5rem; padding: 0 .5rem; margin: 0 .125rem; border: 0; border-bottom: 2px solid var(--ink); background: transparent; font-weight: 600; color: var(--ink); border-radius: 0; }
+.sentence select:hover { background: var(--sunk); }
+.pick-list { display: grid; gap: 2px; }
+.pick-list button { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr) auto; gap: .75rem; align-items: center; min-height: 3.25rem; padding: .25rem .5rem; text-align: left; border-bottom: 1px solid var(--rule); }
+.pick-list button:hover { background: var(--sunk); }
+.pick-list button[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
+.pick-list button[aria-pressed='true'] .muted { color: color-mix(in oklab, var(--paper) 70%, transparent); }
+.years { display: flex; flex-wrap: wrap; gap: .25rem; }
+.years button { min-width: 3.5rem; min-height: 2.75rem; border: 1px solid var(--rule-strong); border-radius: var(--radius); background: var(--surface); font-family: var(--font-mono); font-size: var(--text-sm); }
+.years button:hover { background: var(--sunk); }
+.years button[aria-pressed='true'] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+@media (min-width: 64rem) { .split { display: grid; grid-template-columns: 19rem minmax(0, 1fr); gap: 2rem; align-items: start; } .split > :first-child { position: sticky; top: 3.5rem; } }

@@ -24,7 +24,9 @@ const options = [
   { file: 'option-a-ledger-archive.html', script: 'kit/option-a.js', title: 'History A: Ledger Archive' },
   { file: 'option-b-owner-season-grid.html', script: 'kit/option-b.js', title: 'History B: Owner by Season Grid' },
   { file: 'option-c-search-desk.html', script: 'kit/option-c.js', title: 'History C: Search Desk' },
-];
+  { file: 'v2-team-season.html', script: 'kit/v2-team-season.js', title: 'History v2: Team Season', extra: 'kit/player.js' },
+  { file: 'v2-search-desk.html', script: 'kit/v2-search-desk.js', title: 'History v2: Search Desk', extra: 'kit/player.js' },
+] as { file: string; script: string; title: string; extra?: string }[];
 for (const o of options) {
   const html = `<!doctype html>
 <html lang="en">
@@ -46,6 +48,7 @@ ${kitCss}
 <div id="app"></div>
 <script>const D = ${JSON.stringify(data)};</script>
 <script>${kitJs}</script>
+${o.extra ? `<script>${readFileSync(here + o.extra, 'utf8')}</script>` : ''}
 <script>${readFileSync(here + o.script, 'utf8')}</script>
 </body>
 </html>

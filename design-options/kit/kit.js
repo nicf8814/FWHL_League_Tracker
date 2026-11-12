@@ -19,8 +19,10 @@ const rowOf = (k, y) => SEASON.get(y)?.rows.find((r) => r.o === k);
 const place = (n) => (n == null ? '–' : n === 1 ? '1st 🏆' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`);
 
 // Picks as objects. ref = the price reference (ESPN average auction value, or the Sleeper-file estimate).
-const PICKS = D.picks.map(([y, o, p, price, keeper, ref, refKind, proj, projKind, pts, ptsKind, round, overall, nfl, worth], i) => ({
+const PICKS = D.picks.map(([y, o, p, price, keeper, ref, refKind, proj, projKind, pts, ptsKind, round, overall, nfl, worth, held], i) => ({
   i, y, o, p, name: D.players[p][0], pos: D.players[p][1], price, share: price / BUDGET, keeper: !!keeper, ref, refKind, proj, projKind, pts, ptsKind, round, overall, nfl, worth,
+  held: held && held.map(([o, s, b, sp, w]) => ({ o, started: s, benched: b, startPts: sp, from: w })), // null: no weekly lineups (live season)
+  started: held ? (held.find((h) => h[0] === o)?.[1] ?? 0) : null,
   value: worth == null ? null : worth - price,
 }));
 const BY_YEAR = new Map();

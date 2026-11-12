@@ -119,3 +119,34 @@ Measured today: 3,000 picks; season draft file 5 KB gz; summary 3 KB gz; player 
 **Recommendation: build A now, then add C's player page and search as a "Search" tab in All seasons later.** The data is small, so the techniques that matter are per-season files, a small summary and clear labels for uneven years, not virtualization or workers. A keeps the drawers you just approved and answers four of the five draft questions in one or two taps. The fifth, "what did people pay for this player year by year", is C's strength, and its player page drops straight into A's player links. B's grid is the best single overview, but on a phone it is the weakest, and its one-metric-at-a-time view needs the drawers anyway.
 
 Build first: the `drafts` command with `accounts.csv`, then A's season Draft view, then the Drafts tab. Defer: C's search and player page (next), the worker (only if search grows to lineups), and B (worth revisiting as an Owners tab view later).
+
+## v2 (after Nic's review, Nov 12)
+
+Nic's feedback: keep the Search Desk but simplify its filters; the player chart was cluttered; keep Option B's roster table without the grid; explain value; show projected points.
+
+| File | What changed |
+|---|---|
+| `v2-search-desk.html` | One search box (player names only), four quick questions, and the filter written as one sentence: "Showing *every position* drafted by *anyone* in *every season*, *leaving out keepers*, *best value first*." Each italic part is a dropdown. No price range, no worker (3,000 picks filter in under a millisecond). Results: player, year, owner, paid, projected, points, value. |
+| `v2-team-season.html` | Option B without the grid: pick a season, pick a team (in final order), see its record, luck, draft and every player it bought, with projected points and how many weeks the team started each player (and where he went if traded or dropped). |
+| Player history (both) | Behind every player name. One column per season, one measure at a time (Value, Paid or Points; the number is written on every bar, projections are a tick on the Points view). The drafting owner is written under each run of seasons. Tap a season for everything known: owner and their finish, who had him week by week (trades show as "then Ty Carlson from week 8"), paid, price reference, projected and season points, position rank, worth, value, and the value worked out step by step. |
+
+### How value is derived
+
+1. **Replacement level** for the season: the season points of the 12th-best drafted QB, TE, K and D/ST, the 30th RB and the 36th WR (about what a team can get for $1).
+2. **Points over replacement** = the player's season points minus that level (none if below it).
+3. **That draft's going rate** = every non-keeper's dollars above $1, divided by their points over replacement. It ranges from about $0.30 to $0.60 per point.
+4. **Worth** = $1 + points over replacement × going rate. **Value** = worth minus price paid.
+
+Example (Kelce 2020): the 12th TE scored 84; Kelce scored 208, so 124 over; the 2020 draft paid $0.45 a point; worth = $1 + 124 × $0.45 = $56; he cost $49, so value +$7.
+
+It is hindsight: it measures how a pick turned out, not whether it was a good bet at the time. Your sheet's projected value (and later the draft engine) is the "at the time" measure and would sit beside it as its own labelled column.
+
+### Projected points: what exists
+
+| Seasons | Projected points |
+|---|---|
+| 2010 to 2017 | None (ESPN did not keep them) |
+| 2018 to 2022 | ESPN preseason, about 97% of picks |
+| 2023 | ESPN preseason for only 19 of 156 picks |
+| 2024, 2025 | Sleeper, but pulled after the season and rescored, so they carry hindsight (marked ‡ and drawn dashed) |
+| 2026 | ESPN preseason, 136 of 156 picks |

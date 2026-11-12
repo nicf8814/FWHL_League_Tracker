@@ -69,8 +69,30 @@ export function prep() {
     }
   }
 
+  // Lineup use: every owner who rostered each player that season, in order of first week:
+  // [owner, weeks started, weeks benched, points as a starter, first week].
+  const held = new Map<string, Map<string, [number, number, number, number]>>();
+  for (const y of new Set(picks.map((x) => x.y))) {
+    let L: Lineups;
+    try { L = read<Lineups>(`public/seed/lineups/${y}.json`); } catch { continue; } // the live season is not in lineups/
+    for (const [w, teams] of Object.entries(L.weeks)) for (const [o, t] of Object.entries(teams)) {
+      const add = (i: number, started: boolean, pts: number | null) => {
+        if (i < 0) return;
+        const [nm, pos] = L.players[i]!; const k = `${y}|${playerKey(nm, pos)}`;
+        const m = held.get(k) ?? new Map(); held.set(k, m);
+        const u = m.get(o) ?? [0, 0, 0, Number(w)]; m.set(o, u);
+        if (started) { u[0]++; u[2] += pts ?? 0; } else u[1]++;
+        u[3] = Math.min(u[3], Number(w));
+      };
+      for (const x of t.s) add(x[0], true, x[2]);
+      for (const x of t.b) if (x[1] !== 'IR') add(x[0], false, x[2]);
+    }
+  }
+  const lineupYears = new Set([...held.keys()].map((k) => Number(k.split('|')[0])));
+
   // Hindsight worth: a player's points over a replacement at his position, priced at that draft's
   // going rate (dollars above $1 per point over replacement, non-keepers only). Worth - price = value.
+  const basis: Record<number, { rate: number; repl: Record<string, number> }> = {};
   for (const y of new Set(picks.map((x) => x.y))) {
     const ps = picks.filter((x) => x.y === y && x.pts !== null);
     const repl = new Map<string, number>();
@@ -82,6 +104,7 @@ export function prep() {
     const open = ps.filter((x) => !x.keeper);
     const rate = open.reduce((a, x) => a + Math.max(vor(x), 0), 0) / Math.max(1, open.reduce((a, x) => a + x.price - 1, 0));
     for (const x of ps) x.worth = Math.round(1 + Math.max(vor(x), 0) / rate);
+    basis[y] = { rate: Math.round((1 / rate) * 100) / 100, repl: Object.fromEntries([...repl].map(([k, v]) => [k, Math.round(v * 10) / 10])) };
   }
 
   const owners = [...H.owners.values()].map((o) => ({ k: o.key, name: o.name, filler: !!o.filler, teamId: o.teamId }));
@@ -90,7 +113,11 @@ export function prep() {
     podium: s.podium,
     rows: s.rows.map((r) => ({ o: r.owner, crew: crewName(H, r.owner, s.year), team: r.team, finish: r.finish, w: r.w, l: r.l, t: r.t, pf: Math.round(r.pf * 10) / 10, index: Math.round(r.index * 1000) / 1000, luck: Math.round(r.luck * 100) / 100 })),
   }));
-  return { asOf: '2026-11-12', owners, seasons, players, picks: picks.map((x) => [x.y, x.o, x.p, x.price, x.keeper ? 1 : 0, x.ref, x.refKind, x.proj, x.projKind, x.pts, x.ptsKind, x.round, x.overall, x.nfl, x.worth]), unmatched };
+  return { asOf: '2026-11-12', owners, seasons, players, picks: picks.map((x) => {
+    const m = lineupYears.has(x.y) ? held.get(`${x.y}|${playerKey(players[x.p]![0], players[x.p]![1])}`) : undefined;
+    const h = lineupYears.has(x.y) ? [...(m ?? new Map())].sort((a, b) => a[1][3] - b[1][3]).map(([o, u]) => [o, u[0], u[1], Math.round(u[2] * 10) / 10, u[3]]) : null;
+    return [x.y, x.o, x.p, x.price, x.keeper ? 1 : 0, x.ref, x.refKind, x.proj, x.projKind, x.pts, x.ptsKind, x.round, x.overall, x.nfl, x.worth, h];
+  }), basis, unmatched };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
