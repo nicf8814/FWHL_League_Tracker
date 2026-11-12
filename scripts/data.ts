@@ -11,6 +11,8 @@ import { validateLineups } from '../src/data/lineups.ts';
 import { buildLineups, formatLineups } from './lineups.ts';
 import { validateDrafts } from '../src/data/drafts.ts';
 import { buildDrafts, formatDrafts } from './drafts.ts';
+import { validateTrades } from '../src/data/trades.ts';
+import { buildTrades, formatTrades } from './trades.ts';
 import { existsSync, mkdirSync, readdirSync } from 'node:fs';
 import {
   applyChart, applyProjections, applyResults, applyRosters, arizonaToday, dropFantasyPros, formatDataset, chartRowsFromCsv,
@@ -100,12 +102,22 @@ function checkDrafts(h = buildHistory(), L = buildLineups(h)) {
   return `${drafts.seasons.length} drafts, ${drafts.picks.length} picks, up to date`;
 }
 
+// public/seed/trades.json must match what data/history/trades builds today.
+const TRADES = 'public/seed/trades.json';
+function checkTrades(h = buildHistory(), L = buildLineups(h)) {
+  const { trades } = buildTrades(h, 'data/history', L);
+  if (!existsSync(TRADES) || readFileSync(TRADES, 'utf8') !== formatTrades(trades)) fail(`${TRADES} is out of date with data/history/trades. Run: npm run data -- trades`);
+  const v = validateTrades(readJson(TRADES));
+  if (!v.ok) fail(`${TRADES} is invalid:\n- ${v.errors.join('\n- ')}`);
+  return `${trades.trades.length} trades, up to date`;
+}
+
 const today = opt('--today') ?? arizonaToday();
 try {
   switch (cmd) {
     case 'check': {
       const ds = load();
-      console.log(JSON.stringify({ valid: true, file, ...summary(ds), history: checkHistory(), ...(() => { const h = buildHistory(), L = buildLineups(h); return { lineups: checkLineups(L), drafts: checkDrafts(h, L) }; })() }, null, 2));
+      console.log(JSON.stringify({ valid: true, file, ...summary(ds), history: checkHistory(), ...(() => { const h = buildHistory(), L = buildLineups(h); return { lineups: checkLineups(L), drafts: checkDrafts(h, L), trades: checkTrades(h, L) }; })() }, null, 2));
       break;
     }
     case 'history': {
@@ -131,6 +143,14 @@ try {
       console.log(JSON.stringify({ written: !dry, file: DRAFTS, picks: drafts.picks.length, players: drafts.players.length, unmatched: report.unmatched, seasons: report.seasons }, null, 2));
       break;
     }
+    case 'trades': {
+      const { trades, report } = buildTrades(buildHistory());
+      const v = validateTrades(JSON.parse(formatTrades(trades)));
+      if (!v.ok) fail(`the trades would be invalid:\n- ${v.errors.join('\n- ')}`);
+      if (!dry) writeFileSync(TRADES, formatTrades(trades));
+      console.log(JSON.stringify({ written: !dry, file: TRADES, trades: trades.trades.length, seasons: report.seasons, neverOnNewTeam: report.unseen }, null, 2));
+      break;
+    }
     case 'results': { const ds = load(); finish(ds, applyResults(ds, readJson(rest[0]) as never, today)); break; }
     case 'projections': { const ds = load(); finish(ds, applyProjections(ds, readJson(rest[0]) as never, today, force)); break; }
     case 'rosters': { const ds = load(); finish(ds, applyRosters(ds, readJson(rest[0]) as never, today, force)); break; }
@@ -142,7 +162,7 @@ try {
     }
     case 'drop-fantasypros': { const ds = load(); finish(ds, dropFantasyPros(ds)); break; }
     default:
-      fail(`unknown command "${cmd ?? ''}". Use: check | results <json> | projections <json> | rosters <json> | chart <peaked|menton> <week> <csv> | history | lineups | drafts`);
+      fail(`unknown command "${cmd ?? ''}". Use: check | results <json> | projections <json> | rosters <json> | chart <peaked|menton> <week> <csv> | history | lineups | drafts | trades`);
   }
 } catch (e) {
   fail(e instanceof Error ? e.message : String(e));

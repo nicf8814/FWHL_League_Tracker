@@ -178,3 +178,19 @@ npm run data -- drafts [--dry-run]
 - Value is worked out in the browser (`src/engine/drafts.ts`), so the 2026 draft's points and starts follow each weekly results push without rebuilding this file. The page explains the method behind the (i) button.
 
 The dry run lists unmatched owners, keepers per season and each season's team spend range. `npm run data:check` fails while `drafts.json` is out of date. After a season's draft: add the export (extend `scripts/drafts.ts` for a new file name), add any new account to `accounts.csv`, run the command, then the usual checks.
+
+### Trade history
+
+History → All seasons → **Trades** lists every trade from 2018 to last season, each side graded A to F; a season's **Trades** view shows that year's, and owner pages show each owner's trades. Reads `public/seed/trades.json` (about 80 KB), built and never edited by hand:
+
+```bash
+npm run data -- trades [--dry-run]
+```
+
+- `data/history/trades/espn-2018-2026.json` and `sleeper-2024-2025.json`: the trade exports, as received. ESPN's own log misses trades, so its export also lists trades found from the weekly rosters (players swapped directly between two teams in one week), marked `likely` and shown as "found from rosters". Checked against 2026, where the app knows every trade: 9 of 10 found, every "likely" one real.
+- Owners match through `accounts.csv` (ESPN names, Sleeper display names), players by name and position like the drafts.
+- Grades are worked out at build time (`src/engine/tradeHistory.ts`) with the Tracker's method: projected points per week above replacement at the trade, moving toward real production as weeks are played (n ÷ (n + 4)), plus next season's real keeper outcome from the draft data. Each week is replayed with the trade undone for the record, seed and playoff line. No trade-chart values exist for past seasons, so the grade at the trade uses projections only.
+- The live season's trades stay on the Tracker page; the 2026 rows in the ESPN export are not used here.
+
+The dry run lists each season's trades, how many were found from rosters, and any player who never shows on his new team (usually a second trade the same week, or injured reserve). `npm run data:check` fails while `trades.json` is out of date.
+
