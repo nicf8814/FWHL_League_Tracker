@@ -1,0 +1,7048 @@
+{
+ "meta": {
+  "generated": "2026-11-12T15:10:03.737Z",
+  "source": "Sleeper API draft/picks endpoints plus unofficial api.sleeper.com season projections",
+  "notes": [
+   "actual_price = auction dollars paid (for keepers, the keeper price)",
+   "is_keeper = Sleeper flag on the pick",
+   "projected_points = Sleeper full-season projection rescored with this league scoring_settings; fetched after each season ended so it may not match the preseason number",
+   "adp_half_ppr = Sleeper half-PPR ADP from the same projection record",
+   "projected_price_est = my estimate, NOT a Sleeper value: $2,400 budget minus $1 per roster spot split by projected value over replacement (QB13, RB30, WR36, TE13), min $1",
+   "price_diff = actual_price - projected_price_est (positive means paid above estimate)"
+  ]
+ },
+ "seasons": [
+  {
+   "season": "2024",
+   "league_id": "1123798863510380544",
+   "draft_id": "1125925027356012544",
+   "draft_type": "auction",
+   "budget": 200,
+   "rounds": 13,
+   "teams": [
+    {
+     "roster_id": 1,
+     "team_name": "Trey, Zay, and Tyjae",
+     "display_name": "pintoandmo",
+     "owner_id": "1123798455777845248"
+    },
+    {
+     "roster_id": 2,
+     "team_name": "Tommy Heist Tag Team 🏆🏆🏆",
+     "display_name": "nheist",
+     "owner_id": "1124025484959903744"
+    },
+    {
+     "roster_id": 3,
+     "team_name": "Patrick Tanks the Gidbinn",
+     "display_name": "Dtmorris",
+     "owner_id": "1124049146102644736"
+    },
+    {
+     "roster_id": 4,
+     "team_name": "I Shaheed My Pants",
+     "display_name": "nicf8814",
+     "owner_id": "1124166707834085376"
+    },
+    {
+     "roster_id": 5,
+     "team_name": "Let's Go Brandon!",
+     "display_name": "tmattson88",
+     "owner_id": "1124375851493154816"
+    },
+    {
+     "roster_id": 6,
+     "team_name": "Bed Bath and Bijan",
+     "display_name": "Buttlips",
+     "owner_id": "431646563530448896"
+    },
+    {
+     "roster_id": 7,
+     "team_name": "MostertbEtienne my DK",
+     "display_name": "coopkid87",
+     "owner_id": "1126014609837740032"
+    },
+    {
+     "roster_id": 8,
+     "team_name": "Let's Ride!",
+     "display_name": "grantgosselin",
+     "owner_id": "1126016694977265664"
+    },
+    {
+     "roster_id": 9,
+     "team_name": "Shannon Sharpe Mixtape",
+     "display_name": "FantasyWoes",
+     "owner_id": "473333590688526336"
+    },
+    {
+     "roster_id": 10,
+     "team_name": "VinnieMac",
+     "display_name": "vinniemac830",
+     "owner_id": "1005334070454259712"
+    },
+    {
+     "roster_id": 11,
+     "team_name": null,
+     "display_name": "chov13",
+     "owner_id": "1126414981433495552"
+    },
+    {
+     "roster_id": 12,
+     "team_name": null,
+     "display_name": "braejones12",
+     "owner_id": "1126361682147778560"
+    }
+   ],
+   "picks": [
+    {
+     "pick_no": 1,
+     "round": 1,
+     "keeper": false,
+     "player": {
+      "player_id": "4881",
+      "name": "Lamar Jackson",
+      "position": "QB",
+      "nfl_team": "BAL"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Trey, Zay, and Tyjae",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 34,
+     "projected_price_est": 53,
+     "price_diff": -19,
+     "projected_points": 424.48,
+     "adp_half_ppr": 36.3
+    },
+    {
+     "pick_no": 2,
+     "round": 1,
+     "keeper": true,
+     "player": {
+      "player_id": "6801",
+      "name": "Tee Higgins",
+      "position": "WR",
+      "nfl_team": "CIN"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "Patrick Tanks the Gidbinn",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 44,
+     "projected_price_est": 11,
+     "price_diff": 33,
+     "projected_points": 241.07,
+     "adp_half_ppr": 57.3
+    },
+    {
+     "pick_no": 3,
+     "round": 1,
+     "keeper": true,
+     "player": {
+      "player_id": "9221",
+      "name": "Jahmyr Gibbs",
+      "position": "RB",
+      "nfl_team": "DET"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "Patrick Tanks the Gidbinn",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 46,
+     "projected_price_est": 42,
+     "price_diff": 4,
+     "projected_points": 274.7,
+     "adp_half_ppr": 10.3
+    },
+    {
+     "pick_no": 4,
+     "round": 1,
+     "keeper": true,
+     "player": {
+      "player_id": "9502",
+      "name": "Tank Dell",
+      "position": "WR",
+      "nfl_team": "HOU"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "Patrick Tanks the Gidbinn",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 21,
+     "projected_price_est": 5,
+     "price_diff": 16,
+     "projected_points": 230.07,
+     "adp_half_ppr": 54.9
+    },
+    {
+     "pick_no": 5,
+     "round": 1,
+     "keeper": true,
+     "player": {
+      "player_id": "8155",
+      "name": "Breece Hall",
+      "position": "RB",
+      "nfl_team": "NYJ"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 29,
+     "projected_price_est": 80,
+     "price_diff": -51,
+     "projected_points": 341.18,
+     "adp_half_ppr": 8.6
+    },
+    {
+     "pick_no": 6,
+     "round": 1,
+     "keeper": true,
+     "player": {
+      "player_id": "2216",
+      "name": "Mike Evans",
+      "position": "WR",
+      "nfl_team": "TB"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Bed Bath and Bijan",
+      "display_name": "Buttlips",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 24,
+     "projected_price_est": 17,
+     "price_diff": 7,
+     "projected_points": 252.52,
+     "adp_half_ppr": 29.9
+    },
+    {
+     "pick_no": 7,
+     "round": 1,
+     "keeper": true,
+     "player": {
+      "player_id": "5849",
+      "name": "Kyler Murray",
+      "position": "QB",
+      "nfl_team": "ARI"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Bed Bath and Bijan",
+      "display_name": "Buttlips",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 11,
+     "projected_price_est": 25,
+     "price_diff": -14,
+     "projected_points": 374.41,
+     "adp_half_ppr": 69.9
+    },
+    {
+     "pick_no": 8,
+     "round": 1,
+     "keeper": false,
+     "player": {
+      "player_id": "4035",
+      "name": "Alvin Kamara",
+      "position": "RB",
+      "nfl_team": "NO"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": null,
+      "display_name": "chov13",
+      "owner_id": "1126414981433495552"
+     },
+     "actual_price": 26,
+     "projected_price_est": 44,
+     "price_diff": -18,
+     "projected_points": 277.85,
+     "adp_half_ppr": 50.9
+    },
+    {
+     "pick_no": 9,
+     "round": 1,
+     "keeper": true,
+     "player": {
+      "player_id": "8205",
+      "name": "Isiah Pacheco",
+      "position": "RB",
+      "nfl_team": "KC"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Bed Bath and Bijan",
+      "display_name": "Buttlips",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 33,
+     "projected_price_est": 48,
+     "price_diff": -15,
+     "projected_points": 284.25,
+     "adp_half_ppr": 27.4
+    },
+    {
+     "pick_no": 10,
+     "round": 1,
+     "keeper": false,
+     "player": {
+      "player_id": "9758",
+      "name": "C.J. Stroud",
+      "position": "QB",
+      "nfl_team": "HOU"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team 🏆🏆🏆",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 13,
+     "projected_price_est": 20,
+     "price_diff": -7,
+     "projected_points": 366.59,
+     "adp_half_ppr": 46.2
+    },
+    {
+     "pick_no": 11,
+     "round": 1,
+     "keeper": false,
+     "player": {
+      "player_id": "8139",
+      "name": "Zamir White",
+      "position": "RB",
+      "nfl_team": "LV"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team 🏆🏆🏆",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 10,
+     "projected_price_est": 1,
+     "price_diff": 9,
+     "projected_points": 150.99,
+     "adp_half_ppr": 73.8
+    },
+    {
+     "pick_no": 12,
+     "round": 1,
+     "keeper": false,
+     "player": {
+      "player_id": "9226",
+      "name": "De'Von Achane",
+      "position": "RB",
+      "nfl_team": "MIA"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team 🏆🏆🏆",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 12,
+     "projected_price_est": 46,
+     "price_diff": -34,
+     "projected_points": 280.7,
+     "adp_half_ppr": 23
+    },
+    {
+     "pick_no": 13,
+     "round": 2,
+     "keeper": false,
+     "player": {
+      "player_id": "7547",
+      "name": "Amon-Ra St. Brown",
+      "position": "WR",
+      "nfl_team": "DET"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team 🏆🏆🏆",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 36,
+     "projected_price_est": 29,
+     "price_diff": 7,
+     "projected_points": 273.41,
+     "adp_half_ppr": 6.2
+    },
+    {
+     "pick_no": 14,
+     "round": 2,
+     "keeper": true,
+     "player": {
+      "player_id": "4983",
+      "name": "DJ Moore",
+      "position": "WR",
+      "nfl_team": "CHI"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "MostertbEtienne my DK",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 33,
+     "projected_price_est": 11,
+     "price_diff": 22,
+     "projected_points": 241.77,
+     "adp_half_ppr": 38.6
+    },
+    {
+     "pick_no": 15,
+     "round": 2,
+     "keeper": false,
+     "player": {
+      "player_id": "8136",
+      "name": "Rachaad White",
+      "position": "RB",
+      "nfl_team": "TB"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "Shannon Sharpe Mixtape",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 26,
+     "projected_price_est": 33,
+     "price_diff": -7,
+     "projected_points": 258.86,
+     "adp_half_ppr": 37.6
+    },
+    {
+     "pick_no": 16,
+     "round": 2,
+     "keeper": false,
+     "player": {
+      "player_id": "8146",
+      "name": "Garrett Wilson",
+      "position": "WR",
+      "nfl_team": "NYJ"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "Shannon Sharpe Mixtape",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 27,
+     "projected_price_est": 21,
+     "price_diff": 6,
+     "projected_points": 259.11,
+     "adp_half_ppr": 13.3
+    },
+    {
+     "pick_no": 17,
+     "round": 2,
+     "keeper": false,
+     "player": {
+      "player_id": "4137",
+      "name": "James Conner",
+      "position": "RB",
+      "nfl_team": "ARI"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Let's Ride!",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 23,
+     "projected_price_est": 19,
+     "price_diff": 4,
+     "projected_points": 232.62,
+     "adp_half_ppr": 59.7
+    },
+    {
+     "pick_no": 18,
+     "round": 2,
+     "keeper": false,
+     "player": {
+      "player_id": "9229",
+      "name": "Anthony Richardson",
+      "position": "QB",
+      "nfl_team": "IND"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "Shannon Sharpe Mixtape",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 12,
+     "projected_price_est": 1,
+     "price_diff": 11,
+     "projected_points": 326.56,
+     "adp_half_ppr": 53.7
+    },
+    {
+     "pick_no": 19,
+     "round": 2,
+     "keeper": false,
+     "player": {
+      "player_id": "5927",
+      "name": "Terry McLaurin",
+      "position": "WR",
+      "nfl_team": "WAS"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "VinnieMac",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 14,
+     "projected_price_est": 15,
+     "price_diff": -1,
+     "projected_points": 249.02,
+     "adp_half_ppr": 68
+    },
+    {
+     "pick_no": 20,
+     "round": 2,
+     "keeper": false,
+     "player": {
+      "player_id": "6845",
+      "name": "Zack Moss",
+      "position": "RB",
+      "nfl_team": "CIN"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "VinnieMac",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 12,
+     "projected_price_est": 3,
+     "price_diff": 9,
+     "projected_points": 205.28,
+     "adp_half_ppr": 89
+    },
+    {
+     "pick_no": 21,
+     "round": 2,
+     "keeper": false,
+     "player": {
+      "player_id": "6790",
+      "name": "D'Andre Swift",
+      "position": "RB",
+      "nfl_team": "CHI"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "VinnieMac",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 19,
+     "projected_price_est": 40,
+     "price_diff": -21,
+     "projected_points": 270.75,
+     "adp_half_ppr": 64.1
+    },
+    {
+     "pick_no": 22,
+     "round": 2,
+     "keeper": false,
+     "player": {
+      "player_id": "7569",
+      "name": "Nico Collins",
+      "position": "WR",
+      "nfl_team": "HOU"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "VinnieMac",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 12,
+     "projected_price_est": 24,
+     "price_diff": -12,
+     "projected_points": 263.81,
+     "adp_half_ppr": 33.5
+    },
+    {
+     "pick_no": 23,
+     "round": 2,
+     "keeper": false,
+     "player": {
+      "player_id": "8150",
+      "name": "Kyren Williams",
+      "position": "RB",
+      "nfl_team": "LAR"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Trey, Zay, and Tyjae",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 56,
+     "projected_price_est": 44,
+     "price_diff": 12,
+     "projected_points": 277.65,
+     "adp_half_ppr": 17.8
+    },
+    {
+     "pick_no": 24,
+     "round": 2,
+     "keeper": false,
+     "player": {
+      "player_id": "6803",
+      "name": "Brandon Aiyuk",
+      "position": "WR",
+      "nfl_team": "SF"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Let's Go Brandon!",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 32,
+     "projected_price_est": 7,
+     "price_diff": 25,
+     "projected_points": 234.57,
+     "adp_half_ppr": 26.4
+    },
+    {
+     "pick_no": 25,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "7564",
+      "name": "Ja'Marr Chase",
+      "position": "WR",
+      "nfl_team": "CIN"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Let's Ride!",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 45,
+     "projected_price_est": 61,
+     "price_diff": -16,
+     "projected_points": 329.34,
+     "adp_half_ppr": 5.6
+    },
+    {
+     "pick_no": 26,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "6794",
+      "name": "Justin Jefferson",
+      "position": "WR",
+      "nfl_team": "MIN"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": null,
+      "display_name": "chov13",
+      "owner_id": "1126414981433495552"
+     },
+     "actual_price": 81,
+     "projected_price_est": 49,
+     "price_diff": 32,
+     "projected_points": 308.74,
+     "adp_half_ppr": 4.3
+    },
+    {
+     "pick_no": 27,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "5872",
+      "name": "Deebo Samuel",
+      "position": "WR",
+      "nfl_team": "SF"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Trey, Zay, and Tyjae",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 37,
+     "projected_price_est": 6,
+     "price_diff": 31,
+     "projected_points": 231.37,
+     "adp_half_ppr": 27.4
+    },
+    {
+     "pick_no": 28,
+     "round": 3,
+     "keeper": true,
+     "player": {
+      "player_id": "6786",
+      "name": "CeeDee Lamb",
+      "position": "WR",
+      "nfl_team": "DAL"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "I Shaheed My Pants",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 61,
+     "projected_price_est": 42,
+     "price_diff": 19,
+     "projected_points": 295.45,
+     "adp_half_ppr": 3.9
+    },
+    {
+     "pick_no": 29,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "4034",
+      "name": "Christian McCaffrey",
+      "position": "RB",
+      "nfl_team": "SF"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "Shannon Sharpe Mixtape",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 82,
+     "projected_price_est": 73,
+     "price_diff": 9,
+     "projected_points": 328.74,
+     "adp_half_ppr": 1.5
+    },
+    {
+     "pick_no": 30,
+     "round": 3,
+     "keeper": true,
+     "player": {
+      "player_id": "8112",
+      "name": "Drake London",
+      "position": "WR",
+      "nfl_team": "ATL"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "Shannon Sharpe Mixtape",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 12,
+     "projected_price_est": 17,
+     "price_diff": -5,
+     "projected_points": 251.42,
+     "adp_half_ppr": 19.4
+    },
+    {
+     "pick_no": 31,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "5892",
+      "name": "David Montgomery",
+      "position": "RB",
+      "nfl_team": "DET"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Let's Ride!",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 25,
+     "projected_price_est": 21,
+     "price_diff": 4,
+     "projected_points": 236.87,
+     "adp_half_ppr": 62.8
+    },
+    {
+     "pick_no": 32,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "4866",
+      "name": "Saquon Barkley",
+      "position": "RB",
+      "nfl_team": "PHI"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "MostertbEtienne my DK",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 59,
+     "projected_price_est": 86,
+     "price_diff": -27,
+     "projected_points": 352.66,
+     "adp_half_ppr": 12.1
+    },
+    {
+     "pick_no": 33,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "3321",
+      "name": "Tyreek Hill",
+      "position": "WR",
+      "nfl_team": "MIA"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 77,
+     "projected_price_est": 64,
+     "price_diff": 13,
+     "projected_points": 335.19,
+     "adp_half_ppr": 2.1
+    },
+    {
+     "pick_no": 34,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "9509",
+      "name": "Bijan Robinson",
+      "position": "RB",
+      "nfl_team": "ATL"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Bed Bath and Bijan",
+      "display_name": "Buttlips",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 70,
+     "projected_price_est": 67,
+     "price_diff": 3,
+     "projected_points": 319.58,
+     "adp_half_ppr": 6.1
+    },
+    {
+     "pick_no": 35,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "11628",
+      "name": "Marvin Harrison",
+      "position": "WR",
+      "nfl_team": "ARI"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "VinnieMac",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 43,
+     "projected_price_est": 18,
+     "price_diff": 25,
+     "projected_points": 254.12,
+     "adp_half_ppr": 14
+    },
+    {
+     "pick_no": 36,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "10229",
+      "name": "Rashee Rice",
+      "position": "WR",
+      "nfl_team": "KC"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "I Shaheed My Pants",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 17,
+     "projected_price_est": 1,
+     "price_diff": 16,
+     "projected_points": 0,
+     "adp_half_ppr": 81.7
+    },
+    {
+     "pick_no": 37,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "8138",
+      "name": "James Cook",
+      "position": "RB",
+      "nfl_team": "BUF"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "VinnieMac",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 44,
+     "projected_price_est": 37,
+     "price_diff": 7,
+     "projected_points": 265.45,
+     "adp_half_ppr": 40.2
+    },
+    {
+     "pick_no": 38,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "6804",
+      "name": "Jordan Love",
+      "position": "QB",
+      "nfl_team": "GB"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "MostertbEtienne my DK",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 6,
+     "projected_price_est": 10,
+     "price_diff": -4,
+     "projected_points": 348.53,
+     "adp_half_ppr": 82.5
+    },
+    {
+     "pick_no": 39,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "4984",
+      "name": "Josh Allen",
+      "position": "QB",
+      "nfl_team": "BUF"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "VinnieMac",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 28,
+     "projected_price_est": 49,
+     "price_diff": -21,
+     "projected_points": 418.21,
+     "adp_half_ppr": 20.2
+    },
+    {
+     "pick_no": 40,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "11620",
+      "name": "Rome Odunze",
+      "position": "WR",
+      "nfl_team": "CHI"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "Shannon Sharpe Mixtape",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 13,
+     "projected_price_est": 1,
+     "price_diff": 12,
+     "projected_points": 187.89,
+     "adp_half_ppr": 72.8
+    },
+    {
+     "pick_no": 41,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "11624",
+      "name": "Xavier Worthy",
+      "position": "WR",
+      "nfl_team": "KC"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 6,
+     "projected_price_est": 1,
+     "price_diff": 5,
+     "projected_points": 199.93,
+     "adp_half_ppr": 76.3
+    },
+    {
+     "pick_no": 42,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "6813",
+      "name": "Jonathan Taylor",
+      "position": "RB",
+      "nfl_team": "IND"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "Patrick Tanks the Gidbinn",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 49,
+     "projected_price_est": 58,
+     "price_diff": -9,
+     "projected_points": 302.84,
+     "adp_half_ppr": 11.8
+    },
+    {
+     "pick_no": 43,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "9493",
+      "name": "Puka Nacua",
+      "position": "WR",
+      "nfl_team": "LAR"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Let's Go Brandon!",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 36,
+     "projected_price_est": 28,
+     "price_diff": 8,
+     "projected_points": 270.51,
+     "adp_half_ppr": 15.9
+    },
+    {
+     "pick_no": 44,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "2133",
+      "name": "Davante Adams",
+      "position": "WR",
+      "nfl_team": "LV"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Let's Ride!",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 42,
+     "projected_price_est": 21,
+     "price_diff": 21,
+     "projected_points": 258.37,
+     "adp_half_ppr": 20.7
+    },
+    {
+     "pick_no": 45,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "5859",
+      "name": "A.J. Brown",
+      "position": "WR",
+      "nfl_team": "PHI"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "I Shaheed My Pants",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 49,
+     "projected_price_est": 39,
+     "price_diff": 10,
+     "projected_points": 290.4,
+     "adp_half_ppr": 9.1
+    },
+    {
+     "pick_no": 46,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "1466",
+      "name": "Travis Kelce",
+      "position": "TE",
+      "nfl_team": "KC"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 26,
+     "projected_price_est": 38,
+     "price_diff": -12,
+     "projected_points": 216.43,
+     "adp_half_ppr": 25.6
+    },
+    {
+     "pick_no": 47,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "1479",
+      "name": "Keenan Allen",
+      "position": "WR",
+      "nfl_team": "CHI"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "VinnieMac",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 13,
+     "projected_price_est": 1,
+     "price_diff": 12,
+     "projected_points": 194.59,
+     "adp_half_ppr": 65.5
+    },
+    {
+     "pick_no": 48,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "11560",
+      "name": "Caleb Williams",
+      "position": "QB",
+      "nfl_team": "CHI"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 3,
+     "projected_price_est": 1,
+     "price_diff": 2,
+     "projected_points": 319.38,
+     "adp_half_ppr": 99.4
+    },
+    {
+     "pick_no": 49,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "8144",
+      "name": "Chris Olave",
+      "position": "WR",
+      "nfl_team": "NO"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team 🏆🏆🏆",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 29,
+     "projected_price_est": 1,
+     "price_diff": 28,
+     "projected_points": 221.38,
+     "adp_half_ppr": 22.6
+    },
+    {
+     "pick_no": 50,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "11632",
+      "name": "Malik Nabers",
+      "position": "WR",
+      "nfl_team": "NYG"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 29,
+     "projected_price_est": 16,
+     "price_diff": 13,
+     "projected_points": 249.12,
+     "adp_half_ppr": 42
+    },
+    {
+     "pick_no": 51,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "5850",
+      "name": "Josh Jacobs",
+      "position": "RB",
+      "nfl_team": "GB"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "I Shaheed My Pants",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 42,
+     "projected_price_est": 39,
+     "price_diff": 3,
+     "projected_points": 268.9,
+     "adp_half_ppr": 24
+    },
+    {
+     "pick_no": 52,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "7543",
+      "name": "Travis Etienne",
+      "position": "RB",
+      "nfl_team": "JAX"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "MostertbEtienne my DK",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 44,
+     "projected_price_est": 42,
+     "price_diff": 2,
+     "projected_points": 273.9,
+     "adp_half_ppr": 16.3
+    },
+    {
+     "pick_no": 53,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "4981",
+      "name": "Calvin Ridley",
+      "position": "WR",
+      "nfl_team": "TEN"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Bed Bath and Bijan",
+      "display_name": "Buttlips",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 16,
+     "projected_price_est": 1,
+     "price_diff": 15,
+     "projected_points": 223.27,
+     "adp_half_ppr": 80.2
+    },
+    {
+     "pick_no": 54,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "4046",
+      "name": "Patrick Mahomes",
+      "position": "QB",
+      "nfl_team": "KC"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "Patrick Tanks the Gidbinn",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 23,
+     "projected_price_est": 26,
+     "price_diff": -3,
+     "projected_points": 377.22,
+     "adp_half_ppr": 32.8
+    },
+    {
+     "pick_no": 55,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "3198",
+      "name": "Derrick Henry",
+      "position": "RB",
+      "nfl_team": "BAL"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team 🏆🏆🏆",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 47,
+     "projected_price_est": 93,
+     "price_diff": -46,
+     "projected_points": 364.87,
+     "adp_half_ppr": 18.6
+    },
+    {
+     "pick_no": 56,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "4039",
+      "name": "Cooper Kupp",
+      "position": "WR",
+      "nfl_team": "LAR"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Let's Go Brandon!",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 24,
+     "projected_price_est": 12,
+     "price_diff": 12,
+     "projected_points": 242.77,
+     "adp_half_ppr": 39.1
+    },
+    {
+     "pick_no": 57,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "10859",
+      "name": "Sam LaPorta",
+      "position": "TE",
+      "nfl_team": "DET"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Trey, Zay, and Tyjae",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 14,
+     "projected_price_est": 20,
+     "price_diff": -6,
+     "projected_points": 184.69,
+     "adp_half_ppr": 30
+    },
+    {
+     "pick_no": 58,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "7526",
+      "name": "Jaylen Waddle",
+      "position": "WR",
+      "nfl_team": "MIA"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Bed Bath and Bijan",
+      "display_name": "Buttlips",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 22,
+     "projected_price_est": 12,
+     "price_diff": 10,
+     "projected_points": 242.67,
+     "adp_half_ppr": 34.9
+    },
+    {
+     "pick_no": 59,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "2449",
+      "name": "Stefon Diggs",
+      "position": "WR",
+      "nfl_team": "HOU"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Let's Go Brandon!",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 27,
+     "projected_price_est": 9,
+     "price_diff": 18,
+     "projected_points": 238.07,
+     "adp_half_ppr": 34.7
+    },
+    {
+     "pick_no": 60,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "6819",
+      "name": "Michael Pittman",
+      "position": "WR",
+      "nfl_team": "IND"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Let's Ride!",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 17,
+     "projected_price_est": 1,
+     "price_diff": 16,
+     "projected_points": 179.89,
+     "adp_half_ppr": 44.7
+    },
+    {
+     "pick_no": 61,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "4018",
+      "name": "Joe Mixon",
+      "position": "RB",
+      "nfl_team": "HOU"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 24,
+     "projected_price_est": 40,
+     "price_diff": -16,
+     "projected_points": 271.2,
+     "adp_half_ppr": 43.2
+    },
+    {
+     "pick_no": 62,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "2749",
+      "name": "Raheem Mostert",
+      "position": "RB",
+      "nfl_team": "MIA"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "MostertbEtienne my DK",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 18,
+     "projected_price_est": 1,
+     "price_diff": 17,
+     "projected_points": 193.63,
+     "adp_half_ppr": 75.6
+    },
+    {
+     "pick_no": 63,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "4199",
+      "name": "Aaron Jones",
+      "position": "RB",
+      "nfl_team": "MIN"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Let's Go Brandon!",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 27,
+     "projected_price_est": 23,
+     "price_diff": 4,
+     "projected_points": 241.31,
+     "adp_half_ppr": 55.8
+    },
+    {
+     "pick_no": 64,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "11586",
+      "name": "Blake Corum",
+      "position": "RB",
+      "nfl_team": "LAR"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "I Shaheed My Pants",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 112.16,
+     "adp_half_ppr": 115.3
+    },
+    {
+     "pick_no": 65,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "9225",
+      "name": "Tank Bigsby",
+      "position": "RB",
+      "nfl_team": "JAX"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Let's Go Brandon!",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 3,
+     "projected_price_est": 1,
+     "price_diff": 2,
+     "projected_points": 168.69,
+     "adp_half_ppr": 222
+    },
+    {
+     "pick_no": 66,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "6904",
+      "name": "Jalen Hurts",
+      "position": "QB",
+      "nfl_team": "PHI"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Let's Ride!",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 27,
+     "projected_price_est": 43,
+     "price_diff": -16,
+     "projected_points": 407,
+     "adp_half_ppr": 31.3
+    },
+    {
+     "pick_no": 67,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "5846",
+      "name": "DK Metcalf",
+      "position": "WR",
+      "nfl_team": "SEA"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "MostertbEtienne my DK",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 22,
+     "projected_price_est": 14,
+     "price_diff": 8,
+     "projected_points": 247.17,
+     "adp_half_ppr": 41.9
+    },
+    {
+     "pick_no": 68,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "9997",
+      "name": "Zay Flowers",
+      "position": "WR",
+      "nfl_team": "BAL"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Trey, Zay, and Tyjae",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 16,
+     "projected_price_est": 6,
+     "price_diff": 10,
+     "projected_points": 232.37,
+     "adp_half_ppr": 52.7
+    },
+    {
+     "pick_no": 69,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "7525",
+      "name": "DeVonta Smith",
+      "position": "WR",
+      "nfl_team": "PHI"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": null,
+      "display_name": "chov13",
+      "owner_id": "1126414981433495552"
+     },
+     "actual_price": 25,
+     "projected_price_est": 7,
+     "price_diff": 18,
+     "projected_points": 234.47,
+     "adp_half_ppr": 47.3
+    },
+    {
+     "pick_no": 70,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "8151",
+      "name": "Kenneth Walker",
+      "position": "RB",
+      "nfl_team": "SEA"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": null,
+      "display_name": "chov13",
+      "owner_id": "1126414981433495552"
+     },
+     "actual_price": 33,
+     "projected_price_est": 24,
+     "price_diff": 9,
+     "projected_points": 241.81,
+     "adp_half_ppr": 45.1
+    },
+    {
+     "pick_no": 71,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "96",
+      "name": "Aaron Rodgers",
+      "position": "QB",
+      "nfl_team": "NYJ"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": null,
+      "display_name": "chov13",
+      "owner_id": "1126414981433495552"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 308.24,
+     "adp_half_ppr": 150.4
+    },
+    {
+     "pick_no": 72,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "8130",
+      "name": "Trey McBride",
+      "position": "TE",
+      "nfl_team": "ARI"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Trey, Zay, and Tyjae",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 11,
+     "projected_price_est": 31,
+     "price_diff": -20,
+     "projected_points": 205.39,
+     "adp_half_ppr": 48.2
+    },
+    {
+     "pick_no": 73,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "7611",
+      "name": "Rhamondre Stevenson",
+      "position": "RB",
+      "nfl_team": "NE"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Bed Bath and Bijan",
+      "display_name": "Buttlips",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 18,
+     "projected_price_est": 36,
+     "price_diff": -18,
+     "projected_points": 263.55,
+     "adp_half_ppr": 66.1
+    },
+    {
+     "pick_no": 74,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "4663",
+      "name": "Austin Ekeler",
+      "position": "RB",
+      "nfl_team": "WAS"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Trey, Zay, and Tyjae",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 10,
+     "projected_price_est": 1,
+     "price_diff": 9,
+     "projected_points": 155.65,
+     "adp_half_ppr": 95.5
+    },
+    {
+     "pick_no": 75,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "7528",
+      "name": "Najee Harris",
+      "position": "RB",
+      "nfl_team": "PIT"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Let's Ride!",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 11,
+     "projected_price_est": 24,
+     "price_diff": -13,
+     "projected_points": 242.56,
+     "adp_half_ppr": 69.3
+    },
+    {
+     "pick_no": 76,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "11637",
+      "name": "Keon Coleman",
+      "position": "WR",
+      "nfl_team": "BUF"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": null,
+      "display_name": "chov13",
+      "owner_id": "1126414981433495552"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 131.16,
+     "adp_half_ppr": 97.6
+    },
+    {
+     "pick_no": 77,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "4082",
+      "name": "Curtis Samuel",
+      "position": "WR",
+      "nfl_team": "BUF"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "Patrick Tanks the Gidbinn",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 3,
+     "projected_price_est": 1,
+     "price_diff": 2,
+     "projected_points": 101.37,
+     "adp_half_ppr": 120
+    },
+    {
+     "pick_no": 78,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "5012",
+      "name": "Mark Andrews",
+      "position": "TE",
+      "nfl_team": "BAL"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "VinnieMac",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 11,
+     "projected_price_est": 1,
+     "price_diff": 10,
+     "projected_points": 146,
+     "adp_half_ppr": 48.3
+    },
+    {
+     "pick_no": 79,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "10236",
+      "name": "Dalton Kincaid",
+      "position": "TE",
+      "nfl_team": "BUF"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "Shannon Sharpe Mixtape",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 11,
+     "projected_price_est": 20,
+     "price_diff": -9,
+     "projected_points": 185.29,
+     "adp_half_ppr": 51.3
+    },
+    {
+     "pick_no": 80,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "2374",
+      "name": "Tyler Lockett",
+      "position": "WR",
+      "nfl_team": "SEA"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Let's Go Brandon!",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 3,
+     "projected_price_est": 1,
+     "price_diff": 2,
+     "projected_points": 176.89,
+     "adp_half_ppr": 122.5
+    },
+    {
+     "pick_no": 81,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "2309",
+      "name": "Amari Cooper",
+      "position": "WR",
+      "nfl_team": "CLE"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": null,
+      "display_name": "chov13",
+      "owner_id": "1126414981433495552"
+     },
+     "actual_price": 14,
+     "projected_price_est": 25,
+     "price_diff": -11,
+     "projected_points": 265.31,
+     "adp_half_ppr": 55.2
+    },
+    {
+     "pick_no": 82,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "11566",
+      "name": "Jayden Daniels",
+      "position": "QB",
+      "nfl_team": "WAS"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team 🏆🏆🏆",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 6,
+     "projected_price_est": 45,
+     "price_diff": -39,
+     "projected_points": 410.79,
+     "adp_half_ppr": 112
+    },
+    {
+     "pick_no": 83,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "4217",
+      "name": "George Kittle",
+      "position": "TE",
+      "nfl_team": "SF"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": null,
+      "display_name": "chov13",
+      "owner_id": "1126414981433495552"
+     },
+     "actual_price": 9,
+     "projected_price_est": 39,
+     "price_diff": -30,
+     "projected_points": 219.88,
+     "adp_half_ppr": 58.9
+    },
+    {
+     "pick_no": 84,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "6783",
+      "name": "Jerry Jeudy",
+      "position": "WR",
+      "nfl_team": "CLE"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 180.44,
+     "adp_half_ppr": 148.7
+    },
+    {
+     "pick_no": 85,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "8154",
+      "name": "Brian Robinson",
+      "position": "RB",
+      "nfl_team": "WAS"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Let's Go Brandon!",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 10,
+     "projected_price_est": 19,
+     "price_diff": -9,
+     "projected_points": 233.01,
+     "adp_half_ppr": 103.9
+    },
+    {
+     "pick_no": 86,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "4988",
+      "name": "Nick Chubb",
+      "position": "RB",
+      "nfl_team": "CLE"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Let's Go Brandon!",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 10,
+     "projected_price_est": 1,
+     "price_diff": 9,
+     "projected_points": 182.33,
+     "adp_half_ppr": 86.7
+    },
+    {
+     "pick_no": 87,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "4950",
+      "name": "Christian Kirk",
+      "position": "WR",
+      "nfl_team": "JAX"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "Patrick Tanks the Gidbinn",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 8,
+     "projected_price_est": 1,
+     "price_diff": 7,
+     "projected_points": 217.23,
+     "adp_half_ppr": 67.7
+    },
+    {
+     "pick_no": 88,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "6130",
+      "name": "Devin Singletary",
+      "position": "RB",
+      "nfl_team": "NYG"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team 🏆🏆🏆",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 12,
+     "projected_price_est": 6,
+     "price_diff": 6,
+     "projected_points": 210.92,
+     "adp_half_ppr": 96.5
+    },
+    {
+     "pick_no": 89,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "8119",
+      "name": "Jahan Dotson",
+      "position": "WR",
+      "nfl_team": "WAS"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Trey, Zay, and Tyjae",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 108.66,
+     "adp_half_ppr": 170.3
+    },
+    {
+     "pick_no": 90,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "6770",
+      "name": "Joe Burrow",
+      "position": "QB",
+      "nfl_team": "CIN"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Let's Go Brandon!",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 5,
+     "projected_price_est": 15,
+     "price_diff": -10,
+     "projected_points": 356.64,
+     "adp_half_ppr": 62.3
+    },
+    {
+     "pick_no": 91,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "4037",
+      "name": "Chris Godwin",
+      "position": "WR",
+      "nfl_team": "TB"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team 🏆🏆🏆",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 9,
+     "projected_price_est": 22,
+     "price_diff": -13,
+     "projected_points": 261.36,
+     "adp_half_ppr": 79.3
+    },
+    {
+     "pick_no": 92,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "11610",
+      "name": "Malik Washington",
+      "position": "WR",
+      "nfl_team": "MIA"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "VinnieMac",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 39.49,
+     "adp_half_ppr": 281.8
+    },
+    {
+     "pick_no": 93,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "8137",
+      "name": "George Pickens",
+      "position": "WR",
+      "nfl_team": "PIT"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "MostertbEtienne my DK",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 8,
+     "projected_price_est": 7,
+     "price_diff": 1,
+     "projected_points": 233.72,
+     "adp_half_ppr": 60.8
+    },
+    {
+     "pick_no": 94,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "10222",
+      "name": "Jayden Reed",
+      "position": "WR",
+      "nfl_team": "GB"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team 🏆🏆🏆",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 8,
+     "projected_price_est": 2,
+     "price_diff": 6,
+     "projected_points": 225.38,
+     "adp_half_ppr": 74.1
+    },
+    {
+     "pick_no": 95,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "11635",
+      "name": "Ladd McConkey",
+      "position": "WR",
+      "nfl_team": "LAC"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team 🏆🏆🏆",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 4,
+     "projected_price_est": 2,
+     "price_diff": 2,
+     "projected_points": 224.58,
+     "adp_half_ppr": 88
+    },
+    {
+     "pick_no": 96,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "5967",
+      "name": "Tony Pollard",
+      "position": "RB",
+      "nfl_team": "TEN"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Let's Go Brandon!",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 16,
+     "projected_price_est": 39,
+     "price_diff": -23,
+     "projected_points": 268.45,
+     "adp_half_ppr": 78.5
+    },
+    {
+     "pick_no": 97,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "1426",
+      "name": "DeAndre Hopkins",
+      "position": "WR",
+      "nfl_team": "TEN"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Let's Go Brandon!",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 3,
+     "projected_price_est": 1,
+     "price_diff": 2,
+     "projected_points": 175.05,
+     "adp_half_ppr": 101.6
+    },
+    {
+     "pick_no": 98,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "7588",
+      "name": "Javonte Williams",
+      "position": "RB",
+      "nfl_team": "DEN"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "I Shaheed My Pants",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 10,
+     "projected_price_est": 9,
+     "price_diff": 1,
+     "projected_points": 215.57,
+     "adp_half_ppr": 90.4
+    },
+    {
+     "pick_no": 99,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "7553",
+      "name": "Kyle Pitts",
+      "position": "TE",
+      "nfl_team": "ATL"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Trey, Zay, and Tyjae",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 2,
+     "projected_price_est": 5,
+     "price_diff": -3,
+     "projected_points": 159.2,
+     "adp_half_ppr": 61.3
+    },
+    {
+     "pick_no": 100,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "3294",
+      "name": "Dak Prescott",
+      "position": "QB",
+      "nfl_team": "DAL"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "I Shaheed My Pants",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 5,
+     "projected_price_est": 5,
+     "price_diff": 0,
+     "projected_points": 339.68,
+     "adp_half_ppr": 76.6
+    },
+    {
+     "pick_no": 101,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "9224",
+      "name": "Chase Brown",
+      "position": "RB",
+      "nfl_team": "CIN"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "Shannon Sharpe Mixtape",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 4,
+     "projected_price_est": 1,
+     "price_diff": 3,
+     "projected_points": 190.18,
+     "adp_half_ppr": 117
+    },
+    {
+     "pick_no": 102,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "8228",
+      "name": "Jaylen Warren",
+      "position": "RB",
+      "nfl_team": "PIT"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": null,
+      "display_name": "chov13",
+      "owner_id": "1126414981433495552"
+     },
+     "actual_price": 5,
+     "projected_price_est": 1,
+     "price_diff": 4,
+     "projected_points": 179.54,
+     "adp_half_ppr": 93.4
+    },
+    {
+     "pick_no": 103,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "5937",
+      "name": "Diontae Johnson",
+      "position": "WR",
+      "nfl_team": "CAR"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "Shannon Sharpe Mixtape",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 7,
+     "projected_price_est": 6,
+     "price_diff": 1,
+     "projected_points": 232.97,
+     "adp_half_ppr": 94.7
+    },
+    {
+     "pick_no": 104,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "5848",
+      "name": "Hollywood Brown",
+      "position": "WR",
+      "nfl_team": "KC"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "VinnieMac",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 37.04,
+     "adp_half_ppr": 92.1
+    },
+    {
+     "pick_no": 105,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "9756",
+      "name": "Jordan Addison",
+      "position": "WR",
+      "nfl_team": "MIN"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "Shannon Sharpe Mixtape",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 214.78,
+     "adp_half_ppr": 83.5
+    },
+    {
+     "pick_no": 106,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "8167",
+      "name": "Christian Watson",
+      "position": "WR",
+      "nfl_team": "GB"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "MostertbEtienne my DK",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 184.79,
+     "adp_half_ppr": 100.5
+    },
+    {
+     "pick_no": 107,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "11626",
+      "name": "Xavier Legette",
+      "position": "WR",
+      "nfl_team": "CAR"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": null,
+      "display_name": "chov13",
+      "owner_id": "1126414981433495552"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 148.25,
+     "adp_half_ppr": 149.2
+    },
+    {
+     "pick_no": 108,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "5022",
+      "name": "Dallas Goedert",
+      "position": "TE",
+      "nfl_team": "PHI"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 1,
+     "projected_price_est": 10,
+     "price_diff": -9,
+     "projected_points": 166.75,
+     "adp_half_ppr": 107.4
+    },
+    {
+     "pick_no": 109,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "8134",
+      "name": "Khalil Shakir",
+      "position": "WR",
+      "nfl_team": "BUF"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Let's Go Brandon!",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 4,
+     "projected_price_est": 1,
+     "price_diff": 3,
+     "projected_points": 179.59,
+     "adp_half_ppr": 125.9
+    },
+    {
+     "pick_no": 110,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "3164",
+      "name": "Ezekiel Elliott",
+      "position": "RB",
+      "nfl_team": "DAL"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Trey, Zay, and Tyjae",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 4,
+     "projected_price_est": 1,
+     "price_diff": 3,
+     "projected_points": 136.15,
+     "adp_half_ppr": 110.8
+    },
+    {
+     "pick_no": 111,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "11583",
+      "name": "Jonathon Brooks",
+      "position": "RB",
+      "nfl_team": "CAR"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team 🏆🏆🏆",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 6,
+     "projected_price_est": 1,
+     "price_diff": 5,
+     "projected_points": 145.45,
+     "adp_half_ppr": 90
+    },
+    {
+     "pick_no": 112,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "9488",
+      "name": "Jaxon Smith-Njigba",
+      "position": "WR",
+      "nfl_team": "SEA"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "I Shaheed My Pants",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 203.69,
+     "adp_half_ppr": 102.2
+    },
+    {
+     "pick_no": 113,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "9508",
+      "name": "Tyjae Spears",
+      "position": "RB",
+      "nfl_team": "TEN"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Trey, Zay, and Tyjae",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 4,
+     "projected_price_est": 1,
+     "price_diff": 3,
+     "projected_points": 158.64,
+     "adp_half_ppr": 108.4
+    },
+    {
+     "pick_no": 114,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "5248",
+      "name": "Gus Edwards",
+      "position": "RB",
+      "nfl_team": "LAC"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "MostertbEtienne my DK",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 4,
+     "projected_price_est": 1,
+     "price_diff": 3,
+     "projected_points": 194.43,
+     "adp_half_ppr": 104.3
+    },
+    {
+     "pick_no": 115,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "8148",
+      "name": "Jameson Williams",
+      "position": "WR",
+      "nfl_team": "DET"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "VinnieMac",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 1,
+     "projected_price_est": 6,
+     "price_diff": -5,
+     "projected_points": 231.47,
+     "adp_half_ppr": 111.1
+    },
+    {
+     "pick_no": 116,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "5045",
+      "name": "Courtland Sutton",
+      "position": "WR",
+      "nfl_team": "DEN"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Let's Ride!",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 1,
+     "projected_price_est": 4,
+     "price_diff": -3,
+     "projected_points": 229.02,
+     "adp_half_ppr": 114.2
+    },
+    {
+     "pick_no": 117,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "11589",
+      "name": "Trey Benson",
+      "position": "RB",
+      "nfl_team": "ARI"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Let's Ride!",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 144,
+     "adp_half_ppr": 109.7
+    },
+    {
+     "pick_no": 118,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "4068",
+      "name": "Mike Williams",
+      "position": "WR",
+      "nfl_team": "NYJ"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Let's Ride!",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 82.77,
+     "adp_half_ppr": 147
+    },
+    {
+     "pick_no": 119,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "6768",
+      "name": "Tua Tagovailoa",
+      "position": "QB",
+      "nfl_team": "MIA"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 316.44,
+     "adp_half_ppr": 106.1
+    },
+    {
+     "pick_no": 120,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "8121",
+      "name": "Romeo Doubs",
+      "position": "WR",
+      "nfl_team": "GB"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "I Shaheed My Pants",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 4,
+     "projected_price_est": 1,
+     "price_diff": 3,
+     "projected_points": 181.54,
+     "adp_half_ppr": 121.5
+    },
+    {
+     "pick_no": 121,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "11631",
+      "name": "Brian Thomas",
+      "position": "WR",
+      "nfl_team": "JAX"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team 🏆🏆🏆",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 1,
+     "projected_price_est": 9,
+     "price_diff": -8,
+     "projected_points": 236.72,
+     "adp_half_ppr": 104.5
+    },
+    {
+     "pick_no": 122,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "7021",
+      "name": "Rico Dowdle",
+      "position": "RB",
+      "nfl_team": "DAL"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "I Shaheed My Pants",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 157.94,
+     "adp_half_ppr": 146.6
+    },
+    {
+     "pick_no": 123,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "8132",
+      "name": "Tyler Allgeier",
+      "position": "RB",
+      "nfl_team": "ATL"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "Patrick Tanks the Gidbinn",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 155.69,
+     "adp_half_ppr": 156.9
+    },
+    {
+     "pick_no": 124,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "7670",
+      "name": "Joshua Palmer",
+      "position": "WR",
+      "nfl_team": "LAC"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Let's Ride!",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 141.4,
+     "adp_half_ppr": 145.4
+    },
+    {
+     "pick_no": 125,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "1689",
+      "name": "Adam Thielen",
+      "position": "WR",
+      "nfl_team": "CAR"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "Shannon Sharpe Mixtape",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 160,
+     "adp_half_ppr": 179.3
+    },
+    {
+     "pick_no": 126,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "6806",
+      "name": "J.K. Dobbins",
+      "position": "RB",
+      "nfl_team": "LAC"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "I Shaheed My Pants",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 201.43,
+     "adp_half_ppr": 131.8
+    },
+    {
+     "pick_no": 127,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "5947",
+      "name": "Jakobi Meyers",
+      "position": "WR",
+      "nfl_team": "LV"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Let's Ride!",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 206.28,
+     "adp_half_ppr": 144.5
+    },
+    {
+     "pick_no": 128,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "7594",
+      "name": "Chuba Hubbard",
+      "position": "RB",
+      "nfl_team": "CAR"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Bed Bath and Bijan",
+      "display_name": "Buttlips",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 1,
+     "projected_price_est": 20,
+     "price_diff": -19,
+     "projected_points": 235.57,
+     "adp_half_ppr": 130.6
+    },
+    {
+     "pick_no": 129,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "11604",
+      "name": "Brock Bowers",
+      "position": "TE",
+      "nfl_team": "LV"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": null,
+      "display_name": "chov13",
+      "owner_id": "1126414981433495552"
+     },
+     "actual_price": 1,
+     "projected_price_est": 30,
+     "price_diff": -29,
+     "projected_points": 203.09,
+     "adp_half_ppr": 83.2
+    },
+    {
+     "pick_no": 130,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "6828",
+      "name": "AJ Dillon",
+      "position": "RB",
+      "nfl_team": "GB"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 0,
+     "adp_half_ppr": 234
+    },
+    {
+     "pick_no": 131,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "8143",
+      "name": "Jerome Ford",
+      "position": "RB",
+      "nfl_team": "CLE"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Trey, Zay, and Tyjae",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 3,
+     "projected_price_est": 1,
+     "price_diff": 2,
+     "projected_points": 177.84,
+     "adp_half_ppr": 116
+    },
+    {
+     "pick_no": 132,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "11625",
+      "name": "Adonai Mitchell",
+      "position": "WR",
+      "nfl_team": "IND"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "I Shaheed My Pants",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 117.16,
+     "adp_half_ppr": 125.4
+    },
+    {
+     "pick_no": 133,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "2197",
+      "name": "Brandin Cooks",
+      "position": "WR",
+      "nfl_team": "DAL"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "Patrick Tanks the Gidbinn",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 148.3,
+     "adp_half_ppr": 158.7
+    },
+    {
+     "pick_no": 134,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "6797",
+      "name": "Justin Herbert",
+      "position": "QB",
+      "nfl_team": "LAC"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Trey, Zay, and Tyjae",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 313.49,
+     "adp_half_ppr": 123
+    },
+    {
+     "pick_no": 135,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "421",
+      "name": "Matthew Stafford",
+      "position": "QB",
+      "nfl_team": "LAR"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "Shannon Sharpe Mixtape",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 283.99,
+     "adp_half_ppr": 166.3
+    },
+    {
+     "pick_no": 136,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "9757",
+      "name": "Kendre Miller",
+      "position": "RB",
+      "nfl_team": "NO"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "VinnieMac",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 71.78,
+     "adp_half_ppr": 173.1
+    },
+    {
+     "pick_no": 137,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "9753",
+      "name": "Zach Charbonnet",
+      "position": "RB",
+      "nfl_team": "SEA"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Let's Ride!",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 130.75,
+     "adp_half_ppr": 128.8
+    },
+    {
+     "pick_no": 138,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "4381",
+      "name": "Taysom Hill",
+      "position": "TE",
+      "nfl_team": "NO"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Bed Bath and Bijan",
+      "display_name": "Buttlips",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 136.31,
+     "adp_half_ppr": 167.9
+    },
+    {
+     "pick_no": 139,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "8183",
+      "name": "Brock Purdy",
+      "position": "QB",
+      "nfl_team": "SF"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": null,
+      "display_name": "chov13",
+      "owner_id": "1126414981433495552"
+     },
+     "actual_price": 1,
+     "projected_price_est": 11,
+     "price_diff": -10,
+     "projected_points": 349.89,
+     "adp_half_ppr": 97.5
+    },
+    {
+     "pick_no": 140,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "8676",
+      "name": "Rashid Shaheed",
+      "position": "WR",
+      "nfl_team": "NO"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "I Shaheed My Pants",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 221.37,
+     "adp_half_ppr": 151.7
+    },
+    {
+     "pick_no": 141,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "9494",
+      "name": "Marvin Mims",
+      "position": "WR",
+      "nfl_team": "DEN"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "MostertbEtienne my DK",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 37.04,
+     "adp_half_ppr": 209.6
+    },
+    {
+     "pick_no": 142,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "11559",
+      "name": "Michael Penix",
+      "position": "QB",
+      "nfl_team": "ATL"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "Patrick Tanks the Gidbinn",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 49.65,
+     "adp_half_ppr": 260.7
+    },
+    {
+     "pick_no": 143,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "4066",
+      "name": "Evan Engram",
+      "position": "TE",
+      "nfl_team": "JAX"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "Shannon Sharpe Mixtape",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 1,
+     "projected_price_est": 9,
+     "price_diff": -8,
+     "projected_points": 165.2,
+     "adp_half_ppr": 71.6
+    },
+    {
+     "pick_no": 144,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "8110",
+      "name": "Jake Ferguson",
+      "position": "TE",
+      "nfl_team": "DAL"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Bed Bath and Bijan",
+      "display_name": "Buttlips",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 1,
+     "projected_price_est": 11,
+     "price_diff": -10,
+     "projected_points": 169.6,
+     "adp_half_ppr": 85.5
+    },
+    {
+     "pick_no": 145,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "11643",
+      "name": "Jaylen Wright",
+      "position": "RB",
+      "nfl_team": "MIA"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": null,
+      "display_name": "chov13",
+      "owner_id": "1126414981433495552"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 80.62,
+     "adp_half_ppr": 155.2
+    },
+    {
+     "pick_no": 146,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "5970",
+      "name": "Greg Dortch",
+      "position": "WR",
+      "nfl_team": "ARI"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 130.21,
+     "adp_half_ppr": 227.4
+    },
+    {
+     "pick_no": 147,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "6820",
+      "name": "Clyde Edwards-Helaire",
+      "position": "RB",
+      "nfl_team": "KC"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "MostertbEtienne my DK",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 63.73,
+     "adp_half_ppr": 221.5
+    },
+    {
+     "pick_no": 148,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "6943",
+      "name": "Gabe Davis",
+      "position": "WR",
+      "nfl_team": "JAX"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "Patrick Tanks the Gidbinn",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 165.5,
+     "adp_half_ppr": 157.8
+    },
+    {
+     "pick_no": 149,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "11439",
+      "name": "Jaleel McLaughlin",
+      "position": "RB",
+      "nfl_team": "DEN"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Bed Bath and Bijan",
+      "display_name": "Buttlips",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 154.29,
+     "adp_half_ppr": 175
+    },
+    {
+     "pick_no": 150,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "7567",
+      "name": "Kenneth Gainwell",
+      "position": "RB",
+      "nfl_team": "PHI"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 62.78,
+     "adp_half_ppr": 261.8
+    },
+    {
+     "pick_no": 151,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "11638",
+      "name": "Ricky Pearsall",
+      "position": "WR",
+      "nfl_team": "SF"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "MostertbEtienne my DK",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 78.38,
+     "adp_half_ppr": 176.4
+    },
+    {
+     "pick_no": 152,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "9497",
+      "name": "Jalin Hyatt",
+      "position": "WR",
+      "nfl_team": "NYG"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "Patrick Tanks the Gidbinn",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 75.37,
+     "adp_half_ppr": 269.2
+    },
+    {
+     "pick_no": 153,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "4033",
+      "name": "David Njoku",
+      "position": "TE",
+      "nfl_team": "CLE"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Bed Bath and Bijan",
+      "display_name": "Buttlips",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 1,
+     "projected_price_est": 11,
+     "price_diff": -10,
+     "projected_points": 168.6,
+     "adp_half_ppr": 87.6
+    },
+    {
+     "pick_no": 154,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "7090",
+      "name": "Darnell Mooney",
+      "position": "WR",
+      "nfl_team": "ATL"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "MostertbEtienne my DK",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 152.45,
+     "adp_half_ppr": 181.6
+    },
+    {
+     "pick_no": 155,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "8126",
+      "name": "Wan'Dale Robinson",
+      "position": "WR",
+      "nfl_team": "NYG"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "Patrick Tanks the Gidbinn",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 186.89,
+     "adp_half_ppr": 231
+    },
+    {
+     "pick_no": 156,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "7523",
+      "name": "Trevor Lawrence",
+      "position": "QB",
+      "nfl_team": "JAX"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Bed Bath and Bijan",
+      "display_name": "Buttlips",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 324.18,
+     "adp_half_ppr": 127
+    }
+   ]
+  },
+  {
+   "season": "2025",
+   "league_id": "1249069365328891904",
+   "draft_id": "1249069365337260032",
+   "draft_type": "auction",
+   "budget": 200,
+   "rounds": 13,
+   "teams": [
+    {
+     "roster_id": 1,
+     "team_name": "Bengals Bonanza",
+     "display_name": "pintoandmo",
+     "owner_id": "1123798455777845248"
+    },
+    {
+     "roster_id": 2,
+     "team_name": "Tommy Heist Tag Team",
+     "display_name": "nheist",
+     "owner_id": "1124025484959903744"
+    },
+    {
+     "roster_id": 3,
+     "team_name": "What Can Brown Do To You?",
+     "display_name": "Dtmorris",
+     "owner_id": "1124049146102644736"
+    },
+    {
+     "roster_id": 4,
+     "team_name": "Jeantly Lick My Balls",
+     "display_name": "nicf8814",
+     "owner_id": "1124166707834085376"
+    },
+    {
+     "roster_id": 5,
+     "team_name": "Jahmyr Comes the Boom",
+     "display_name": "tmattson88",
+     "owner_id": "1124375851493154816"
+    },
+    {
+     "roster_id": 6,
+     "team_name": "Hold muh DK",
+     "display_name": "tcarlson8",
+     "owner_id": "431646563530448896"
+    },
+    {
+     "roster_id": 7,
+     "team_name": "Shakyir Purdy Tets",
+     "display_name": "coopkid87",
+     "owner_id": "1126014609837740032"
+    },
+    {
+     "roster_id": 8,
+     "team_name": "Big Dix Energy",
+     "display_name": "grantgosselin",
+     "owner_id": "1126016694977265664"
+    },
+    {
+     "roster_id": 9,
+     "team_name": "The Nic(k)inator",
+     "display_name": "FantasyWoes",
+     "owner_id": "473333590688526336"
+    },
+    {
+     "roster_id": 10,
+     "team_name": "LaPorta Potty",
+     "display_name": "vinniemac830",
+     "owner_id": "1005334070454259712"
+    },
+    {
+     "roster_id": 11,
+     "team_name": "Brockback Mountain",
+     "display_name": "BaryGusey",
+     "owner_id": "605902199284912128"
+    },
+    {
+     "roster_id": 12,
+     "team_name": null,
+     "display_name": "braejones12",
+     "owner_id": "1126361682147778560"
+    }
+   ],
+   "picks": [
+    {
+     "pick_no": 1,
+     "round": 1,
+     "keeper": false,
+     "player": {
+      "player_id": "5859",
+      "name": "A.J. Brown",
+      "position": "WR",
+      "nfl_team": "PHI"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "What Can Brown Do To You?",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 50,
+     "projected_price_est": 30,
+     "price_diff": 20,
+     "projected_points": 273.16,
+     "adp_half_ppr": 18.7
+    },
+    {
+     "pick_no": 2,
+     "round": 1,
+     "keeper": true,
+     "player": {
+      "player_id": "11560",
+      "name": "Caleb Williams",
+      "position": "QB",
+      "nfl_team": "CHI"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 13,
+     "projected_price_est": 3,
+     "price_diff": 10,
+     "projected_points": 335.22,
+     "adp_half_ppr": 143.9
+    },
+    {
+     "pick_no": 3,
+     "round": 1,
+     "keeper": false,
+     "player": {
+      "player_id": "12495",
+      "name": "Ollie Gordon",
+      "position": "RB",
+      "nfl_team": "MIA"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "What Can Brown Do To You?",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 3,
+     "projected_price_est": 1,
+     "price_diff": 2,
+     "projected_points": 94.12,
+     "adp_half_ppr": 138.7
+    },
+    {
+     "pick_no": 4,
+     "round": 1,
+     "keeper": true,
+     "player": {
+      "player_id": "11632",
+      "name": "Malik Nabers",
+      "position": "WR",
+      "nfl_team": "NYG"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 39,
+     "projected_price_est": 39,
+     "price_diff": 0,
+     "projected_points": 293.85,
+     "adp_half_ppr": 11.5
+    },
+    {
+     "pick_no": 5,
+     "round": 1,
+     "keeper": true,
+     "player": {
+      "player_id": "11604",
+      "name": "Brock Bowers",
+      "position": "TE",
+      "nfl_team": "LV"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": "Brockback Mountain",
+      "display_name": "BaryGusey",
+      "owner_id": "605902199284912128"
+     },
+     "actual_price": 11,
+     "projected_price_est": 46,
+     "price_diff": -35,
+     "projected_points": 254.12,
+     "adp_half_ppr": 22.6
+    },
+    {
+     "pick_no": 6,
+     "round": 1,
+     "keeper": true,
+     "player": {
+      "player_id": "9226",
+      "name": "De'Von Achane",
+      "position": "RB",
+      "nfl_team": "MIA"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "What Can Brown Do To You?",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 27,
+     "projected_price_est": 51,
+     "price_diff": -24,
+     "projected_points": 305.24,
+     "adp_half_ppr": 15.1
+    },
+    {
+     "pick_no": 7,
+     "round": 1,
+     "keeper": true,
+     "player": {
+      "player_id": "11584",
+      "name": "Bucky Irving",
+      "position": "RB",
+      "nfl_team": "TB"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "Jeantly Lick My Balls",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 30,
+     "projected_price_est": 48,
+     "price_diff": -18,
+     "projected_points": 297.04,
+     "adp_half_ppr": 23.3
+    },
+    {
+     "pick_no": 8,
+     "round": 1,
+     "keeper": true,
+     "player": {
+      "player_id": "11631",
+      "name": "Brian Thomas",
+      "position": "WR",
+      "nfl_team": "JAX"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "Jeantly Lick My Balls",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 11,
+     "projected_price_est": 38,
+     "price_diff": -27,
+     "projected_points": 291.6,
+     "adp_half_ppr": 20.2
+    },
+    {
+     "pick_no": 9,
+     "round": 1,
+     "keeper": true,
+     "player": {
+      "player_id": "7594",
+      "name": "Chuba Hubbard",
+      "position": "RB",
+      "nfl_team": "CAR"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "Jeantly Lick My Balls",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 11,
+     "projected_price_est": 33,
+     "price_diff": -22,
+     "projected_points": 262.6,
+     "adp_half_ppr": 44
+    },
+    {
+     "pick_no": 10,
+     "round": 1,
+     "keeper": true,
+     "player": {
+      "player_id": "9488",
+      "name": "Jaxon Smith-Njigba",
+      "position": "WR",
+      "nfl_team": "SEA"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "Jeantly Lick My Balls",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 12,
+     "projected_price_est": 15,
+     "price_diff": -3,
+     "projected_points": 236.92,
+     "adp_half_ppr": 31.7
+    },
+    {
+     "pick_no": 11,
+     "round": 1,
+     "keeper": true,
+     "player": {
+      "player_id": "8136",
+      "name": "Rachaad White",
+      "position": "RB",
+      "nfl_team": "TB"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "The Nic(k)inator",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 36,
+     "projected_price_est": 1,
+     "price_diff": 35,
+     "projected_points": 121.16,
+     "adp_half_ppr": 155.6
+    },
+    {
+     "pick_no": 12,
+     "round": 1,
+     "keeper": true,
+     "player": {
+      "player_id": "8112",
+      "name": "Drake London",
+      "position": "WR",
+      "nfl_team": "ATL"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "The Nic(k)inator",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 27,
+     "projected_price_est": 36,
+     "price_diff": -9,
+     "projected_points": 287.51,
+     "adp_half_ppr": 17.4
+    },
+    {
+     "pick_no": 13,
+     "round": 2,
+     "keeper": true,
+     "player": {
+      "player_id": "9224",
+      "name": "Chase Brown",
+      "position": "RB",
+      "nfl_team": "CIN"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "The Nic(k)inator",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 14,
+     "projected_price_est": 47,
+     "price_diff": -33,
+     "projected_points": 295.59,
+     "adp_half_ppr": 25.9
+    },
+    {
+     "pick_no": 14,
+     "round": 2,
+     "keeper": true,
+     "player": {
+      "player_id": "6770",
+      "name": "Joe Burrow",
+      "position": "QB",
+      "nfl_team": "CIN"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Bengals Bonanza",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 15,
+     "projected_price_est": 19,
+     "price_diff": -4,
+     "projected_points": 374.29,
+     "adp_half_ppr": 40
+    },
+    {
+     "pick_no": 15,
+     "round": 2,
+     "keeper": true,
+     "player": {
+      "player_id": "8146",
+      "name": "Garrett Wilson",
+      "position": "WR",
+      "nfl_team": "NYJ"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Bengals Bonanza",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 37,
+     "projected_price_est": 22,
+     "price_diff": 15,
+     "projected_points": 253.21,
+     "adp_half_ppr": 43.1
+    },
+    {
+     "pick_no": 16,
+     "round": 2,
+     "keeper": true,
+     "player": {
+      "player_id": "9493",
+      "name": "Puka Nacua",
+      "position": "WR",
+      "nfl_team": "LAR"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Jahmyr Comes the Boom",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 46,
+     "projected_price_est": 39,
+     "price_diff": 7,
+     "projected_points": 293.1,
+     "adp_half_ppr": 12.8
+    },
+    {
+     "pick_no": 17,
+     "round": 2,
+     "keeper": true,
+     "player": {
+      "player_id": "5045",
+      "name": "Courtland Sutton",
+      "position": "WR",
+      "nfl_team": "DEN"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Big Dix Energy",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 11,
+     "projected_price_est": 13,
+     "price_diff": -2,
+     "projected_points": 232.62,
+     "adp_half_ppr": 50.6
+    },
+    {
+     "pick_no": 18,
+     "round": 2,
+     "keeper": true,
+     "player": {
+      "player_id": "9753",
+      "name": "Zach Charbonnet",
+      "position": "RB",
+      "nfl_team": "SEA"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Big Dix Energy",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 11,
+     "projected_price_est": 1,
+     "price_diff": 10,
+     "projected_points": 186.33,
+     "adp_half_ppr": 98.8
+    },
+    {
+     "pick_no": 19,
+     "round": 2,
+     "keeper": true,
+     "player": {
+      "player_id": "8205",
+      "name": "Isiah Pacheco",
+      "position": "RB",
+      "nfl_team": "KC"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Hold muh DK",
+      "display_name": "tcarlson8",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 43,
+     "projected_price_est": 20,
+     "price_diff": 23,
+     "projected_points": 230.62,
+     "adp_half_ppr": 55
+    },
+    {
+     "pick_no": 20,
+     "round": 2,
+     "keeper": true,
+     "player": {
+      "player_id": "7569",
+      "name": "Nico Collins",
+      "position": "WR",
+      "nfl_team": "HOU"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "LaPorta Potty",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 27,
+     "projected_price_est": 39,
+     "price_diff": -12,
+     "projected_points": 293.55,
+     "adp_half_ppr": 14.5
+    },
+    {
+     "pick_no": 21,
+     "round": 2,
+     "keeper": true,
+     "player": {
+      "player_id": "11566",
+      "name": "Jayden Daniels",
+      "position": "QB",
+      "nfl_team": "WAS"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 16,
+     "projected_price_est": 39,
+     "price_diff": -23,
+     "projected_points": 420.14,
+     "adp_half_ppr": 35.6
+    },
+    {
+     "pick_no": 22,
+     "round": 2,
+     "keeper": true,
+     "player": {
+      "player_id": "11635",
+      "name": "Ladd McConkey",
+      "position": "WR",
+      "nfl_team": "LAC"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 14,
+     "projected_price_est": 20,
+     "price_diff": -6,
+     "projected_points": 250.22,
+     "adp_half_ppr": 26.6
+    },
+    {
+     "pick_no": 23,
+     "round": 2,
+     "keeper": true,
+     "player": {
+      "player_id": "7547",
+      "name": "Amon-Ra St. Brown",
+      "position": "WR",
+      "nfl_team": "DET"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 46,
+     "projected_price_est": 34,
+     "price_diff": 12,
+     "projected_points": 283.21,
+     "adp_half_ppr": 9.5
+    },
+    {
+     "pick_no": 24,
+     "round": 2,
+     "keeper": false,
+     "player": {
+      "player_id": "9221",
+      "name": "Jahmyr Gibbs",
+      "position": "RB",
+      "nfl_team": "DET"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Jahmyr Comes the Boom",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 70,
+     "projected_price_est": 74,
+     "price_diff": -4,
+     "projected_points": 357.83,
+     "adp_half_ppr": 4.3
+    },
+    {
+     "pick_no": 25,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "7564",
+      "name": "Ja'Marr Chase",
+      "position": "WR",
+      "nfl_team": "CIN"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Bengals Bonanza",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 89,
+     "projected_price_est": 61,
+     "price_diff": 28,
+     "projected_points": 346.34,
+     "adp_half_ppr": 1.4
+    },
+    {
+     "pick_no": 26,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "4046",
+      "name": "Patrick Mahomes",
+      "position": "QB",
+      "nfl_team": "KC"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "What Can Brown Do To You?",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 20,
+     "projected_price_est": 19,
+     "price_diff": 1,
+     "projected_points": 373.62,
+     "adp_half_ppr": 53.3
+    },
+    {
+     "pick_no": 27,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "4866",
+      "name": "Saquon Barkley",
+      "position": "RB",
+      "nfl_team": "PHI"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "LaPorta Potty",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 75,
+     "projected_price_est": 82,
+     "price_diff": -7,
+     "projected_points": 377.61,
+     "adp_half_ppr": 3.6
+    },
+    {
+     "pick_no": 28,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "3198",
+      "name": "Derrick Henry",
+      "position": "RB",
+      "nfl_team": "BAL"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "Shakyir Purdy Tets",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 68,
+     "projected_price_est": 69,
+     "price_diff": -1,
+     "projected_points": 346.17,
+     "adp_half_ppr": 7.9
+    },
+    {
+     "pick_no": 29,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "9509",
+      "name": "Bijan Robinson",
+      "position": "RB",
+      "nfl_team": "ATL"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "Jeantly Lick My Balls",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 82,
+     "projected_price_est": 78,
+     "price_diff": 4,
+     "projected_points": 368.02,
+     "adp_half_ppr": 2.5
+    },
+    {
+     "pick_no": 30,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "6794",
+      "name": "Justin Jefferson",
+      "position": "WR",
+      "nfl_team": "MIN"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Big Dix Energy",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 68,
+     "projected_price_est": 49,
+     "price_diff": 19,
+     "projected_points": 316.84,
+     "adp_half_ppr": 5
+    },
+    {
+     "pick_no": 31,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "4035",
+      "name": "Alvin Kamara",
+      "position": "RB",
+      "nfl_team": "NO"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "What Can Brown Do To You?",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 26,
+     "projected_price_est": 34,
+     "price_diff": -8,
+     "projected_points": 264.35,
+     "adp_half_ppr": 38.6
+    },
+    {
+     "pick_no": 32,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "6786",
+      "name": "CeeDee Lamb",
+      "position": "WR",
+      "nfl_team": "DAL"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 72,
+     "projected_price_est": 50,
+     "price_diff": 22,
+     "projected_points": 318.64,
+     "adp_half_ppr": 6.1
+    },
+    {
+     "pick_no": 33,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "12527",
+      "name": "Ashton Jeanty",
+      "position": "RB",
+      "nfl_team": "LV"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "What Can Brown Do To You?",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 57,
+     "projected_price_est": 65,
+     "price_diff": -8,
+     "projected_points": 338.58,
+     "adp_half_ppr": 10.2
+    },
+    {
+     "pick_no": 34,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "8155",
+      "name": "Breece Hall",
+      "position": "RB",
+      "nfl_team": "NYJ"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "LaPorta Potty",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 29,
+     "projected_price_est": 32,
+     "price_diff": -3,
+     "projected_points": 258.6,
+     "adp_half_ppr": 34.8
+    },
+    {
+     "pick_no": 35,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "10229",
+      "name": "Rashee Rice",
+      "position": "WR",
+      "nfl_team": "KC"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Hold muh DK",
+      "display_name": "tcarlson8",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 17,
+     "projected_price_est": 2,
+     "price_diff": 15,
+     "projected_points": 206.89,
+     "adp_half_ppr": 62
+    },
+    {
+     "pick_no": 36,
+     "round": 3,
+     "keeper": false,
+     "player": {
+      "player_id": "5846",
+      "name": "DK Metcalf",
+      "position": "WR",
+      "nfl_team": "PIT"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Hold muh DK",
+      "display_name": "tcarlson8",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 21,
+     "projected_price_est": 21,
+     "price_diff": 0,
+     "projected_points": 251.96,
+     "adp_half_ppr": 46.8
+    },
+    {
+     "pick_no": 37,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "4034",
+      "name": "Christian McCaffrey",
+      "position": "RB",
+      "nfl_team": "SF"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": "Brockback Mountain",
+      "display_name": "BaryGusey",
+      "owner_id": "605902199284912128"
+     },
+     "actual_price": 56,
+     "projected_price_est": 57,
+     "price_diff": -1,
+     "projected_points": 317.89,
+     "adp_half_ppr": 7.3
+    },
+    {
+     "pick_no": 38,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "4881",
+      "name": "Lamar Jackson",
+      "position": "QB",
+      "nfl_team": "BAL"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": "Brockback Mountain",
+      "display_name": "BaryGusey",
+      "owner_id": "605902199284912128"
+     },
+     "actual_price": 42,
+     "projected_price_est": 42,
+     "price_diff": 0,
+     "projected_points": 428.29,
+     "adp_half_ppr": 21.1
+    },
+    {
+     "pick_no": 39,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "5850",
+      "name": "Josh Jacobs",
+      "position": "RB",
+      "nfl_team": "GB"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "Shakyir Purdy Tets",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 54,
+     "projected_price_est": 57,
+     "price_diff": -3,
+     "projected_points": 317.84,
+     "adp_half_ppr": 13.4
+    },
+    {
+     "pick_no": 40,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "6783",
+      "name": "Jerry Jeudy",
+      "position": "WR",
+      "nfl_team": "CLE"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "LaPorta Potty",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 11,
+     "projected_price_est": 11,
+     "price_diff": 0,
+     "projected_points": 228.47,
+     "adp_half_ppr": 75.2
+    },
+    {
+     "pick_no": 41,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "8150",
+      "name": "Kyren Williams",
+      "position": "RB",
+      "nfl_team": "LAR"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": "Brockback Mountain",
+      "display_name": "BaryGusey",
+      "owner_id": "605902199284912128"
+     },
+     "actual_price": 32,
+     "projected_price_est": 46,
+     "price_diff": -14,
+     "projected_points": 292.05,
+     "adp_half_ppr": 23.8
+    },
+    {
+     "pick_no": 42,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "4984",
+      "name": "Josh Allen",
+      "position": "QB",
+      "nfl_team": "BUF"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "Jeantly Lick My Balls",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 41,
+     "projected_price_est": 33,
+     "price_diff": 8,
+     "projected_points": 407.36,
+     "adp_half_ppr": 19.2
+    },
+    {
+     "pick_no": 43,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "3321",
+      "name": "Tyreek Hill",
+      "position": "WR",
+      "nfl_team": "MIA"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Jahmyr Comes the Boom",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 31,
+     "projected_price_est": 32,
+     "price_diff": -1,
+     "projected_points": 276.76,
+     "adp_half_ppr": 28.7
+    },
+    {
+     "pick_no": 44,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "6813",
+      "name": "Jonathan Taylor",
+      "position": "RB",
+      "nfl_team": "IND"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "The Nic(k)inator",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 48,
+     "projected_price_est": 56,
+     "price_diff": -8,
+     "projected_points": 317.13,
+     "adp_half_ppr": 15.7
+    },
+    {
+     "pick_no": 45,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "11628",
+      "name": "Marvin Harrison",
+      "position": "WR",
+      "nfl_team": "ARI"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 29,
+     "projected_price_est": 21,
+     "price_diff": 8,
+     "projected_points": 251.12,
+     "adp_half_ppr": 36.4
+    },
+    {
+     "pick_no": 46,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "8130",
+      "name": "Trey McBride",
+      "position": "TE",
+      "nfl_team": "ARI"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Jahmyr Comes the Boom",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 14,
+     "projected_price_est": 43,
+     "price_diff": -29,
+     "projected_points": 248.02,
+     "adp_half_ppr": 29.5
+    },
+    {
+     "pick_no": 47,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "12530",
+      "name": "Travis Hunter",
+      "position": "WR",
+      "nfl_team": "JAX"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 9,
+     "projected_price_est": 1,
+     "price_diff": 8,
+     "projected_points": 209.43,
+     "adp_half_ppr": 70.3
+    },
+    {
+     "pick_no": 48,
+     "round": 4,
+     "keeper": false,
+     "player": {
+      "player_id": "12535",
+      "name": "Isaac TeSlaa",
+      "position": "WR",
+      "nfl_team": "DET"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "The Nic(k)inator",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 3,
+     "projected_price_est": 1,
+     "price_diff": 2,
+     "projected_points": 109.46,
+     "adp_half_ppr": 177
+    },
+    {
+     "pick_no": 49,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "8138",
+      "name": "James Cook",
+      "position": "RB",
+      "nfl_team": "BUF"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Big Dix Energy",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 36,
+     "projected_price_est": 36,
+     "price_diff": 0,
+     "projected_points": 268.2,
+     "adp_half_ppr": 27.2
+    },
+    {
+     "pick_no": 50,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "12489",
+      "name": "RJ Harvey",
+      "position": "RB",
+      "nfl_team": "DEN"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 21,
+     "projected_price_est": 22,
+     "price_diff": -1,
+     "projected_points": 235.92,
+     "adp_half_ppr": 54.3
+    },
+    {
+     "pick_no": 51,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "6904",
+      "name": "Jalen Hurts",
+      "position": "QB",
+      "nfl_team": "PHI"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "LaPorta Potty",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 27,
+     "projected_price_est": 32,
+     "price_diff": -5,
+     "projected_points": 403.96,
+     "adp_half_ppr": 33.9
+    },
+    {
+     "pick_no": 52,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "9758",
+      "name": "C.J. Stroud",
+      "position": "QB",
+      "nfl_team": "HOU"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 3,
+     "projected_price_est": 1,
+     "price_diff": 2,
+     "projected_points": 325.14,
+     "adp_half_ppr": 126.3
+    },
+    {
+     "pick_no": 53,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "6801",
+      "name": "Tee Higgins",
+      "position": "WR",
+      "nfl_team": "CIN"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Bengals Bonanza",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 30,
+     "projected_price_est": 19,
+     "price_diff": 11,
+     "projected_points": 245.97,
+     "adp_half_ppr": 31.2
+    },
+    {
+     "pick_no": 54,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "12507",
+      "name": "Omarion Hampton",
+      "position": "RB",
+      "nfl_team": "LAC"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 42,
+     "projected_price_est": 43,
+     "price_diff": -1,
+     "projected_points": 284.75,
+     "adp_half_ppr": 30.5
+    },
+    {
+     "pick_no": 55,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "5927",
+      "name": "Terry McLaurin",
+      "position": "WR",
+      "nfl_team": "WAS"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "Shakyir Purdy Tets",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 20,
+     "projected_price_est": 21,
+     "price_diff": -1,
+     "projected_points": 250.97,
+     "adp_half_ppr": 42.9
+    },
+    {
+     "pick_no": 56,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "4217",
+      "name": "George Kittle",
+      "position": "TE",
+      "nfl_team": "SF"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Hold muh DK",
+      "display_name": "tcarlson8",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 10,
+     "projected_price_est": 32,
+     "price_diff": -22,
+     "projected_points": 220.93,
+     "adp_half_ppr": 37.7
+    },
+    {
+     "pick_no": 57,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "4137",
+      "name": "James Conner",
+      "position": "RB",
+      "nfl_team": "ARI"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 26,
+     "projected_price_est": 35,
+     "price_diff": -9,
+     "projected_points": 266.16,
+     "adp_half_ppr": 47.9
+    },
+    {
+     "pick_no": 58,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "2133",
+      "name": "Davante Adams",
+      "position": "WR",
+      "nfl_team": "LAR"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Jahmyr Comes the Boom",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 15,
+     "projected_price_est": 18,
+     "price_diff": -3,
+     "projected_points": 244.92,
+     "adp_half_ppr": 45
+    },
+    {
+     "pick_no": 59,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "12501",
+      "name": "Matthew Golden",
+      "position": "WR",
+      "nfl_team": "GB"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Hold muh DK",
+      "display_name": "tcarlson8",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 11,
+     "projected_price_est": 4,
+     "price_diff": 7,
+     "projected_points": 212.28,
+     "adp_half_ppr": 86.4
+    },
+    {
+     "pick_no": 60,
+     "round": 5,
+     "keeper": false,
+     "player": {
+      "player_id": "5967",
+      "name": "Tony Pollard",
+      "position": "RB",
+      "nfl_team": "TEN"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Hold muh DK",
+      "display_name": "tcarlson8",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 14,
+     "projected_price_est": 30,
+     "price_diff": -16,
+     "projected_points": 253.9,
+     "adp_half_ppr": 65.7
+    },
+    {
+     "pick_no": 61,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "4983",
+      "name": "DJ Moore",
+      "position": "WR",
+      "nfl_team": "CHI"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "LaPorta Potty",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 15,
+     "projected_price_est": 12,
+     "price_diff": 3,
+     "projected_points": 231.17,
+     "adp_half_ppr": 51.5
+    },
+    {
+     "pick_no": 62,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "9997",
+      "name": "Zay Flowers",
+      "position": "WR",
+      "nfl_team": "BAL"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": "Brockback Mountain",
+      "display_name": "BaryGusey",
+      "owner_id": "605902199284912128"
+     },
+     "actual_price": 14,
+     "projected_price_est": 2,
+     "price_diff": 12,
+     "projected_points": 207.23,
+     "adp_half_ppr": 60.4
+    },
+    {
+     "pick_no": 63,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "7526",
+      "name": "Jaylen Waddle",
+      "position": "WR",
+      "nfl_team": "MIA"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": "Brockback Mountain",
+      "display_name": "BaryGusey",
+      "owner_id": "605902199284912128"
+     },
+     "actual_price": 8,
+     "projected_price_est": 8,
+     "price_diff": 0,
+     "projected_points": 221.87,
+     "adp_half_ppr": 71.9
+    },
+    {
+     "pick_no": 64,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "7588",
+      "name": "Javonte Williams",
+      "position": "RB",
+      "nfl_team": "DAL"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Hold muh DK",
+      "display_name": "tcarlson8",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 163.89,
+     "adp_half_ppr": 103.3
+    },
+    {
+     "pick_no": 65,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "2216",
+      "name": "Mike Evans",
+      "position": "WR",
+      "nfl_team": "TB"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "The Nic(k)inator",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 28,
+     "projected_price_est": 19,
+     "price_diff": 9,
+     "projected_points": 246.07,
+     "adp_half_ppr": 39.3
+    },
+    {
+     "pick_no": 66,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "12529",
+      "name": "TreVeyon Henderson",
+      "position": "RB",
+      "nfl_team": "NE"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Hold muh DK",
+      "display_name": "tcarlson8",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 29,
+     "projected_price_est": 23,
+     "price_diff": 6,
+     "projected_points": 239.21,
+     "adp_half_ppr": 47.7
+    },
+    {
+     "pick_no": 67,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "7525",
+      "name": "DeVonta Smith",
+      "position": "WR",
+      "nfl_team": "PHI"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "Shakyir Purdy Tets",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 12,
+     "projected_price_est": 7,
+     "price_diff": 5,
+     "projected_points": 217.98,
+     "adp_half_ppr": 57.8
+    },
+    {
+     "pick_no": 68,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "8151",
+      "name": "Kenneth Walker",
+      "position": "RB",
+      "nfl_team": "SEA"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Big Dix Energy",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 30,
+     "projected_price_est": 16,
+     "price_diff": 14,
+     "projected_points": 221.17,
+     "adp_half_ppr": 41.5
+    },
+    {
+     "pick_no": 69,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "6790",
+      "name": "D'Andre Swift",
+      "position": "RB",
+      "nfl_team": "CHI"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Bengals Bonanza",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 15,
+     "projected_price_est": 17,
+     "price_diff": -2,
+     "projected_points": 224.02,
+     "adp_half_ppr": 63.3
+    },
+    {
+     "pick_no": 70,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "11620",
+      "name": "Rome Odunze",
+      "position": "WR",
+      "nfl_team": "CHI"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "Jeantly Lick My Balls",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 7,
+     "projected_price_est": 1,
+     "price_diff": 6,
+     "projected_points": 202.58,
+     "adp_half_ppr": 77.9
+    },
+    {
+     "pick_no": 71,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "12514",
+      "name": "Emeka Egbuka",
+      "position": "WR",
+      "nfl_team": "TB"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "What Can Brown Do To You?",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 10,
+     "projected_price_est": 1,
+     "price_diff": 9,
+     "projected_points": 202.73,
+     "adp_half_ppr": 85.3
+    },
+    {
+     "pick_no": 72,
+     "round": 6,
+     "keeper": false,
+     "player": {
+      "player_id": "11624",
+      "name": "Xavier Worthy",
+      "position": "WR",
+      "nfl_team": "KC"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "The Nic(k)inator",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 17,
+     "projected_price_est": 8,
+     "price_diff": 9,
+     "projected_points": 219.73,
+     "adp_half_ppr": 58
+    },
+    {
+     "pick_no": 73,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "10859",
+      "name": "Sam LaPorta",
+      "position": "TE",
+      "nfl_team": "DET"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "LaPorta Potty",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 3,
+     "projected_price_est": 17,
+     "price_diff": -14,
+     "projected_points": 185.54,
+     "adp_half_ppr": 49
+    },
+    {
+     "pick_no": 74,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "5849",
+      "name": "Kyler Murray",
+      "position": "QB",
+      "nfl_team": "ARI"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Big Dix Energy",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 2,
+     "projected_price_est": 16,
+     "price_diff": -14,
+     "projected_points": 367.26,
+     "adp_half_ppr": 94.7
+    },
+    {
+     "pick_no": 75,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "12526",
+      "name": "Tetairoa McMillan",
+      "position": "WR",
+      "nfl_team": "CAR"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "Shakyir Purdy Tets",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 15,
+     "projected_price_est": 17,
+     "price_diff": -2,
+     "projected_points": 242.72,
+     "adp_half_ppr": 55.7
+    },
+    {
+     "pick_no": 76,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "5892",
+      "name": "David Montgomery",
+      "position": "RB",
+      "nfl_team": "DET"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Big Dix Energy",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 11,
+     "projected_price_est": 14,
+     "price_diff": -3,
+     "projected_points": 218.07,
+     "adp_half_ppr": 52.8
+    },
+    {
+     "pick_no": 77,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "8148",
+      "name": "Jameson Williams",
+      "position": "WR",
+      "nfl_team": "DET"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Big Dix Energy",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 16,
+     "projected_price_est": 17,
+     "price_diff": -1,
+     "projected_points": 241.92,
+     "adp_half_ppr": 59.9
+    },
+    {
+     "pick_no": 78,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "5872",
+      "name": "Deebo Samuel",
+      "position": "WR",
+      "nfl_team": "WAS"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Hold muh DK",
+      "display_name": "tcarlson8",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 7,
+     "projected_price_est": 5,
+     "price_diff": 2,
+     "projected_points": 213.83,
+     "adp_half_ppr": 79.4
+    },
+    {
+     "pick_no": 79,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "8137",
+      "name": "George Pickens",
+      "position": "WR",
+      "nfl_team": "DAL"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": "Brockback Mountain",
+      "display_name": "BaryGusey",
+      "owner_id": "605902199284912128"
+     },
+     "actual_price": 14,
+     "projected_price_est": 14,
+     "price_diff": 0,
+     "projected_points": 234.02,
+     "adp_half_ppr": 61.1
+    },
+    {
+     "pick_no": 80,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "4199",
+      "name": "Aaron Jones",
+      "position": "RB",
+      "nfl_team": "MIN"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": "Brockback Mountain",
+      "display_name": "BaryGusey",
+      "owner_id": "605902199284912128"
+     },
+     "actual_price": 11,
+     "projected_price_est": 12,
+     "price_diff": -1,
+     "projected_points": 212.22,
+     "adp_half_ppr": 67.1
+    },
+    {
+     "pick_no": 81,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "7543",
+      "name": "Travis Etienne",
+      "position": "RB",
+      "nfl_team": "JAX"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Jahmyr Comes the Boom",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 5,
+     "projected_price_est": 1,
+     "price_diff": 4,
+     "projected_points": 184.23,
+     "adp_half_ppr": 84.8
+    },
+    {
+     "pick_no": 82,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "1466",
+      "name": "Travis Kelce",
+      "position": "TE",
+      "nfl_team": "KC"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 3,
+     "projected_price_est": 12,
+     "price_diff": -9,
+     "projected_points": 174.3,
+     "adp_half_ppr": 63.9
+    },
+    {
+     "pick_no": 83,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "6803",
+      "name": "Brandon Aiyuk",
+      "position": "WR",
+      "nfl_team": "SF"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Jahmyr Comes the Boom",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 138.45,
+     "adp_half_ppr": 131.9
+    },
+    {
+     "pick_no": 84,
+     "round": 7,
+     "keeper": false,
+     "player": {
+      "player_id": "11576",
+      "name": "Braelon Allen",
+      "position": "RB",
+      "nfl_team": "NYJ"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Jahmyr Comes the Boom",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 3,
+     "projected_price_est": 1,
+     "price_diff": 2,
+     "projected_points": 101.67,
+     "adp_half_ppr": 127.9
+    },
+    {
+     "pick_no": 85,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "12504",
+      "name": "Kaleb Johnson",
+      "position": "RB",
+      "nfl_team": "PIT"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Hold muh DK",
+      "display_name": "tcarlson8",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 12,
+     "projected_price_est": 13,
+     "price_diff": -1,
+     "projected_points": 214.17,
+     "adp_half_ppr": 73.6
+    },
+    {
+     "pick_no": 86,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "4037",
+      "name": "Chris Godwin",
+      "position": "WR",
+      "nfl_team": "TB"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "LaPorta Potty",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 4,
+     "projected_price_est": 1,
+     "price_diff": 3,
+     "projected_points": 170.89,
+     "adp_half_ppr": 105.4
+    },
+    {
+     "pick_no": 87,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "4892",
+      "name": "Baker Mayfield",
+      "position": "QB",
+      "nfl_team": "TB"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "The Nic(k)inator",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 3,
+     "projected_price_est": 10,
+     "price_diff": -7,
+     "projected_points": 352.73,
+     "adp_half_ppr": 68.5
+    },
+    {
+     "pick_no": 88,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "8183",
+      "name": "Brock Purdy",
+      "position": "QB",
+      "nfl_team": "SF"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "Shakyir Purdy Tets",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 2,
+     "projected_price_est": 11,
+     "price_diff": -9,
+     "projected_points": 354.93,
+     "adp_half_ppr": 114.5
+    },
+    {
+     "pick_no": 89,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "12512",
+      "name": "Quinshon Judkins",
+      "position": "RB",
+      "nfl_team": "CLE"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Big Dix Energy",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 3,
+     "projected_price_est": 1,
+     "price_diff": 2,
+     "projected_points": 139.05,
+     "adp_half_ppr": 82.7
+    },
+    {
+     "pick_no": 90,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "4981",
+      "name": "Calvin Ridley",
+      "position": "WR",
+      "nfl_team": "TEN"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Hold muh DK",
+      "display_name": "tcarlson8",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 19,
+     "projected_price_est": 12,
+     "price_diff": 7,
+     "projected_points": 230.02,
+     "adp_half_ppr": 69.1
+    },
+    {
+     "pick_no": 91,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "4018",
+      "name": "Joe Mixon",
+      "position": "RB",
+      "nfl_team": "HOU"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "Shakyir Purdy Tets",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 153.8,
+     "adp_half_ppr": 83.1
+    },
+    {
+     "pick_no": 92,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "11563",
+      "name": "Bo Nix",
+      "position": "QB",
+      "nfl_team": "DEN"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Jahmyr Comes the Boom",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 5,
+     "projected_price_est": 12,
+     "price_diff": -7,
+     "projected_points": 357.37,
+     "adp_half_ppr": 74.2
+    },
+    {
+     "pick_no": 93,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "12481",
+      "name": "Cam Skattebo",
+      "position": "RB",
+      "nfl_team": "NYG"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "The Nic(k)inator",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 3,
+     "projected_price_est": 1,
+     "price_diff": 2,
+     "projected_points": 136.05,
+     "adp_half_ppr": 99.3
+    },
+    {
+     "pick_no": 94,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "9756",
+      "name": "Jordan Addison",
+      "position": "WR",
+      "nfl_team": "MIN"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Big Dix Energy",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 3,
+     "projected_price_est": 1,
+     "price_diff": 2,
+     "projected_points": 189.99,
+     "adp_half_ppr": 95.4
+    },
+    {
+     "pick_no": 95,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "8144",
+      "name": "Chris Olave",
+      "position": "WR",
+      "nfl_team": "NO"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Hold muh DK",
+      "display_name": "tcarlson8",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 4,
+     "projected_price_est": 6,
+     "price_diff": -2,
+     "projected_points": 216.72,
+     "adp_half_ppr": 76.6
+    },
+    {
+     "pick_no": 96,
+     "round": 8,
+     "keeper": false,
+     "player": {
+      "player_id": "12541",
+      "name": "Dont'e Thornton",
+      "position": "WR",
+      "nfl_team": "LV"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Jahmyr Comes the Boom",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 113.96,
+     "adp_half_ppr": 180.1
+    },
+    {
+     "pick_no": 97,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "11655",
+      "name": "Tyrone Tracy",
+      "position": "RB",
+      "nfl_team": "NYG"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "The Nic(k)inator",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 4,
+     "projected_price_est": 13,
+     "price_diff": -9,
+     "projected_points": 214.92,
+     "adp_half_ppr": 78.3
+    },
+    {
+     "pick_no": 98,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "4039",
+      "name": "Cooper Kupp",
+      "position": "WR",
+      "nfl_team": "SEA"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "Shakyir Purdy Tets",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 6,
+     "projected_price_est": 1,
+     "price_diff": 5,
+     "projected_points": 171.69,
+     "adp_half_ppr": 91.4
+    },
+    {
+     "pick_no": 99,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "11638",
+      "name": "Ricky Pearsall",
+      "position": "WR",
+      "nfl_team": "SF"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 15,
+     "projected_price_est": 1,
+     "price_diff": 14,
+     "projected_points": 204.28,
+     "adp_half_ppr": 81.8
+    },
+    {
+     "pick_no": 100,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "7670",
+      "name": "Joshua Palmer",
+      "position": "WR",
+      "nfl_team": "BUF"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Big Dix Energy",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 158.35,
+     "adp_half_ppr": 171
+    },
+    {
+     "pick_no": 101,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "5947",
+      "name": "Jakobi Meyers",
+      "position": "WR",
+      "nfl_team": "LV"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Bengals Bonanza",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 3,
+     "projected_price_est": 1,
+     "price_diff": 2,
+     "projected_points": 199.53,
+     "adp_half_ppr": 87.8
+    },
+    {
+     "pick_no": 102,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "3294",
+      "name": "Dak Prescott",
+      "position": "QB",
+      "nfl_team": "DAL"
+     },
+     "drafted_by": {
+      "roster_id": 6,
+      "team_name": "Hold muh DK",
+      "display_name": "tcarlson8",
+      "owner_id": "431646563530448896"
+     },
+     "actual_price": 4,
+     "projected_price_est": 1,
+     "price_diff": 3,
+     "projected_points": 323.59,
+     "adp_half_ppr": 110.1
+    },
+    {
+     "pick_no": 103,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "2449",
+      "name": "Stefon Diggs",
+      "position": "WR",
+      "nfl_team": "NE"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "The Nic(k)inator",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 3,
+     "projected_price_est": 1,
+     "price_diff": 2,
+     "projected_points": 188.34,
+     "adp_half_ppr": 93.2
+    },
+    {
+     "pick_no": 104,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "8228",
+      "name": "Jaylen Warren",
+      "position": "RB",
+      "nfl_team": "PIT"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 5,
+     "projected_price_est": 9,
+     "price_diff": -4,
+     "projected_points": 204.92,
+     "adp_half_ppr": 89.4
+    },
+    {
+     "pick_no": 105,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "4988",
+      "name": "Nick Chubb",
+      "position": "RB",
+      "nfl_team": "HOU"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Bengals Bonanza",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 141.85,
+     "adp_half_ppr": 118.2
+    },
+    {
+     "pick_no": 106,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "6806",
+      "name": "J.K. Dobbins",
+      "position": "RB",
+      "nfl_team": "DEN"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Bengals Bonanza",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 4,
+     "projected_price_est": 1,
+     "price_diff": 3,
+     "projected_points": 186.69,
+     "adp_half_ppr": 102.9
+    },
+    {
+     "pick_no": 107,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "6819",
+      "name": "Michael Pittman",
+      "position": "WR",
+      "nfl_team": "IND"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "LaPorta Potty",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 5,
+     "projected_price_est": 1,
+     "price_diff": 4,
+     "projected_points": 174.44,
+     "adp_half_ppr": 111.2
+    },
+    {
+     "pick_no": 108,
+     "round": 9,
+     "keeper": false,
+     "player": {
+      "player_id": "11637",
+      "name": "Keon Coleman",
+      "position": "WR",
+      "nfl_team": "BUF"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 5,
+     "projected_price_est": 1,
+     "price_diff": 4,
+     "projected_points": 167.69,
+     "adp_half_ppr": 113.4
+    },
+    {
+     "pick_no": 109,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "11564",
+      "name": "Drake Maye",
+      "position": "QB",
+      "nfl_team": "NE"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "The Nic(k)inator",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 3,
+     "projected_price_est": 9,
+     "price_diff": -6,
+     "projected_points": 349.22,
+     "adp_half_ppr": 130.1
+    },
+    {
+     "pick_no": 110,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "12533",
+      "name": "Jacory Croskey-Merritt",
+      "position": "RB",
+      "nfl_team": "WAS"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 15,
+     "projected_price_est": 1,
+     "price_diff": 14,
+     "projected_points": 148.3,
+     "adp_half_ppr": 97.4
+    },
+    {
+     "pick_no": 111,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "5012",
+      "name": "Mark Andrews",
+      "position": "TE",
+      "nfl_team": "BAL"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 2,
+     "projected_price_est": 11,
+     "price_diff": -9,
+     "projected_points": 172.2,
+     "adp_half_ppr": 71.7
+    },
+    {
+     "pick_no": 112,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "11589",
+      "name": "Trey Benson",
+      "position": "RB",
+      "nfl_team": "ARI"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": "Brockback Mountain",
+      "display_name": "BaryGusey",
+      "owner_id": "605902199284912128"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 151.84,
+     "adp_half_ppr": 142.2
+    },
+    {
+     "pick_no": 113,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "8134",
+      "name": "Khalil Shakir",
+      "position": "WR",
+      "nfl_team": "BUF"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "Shakyir Purdy Tets",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 175.64,
+     "adp_half_ppr": 100.3
+    },
+    {
+     "pick_no": 114,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "9506",
+      "name": "Sean Tucker",
+      "position": "RB",
+      "nfl_team": "TB"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "What Can Brown Do To You?",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 76.47,
+     "adp_half_ppr": 635.3
+    },
+    {
+     "pick_no": 115,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "8408",
+      "name": "Jordan Mason",
+      "position": "RB",
+      "nfl_team": "MIN"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 6,
+     "projected_price_est": 1,
+     "price_diff": 5,
+     "projected_points": 174.19,
+     "adp_half_ppr": 95.3
+    },
+    {
+     "pick_no": 116,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "4663",
+      "name": "Austin Ekeler",
+      "position": "RB",
+      "nfl_team": "WAS"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Jahmyr Comes the Boom",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 176.94,
+     "adp_half_ppr": 109.1
+    },
+    {
+     "pick_no": 117,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "9500",
+      "name": "Josh Downs",
+      "position": "WR",
+      "nfl_team": "IND"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 4,
+     "projected_price_est": 1,
+     "price_diff": 3,
+     "projected_points": 168.99,
+     "adp_half_ppr": 119.3
+    },
+    {
+     "pick_no": 118,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "1479",
+      "name": "Keenan Allen",
+      "position": "WR",
+      "nfl_team": "LAC"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "What Can Brown Do To You?",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 127.16,
+     "adp_half_ppr": 141.6
+    },
+    {
+     "pick_no": 119,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "7553",
+      "name": "Kyle Pitts",
+      "position": "TE",
+      "nfl_team": "ATL"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "Jeantly Lick My Balls",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 143.15,
+     "adp_half_ppr": 119.6
+    },
+    {
+     "pick_no": 120,
+     "round": 10,
+     "keeper": false,
+     "player": {
+      "player_id": "10222",
+      "name": "Jayden Reed",
+      "position": "WR",
+      "nfl_team": "GB"
+     },
+     "drafted_by": {
+      "roster_id": 9,
+      "team_name": "The Nic(k)inator",
+      "display_name": "FantasyWoes",
+      "owner_id": "473333590688526336"
+     },
+     "actual_price": 7,
+     "projected_price_est": 1,
+     "price_diff": 6,
+     "projected_points": 131.11,
+     "adp_half_ppr": 115.6
+    },
+    {
+     "pick_no": 121,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "8154",
+      "name": "Brian Robinson",
+      "position": "RB",
+      "nfl_team": "SF"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "Shakyir Purdy Tets",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 8,
+     "projected_price_est": 1,
+     "price_diff": 7,
+     "projected_points": 94.32,
+     "adp_half_ppr": 90.3
+    },
+    {
+     "pick_no": 122,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "7528",
+      "name": "Najee Harris",
+      "position": "RB",
+      "nfl_team": "LAC"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "Shakyir Purdy Tets",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 120.46,
+     "adp_half_ppr": 124.6
+    },
+    {
+     "pick_no": 123,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "12519",
+      "name": "Luther Burden",
+      "position": "WR",
+      "nfl_team": "CHI"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Jahmyr Comes the Boom",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 139.51,
+     "adp_half_ppr": 154
+    },
+    {
+     "pick_no": 124,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "7049",
+      "name": "Jauan Jennings",
+      "position": "WR",
+      "nfl_team": "SF"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": "Brockback Mountain",
+      "display_name": "BaryGusey",
+      "owner_id": "605902199284912128"
+     },
+     "actual_price": 5,
+     "projected_price_est": 1,
+     "price_diff": 4,
+     "projected_points": 169.79,
+     "adp_half_ppr": 107.3
+    },
+    {
+     "pick_no": 125,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "9225",
+      "name": "Tank Bigsby",
+      "position": "RB",
+      "nfl_team": "JAX"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": "Brockback Mountain",
+      "display_name": "BaryGusey",
+      "owner_id": "605902199284912128"
+     },
+     "actual_price": 2,
+     "projected_price_est": 1,
+     "price_diff": 1,
+     "projected_points": 120.46,
+     "adp_half_ppr": 117.8
+    },
+    {
+     "pick_no": 126,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "7090",
+      "name": "Darnell Mooney",
+      "position": "WR",
+      "nfl_team": "ATL"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 170.94,
+     "adp_half_ppr": 132
+    },
+    {
+     "pick_no": 127,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "6151",
+      "name": "Miles Sanders",
+      "position": "RB",
+      "nfl_team": "DAL"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 47.68,
+     "adp_half_ppr": 245.6
+    },
+    {
+     "pick_no": 128,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "7571",
+      "name": "Rashod Bateman",
+      "position": "WR",
+      "nfl_team": "BAL"
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": "Brockback Mountain",
+      "display_name": "BaryGusey",
+      "owner_id": "605902199284912128"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 154.3,
+     "adp_half_ppr": 158.6
+    },
+    {
+     "pick_no": 129,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "5848",
+      "name": "Hollywood Brown",
+      "position": "WR",
+      "nfl_team": "KC"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "What Can Brown Do To You?",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 138.15,
+     "adp_half_ppr": 197.9
+    },
+    {
+     "pick_no": 130,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "9501",
+      "name": "DeMario Douglas",
+      "position": "WR",
+      "nfl_team": "NE"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "Jeantly Lick My Balls",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 145.95,
+     "adp_half_ppr": 196.6
+    },
+    {
+     "pick_no": 131,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "5844",
+      "name": "T.J. Hockenson",
+      "position": "TE",
+      "nfl_team": "MIN"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "Shakyir Purdy Tets",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 1,
+     "projected_price_est": 13,
+     "price_diff": -12,
+     "projected_points": 175.94,
+     "adp_half_ppr": 66.6
+    },
+    {
+     "pick_no": 132,
+     "round": 11,
+     "keeper": false,
+     "player": {
+      "player_id": "6804",
+      "name": "Jordan Love",
+      "position": "QB",
+      "nfl_team": "GB"
+     },
+     "drafted_by": {
+      "roster_id": 2,
+      "team_name": "Tommy Heist Tag Team",
+      "display_name": "nheist",
+      "owner_id": "1124025484959903744"
+     },
+     "actual_price": 4,
+     "projected_price_est": 1,
+     "price_diff": 3,
+     "projected_points": 312.24,
+     "adp_half_ppr": 146
+    },
+    {
+     "pick_no": 133,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "12484",
+      "name": "Jayden Higgins",
+      "position": "WR",
+      "nfl_team": "HOU"
+     },
+     "drafted_by": {
+      "roster_id": 5,
+      "team_name": "Jahmyr Comes the Boom",
+      "display_name": "tmattson88",
+      "owner_id": "1124375851493154816"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 164.35,
+     "adp_half_ppr": 121.1
+    },
+    {
+     "pick_no": 134,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "9494",
+      "name": "Marvin Mims",
+      "position": "WR",
+      "nfl_team": "DEN"
+     },
+     "drafted_by": {
+      "roster_id": 7,
+      "team_name": "Shakyir Purdy Tets",
+      "display_name": "coopkid87",
+      "owner_id": "1126014609837740032"
+     },
+     "actual_price": 8,
+     "projected_price_est": 1,
+     "price_diff": 7,
+     "projected_points": 164.95,
+     "adp_half_ppr": 145.5
+    },
+    {
+     "pick_no": 135,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "12457",
+      "name": "Jaydon Blue",
+      "position": "RB",
+      "nfl_team": "DAL"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "LaPorta Potty",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 150.99,
+     "adp_half_ppr": 127.7
+    },
+    {
+     "pick_no": 136,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "4033",
+      "name": "David Njoku",
+      "position": "TE",
+      "nfl_team": "CLE"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 1,
+     "projected_price_est": 5,
+     "price_diff": -4,
+     "projected_points": 159.2,
+     "adp_half_ppr": 92.8
+    },
+    {
+     "pick_no": 137,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "4066",
+      "name": "Evan Engram",
+      "position": "TE",
+      "nfl_team": "DEN"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Big Dix Energy",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 2,
+     "projected_price_est": 9,
+     "price_diff": -7,
+     "projected_points": 167.6,
+     "adp_half_ppr": 79.8
+    },
+    {
+     "pick_no": 138,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "12497",
+      "name": "Tory Horton",
+      "position": "WR",
+      "nfl_team": "SEA"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "What Can Brown Do To You?",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 119.21,
+     "adp_half_ppr": 227
+    },
+    {
+     "pick_no": 139,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "8121",
+      "name": "Romeo Doubs",
+      "position": "WR",
+      "nfl_team": "GB"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "Jeantly Lick My Balls",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 138.7,
+     "adp_half_ppr": 207.8
+    },
+    {
+     "pick_no": 140,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "8676",
+      "name": "Rashid Shaheed",
+      "position": "WR",
+      "nfl_team": "NO"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Bengals Bonanza",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 185.14,
+     "adp_half_ppr": 125.9
+    },
+    {
+     "pick_no": 141,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "4950",
+      "name": "Christian Kirk",
+      "position": "WR",
+      "nfl_team": "HOU"
+     },
+     "drafted_by": {
+      "roster_id": 8,
+      "team_name": "Big Dix Energy",
+      "display_name": "grantgosselin",
+      "owner_id": "1126016694977265664"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 150.3,
+     "adp_half_ppr": 148.5
+    },
+    {
+     "pick_no": 142,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "4098",
+      "name": "Kareem Hunt",
+      "position": "RB",
+      "nfl_team": "KC"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "LaPorta Potty",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 120.61,
+     "adp_half_ppr": 181.7
+    },
+    {
+     "pick_no": 143,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "7611",
+      "name": "Rhamondre Stevenson",
+      "position": "RB",
+      "nfl_team": "NE"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 146.75,
+     "adp_half_ppr": 122.7
+    },
+    {
+     "pick_no": 144,
+     "round": 12,
+     "keeper": false,
+     "player": {
+      "player_id": "1244",
+      "name": "Josh Gordon",
+      "position": "WR",
+      "nfl_team": ""
+     },
+     "drafted_by": {
+      "roster_id": 11,
+      "team_name": "Brockback Mountain",
+      "display_name": "BaryGusey",
+      "owner_id": "605902199284912128"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 0,
+     "adp_half_ppr": 691.1
+    },
+    {
+     "pick_no": 145,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "11610",
+      "name": "Malik Washington",
+      "position": "WR",
+      "nfl_team": "MIA"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "What Can Brown Do To You?",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 89.27,
+     "adp_half_ppr": 694.5
+    },
+    {
+     "pick_no": 146,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "12499",
+      "name": "Elic Ayomanor",
+      "position": "WR",
+      "nfl_team": "TEN"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "Jeantly Lick My Balls",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 125.51,
+     "adp_half_ppr": 206.6
+    },
+    {
+     "pick_no": 147,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "2749",
+      "name": "Raheem Mostert",
+      "position": "RB",
+      "nfl_team": "LV"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Bengals Bonanza",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 48.58,
+     "adp_half_ppr": 238.6
+    },
+    {
+     "pick_no": 148,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "8143",
+      "name": "Jerome Ford",
+      "position": "RB",
+      "nfl_team": "CLE"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "LaPorta Potty",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 130.1,
+     "adp_half_ppr": 150.1
+    },
+    {
+     "pick_no": 149,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "9508",
+      "name": "Tyjae Spears",
+      "position": "RB",
+      "nfl_team": "TEN"
+     },
+     "drafted_by": {
+      "roster_id": 12,
+      "team_name": null,
+      "display_name": "braejones12",
+      "owner_id": "1126361682147778560"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 109.31,
+     "adp_half_ppr": 170.8
+    },
+    {
+     "pick_no": 150,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "12509",
+      "name": "Tre' Harris",
+      "position": "WR",
+      "nfl_team": "LAC"
+     },
+     "drafted_by": {
+      "roster_id": 3,
+      "team_name": "What Can Brown Do To You?",
+      "display_name": "Dtmorris",
+      "owner_id": "1124049146102644736"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 142.85,
+     "adp_half_ppr": 174.1
+    },
+    {
+     "pick_no": 151,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "11626",
+      "name": "Xavier Legette",
+      "position": "WR",
+      "nfl_team": "CAR"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "Jeantly Lick My Balls",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 152.6,
+     "adp_half_ppr": 186.7
+    },
+    {
+     "pick_no": 152,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "8129",
+      "name": "Dameon Pierce",
+      "position": "RB",
+      "nfl_team": "HOU"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Bengals Bonanza",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 58.48,
+     "adp_half_ppr": 682.3
+    },
+    {
+     "pick_no": 153,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "1689",
+      "name": "Adam Thielen",
+      "position": "WR",
+      "nfl_team": "MIN"
+     },
+     "drafted_by": {
+      "roster_id": 10,
+      "team_name": "LaPorta Potty",
+      "display_name": "vinniemac830",
+      "owner_id": "1005334070454259712"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 99.82,
+     "adp_half_ppr": 166.1
+    },
+    {
+     "pick_no": 154,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "7021",
+      "name": "Rico Dowdle",
+      "position": "RB",
+      "nfl_team": "CAR"
+     },
+     "drafted_by": {
+      "roster_id": 4,
+      "team_name": "Jeantly Lick My Balls",
+      "display_name": "nicf8814",
+      "owner_id": "1124166707834085376"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 123.61,
+     "adp_half_ppr": 199.9
+    },
+    {
+     "pick_no": 155,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "12518",
+      "name": "Tyler Warren",
+      "position": "TE",
+      "nfl_team": "IND"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Bengals Bonanza",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 1,
+     "projected_price_est": 3,
+     "price_diff": -2,
+     "projected_points": 153.35,
+     "adp_half_ppr": 87.8
+    },
+    {
+     "pick_no": 156,
+     "round": 13,
+     "keeper": false,
+     "player": {
+      "player_id": "6797",
+      "name": "Justin Herbert",
+      "position": "QB",
+      "nfl_team": "LAC"
+     },
+     "drafted_by": {
+      "roster_id": 1,
+      "team_name": "Bengals Bonanza",
+      "display_name": "pintoandmo",
+      "owner_id": "1123798455777845248"
+     },
+     "actual_price": 1,
+     "projected_price_est": 1,
+     "price_diff": 0,
+     "projected_points": 326.83,
+     "adp_half_ppr": 111.7
+    }
+   ]
+  }
+ ]
+}
