@@ -10,7 +10,7 @@ import { buildDrafts } from '../../scripts/drafts.ts';
 import { buildHist, careers } from './history.ts';
 import { buildIndex } from './league.ts';
 import { buildDraftBook } from './drafts.ts';
-import { bestAndWorstBuilders, builderCareers } from './builders.ts';
+import { bestAndWorstBuilders, builderCareers, ranked } from './builders.ts';
 
 const dir = new URL('../../data/history', import.meta.url).pathname;
 const h = buildHistory(dir);
@@ -55,4 +55,20 @@ test('each measure is ranked on its own, never blended', () => {
   // Scoring index is finished seasons only, so it is stable.
   assert.equal(bestAndWorstBuilders(lifers, 'index').best!.owner, 'nick-heisterkamp');
   assert.equal(who('nick-heisterkamp').index, 1.077);
+});
+
+test('keepers are judged against that season\'s keeper market, not the open auction', () => {
+  const lifers = bs.filter((b) => b.lifer);
+  // The keeper price is a rule, so the whole field swings by year. Against the open auction almost
+  // everyone looks bad; against the other keepers that season most managers are near even.
+  assert.ok(lifers.filter((b) => (b.keeperAbs ?? 0) > 0).length <= 4, 'raw dollars punish nearly everyone');
+  assert.ok(lifers.filter((b) => (b.keeper ?? 0) > 0).length >= 8, 'the relative figure does not');
+  // Correcting for the year does not rescue the order: Hovik is last either way.
+  const worstAbs = [...lifers].sort((a, b) => (a.keeperAbs ?? 0) - (b.keeperAbs ?? 0))[0]!;
+  assert.equal(worstAbs.owner, 'chandler-hovik');
+  assert.equal(bestAndWorstBuilders(lifers, 'keeper').worst!.owner, 'chandler-hovik');
+  // Every keeper beating its own season's average is counted, and the rate agrees with the count.
+  for (const b of lifers) if (b.beatRate !== null) assert.equal(b.beatRate, b.beat / b.keepers);
+  assert.ok(ranked(who('travis-mattson'), 'keeper'));
+  assert.ok(who('travis-mattson').beatRate! > who('wes-anderson').beatRate!, 'Mattson is right more often, by less');
 });

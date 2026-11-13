@@ -13,8 +13,8 @@ import { buildCareerBook, ringRosters, type CareerBook, type PlayerCareer } from
 import { careers, LIFER_SEASONS, ownerName, type Hist } from '../engine/history.ts';
 import { bestAndWorst, historyLines, liveLines, traderCareers, type TradeLine, type TraderCareer, type TraderMetric } from '../engine/traders.ts';
 import { bestAndWorstKeepers, keeperBets, keeperCareers, type KeeperCareer, type KeeperMetric } from '../engine/keeperSkill.ts';
-import { bestAndWorstBuilders, builderCareers, BUILDER_METRICS, MIN_DRAFTS, type BuilderCareer, type BuilderMetric } from '../engine/builders.ts';
-import { Empty, fmt, Section, Seg, signed, tone } from '../ui/components.tsx';
+import { bestAndWorstBuilders, builderCareers, BUILDER_METRICS, MIN_DRAFTS, MIN_KEEPERS, type BuilderCareer, type BuilderMetric } from '../engine/builders.ts';
+import { Empty, fmt, pct, Section, Seg, signed, tone } from '../ui/components.tsx';
 import { DataTable, TableBar, useTable, type Col, type FilterDef } from '../ui/table.tsx';
 import { Stamp } from '../ui/stamp.tsx';
 import { PosTag, useDraftBook, ValueHelp } from './HistoryDrafts.tsx';
@@ -399,7 +399,7 @@ function KeeperBetTable({ H, rows }: { H: Hist; rows: ReturnType<typeof keeperBe
 }
 
 // ---------- roster building (Nic, Nov 13) ----------
-// Four measures, each ranked on its own. No blended score: the whole finding is that the best
+// Three measures, each ranked on its own. No blended score: the whole finding is that the best
 // drafter in the league is also its worst keeper picker, and a single number hides that.
 function Bar({ v, lo, hi, good }: { v: number | null; lo: number; hi: number; good: boolean }) {
   if (v === null) return null;
@@ -414,8 +414,9 @@ function Bar({ v, lo, hi, good }: { v: number | null; lo: number; hi: number; go
   );
 }
 
-// Rounded auction dollars; a value that rounds to zero is plain "$0", never "−$0".
-const dollars = (v: number | null) => (v === null ? '–' : Math.abs(v) < 0.5 ? '$0' : signed(v, 0).replace(/^([+−])/, '$1$'));
+// Auction dollars; a value that rounds to zero is plain "$0", never "−$0". The keeper figures are
+// small against a season's market, so they carry a decimal the draft column does not need.
+const dollars = (v: number | null, d = 0) => (v === null ? '–' : Math.abs(v) < 0.5 / 10 ** d ? '$0' : signed(v, d).replace(/^([+−])/, '$1$'));
 
 function Crown({ H, label, note, b, num }: { H: Hist; label: string; note: string; b: BuilderCareer | null; num: (b: BuilderCareer) => string }) {
   return (
@@ -436,7 +437,7 @@ export function RosterBuilders({ H, onOwner }: { H: Hist; onOwner: (o: OwnerKey)
   if (typeof book === 'string') return <Empty>{book}</Empty>;
   const rows = everyone ? all : all.filter((b) => b.lifer);
   const num: Record<BuilderMetric, (b: BuilderCareer) => string> = {
-    draft: (b) => dollars(b.draft), keeper: (b) => dollars(b.keeper), index: (b) => fmt(b.index, 3),
+    draft: (b) => dollars(b.draft), keeper: (b) => dollars(b.keeper, 1), index: (b) => fmt(b.index, 3),
   };
   return (
     <Section
@@ -444,7 +445,7 @@ export function RosterBuilders({ H, onOwner }: { H: Hist; onOwner: (o: OwnerKey)
       aside={<Seg label="Managers shown" value={everyone ? 'all' : 'lifers'} options={[['lifers', `Lifers (${LIFER_SEASONS}+ seasons)`], ['all', 'Everyone']]} onChange={(v) => setEveryone(v === 'all')} />}
     >
       <div className="max-w-[75ch] text-sm text-ink-2">
-        Four measures of roster building, each ranked on its own and each a <b className="font-medium text-ink">rate</b>, so a 17-season
+        Three measures of roster building, each ranked on its own and each a <b className="font-medium text-ink">rate</b>, so a 17-season
         manager and a 6-season one compare honestly. There is deliberately no combined score: the league's best drafter is also its worst
         keeper picker, and one number would hide that. <ValueHelp />
       </div>
@@ -453,7 +454,9 @@ export function RosterBuilders({ H, onOwner }: { H: Hist; onOwner: (o: OwnerKey)
       </div>
       <BuilderTable H={H} rows={rows} onOwner={onOwner} />
       <p className="text-xs text-ink-3">
-        A crown needs {MIN_DRAFTS} drafts. Co-owned seasons count in full for both managers, so the dollar columns are not a league total.
+        A crown needs {MIN_DRAFTS} drafts, and {MIN_KEEPERS} keepers for the keeper column. Keepers are measured against what every other
+        keeper returned that season, because the keeper price is a rule rather than an auction and the whole field swings with the year;
+        the raw dollars are under Columns. Co-owned seasons count in full for both managers, so the dollar columns are not a league total.
         2026 is in there and moves with each weekly push.
       </p>
     </Section>
@@ -478,10 +481,12 @@ function BuilderTable({ H, rows, onOwner }: { H: Hist; rows: BuilderCareer[]; on
       <span className="block"><b className={`font-semibold ${b.draft === null ? '' : tone(b.draft, 2)}`}>{dollars(b.draft)}</b><Bar v={b.draft} lo={dLo} hi={dHi} good={(b.draft ?? 0) >= 0} /></span>
     ) },
     { id: 'picks', label: 'Picks', hidden: true, value: (b) => b.picks },
-    { id: 'keeper', label: 'Keeper $/draft', className: '!h-auto py-1.5', value: (b) => b.keeper, cell: (b) => (
-      <span className="block"><b className={`font-semibold ${b.keeper === null ? '' : tone(b.keeper, 2)}`}>{dollars(b.keeper)}</b><Bar v={b.keeper} lo={kLo} hi={kHi} good={(b.keeper ?? 0) >= 0} /></span>
+    { id: 'keeper', label: 'Keeper $ vs market', className: '!h-auto py-1.5', value: (b) => b.keeper, cell: (b) => (
+      <span className="block"><b className={`font-semibold ${b.keeper === null ? '' : tone(b.keeper, 1)}`}>{dollars(b.keeper, 1)}</b><Bar v={b.keeper} lo={kLo} hi={kHi} good={(b.keeper ?? 0) >= 0} /></span>
     ) },
+    { id: 'beat', label: 'Beat market', value: (b) => b.beatRate, cell: (b) => (b.beatRate === null ? '–' : <span>{pct(b.beatRate)} <span className="text-ink-3">{b.beat}/{b.keepers}</span></span>) },
     { id: 'keepers', label: 'Keepers', className: 'hidden md:table-cell', value: (b) => b.keepers },
+    { id: 'keeperAbs', label: 'Keeper $/keeper', hidden: true, value: (b) => b.keeperAbs, cell: (b) => dollars(b.keeperAbs, 1) },
     { id: 'index', label: 'Scoring', value: (b) => b.index, cell: (b) => <span className={tone(b.index - 1, 0.015)}>{fmt(b.index, 3)}</span> },
   ], [H, onOwner, dLo, dHi, kLo, kHi]);
   const t = useTable('roster-builders', cols, rows, { id: 'draft', dir: -1 }, { filters, search });
