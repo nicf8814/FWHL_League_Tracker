@@ -21,7 +21,7 @@ test('every draft since 2010, every owner and Sleeper account matched', () => {
   assert.deepEqual(report.unmatched, []);
   assert.ok(validateDrafts(JSON.parse(formatDrafts(drafts))).ok);
   const owners = (y: number) => new Set(book.byYear.get(y)!.map((x) => x.owner));
-  assert.ok(owners(2024).has('clint-helling'), 'braejones12 is the filler team');
+  assert.ok(owners(2024).has('braedyn-jones'), 'braejones12 is Braedyn Jones');
   assert.ok(owners(2025).has('chris-walker'), 'BaryGusey is Chris Walker');
   assert.ok(owners(2022).has('tommy-teves'), 'the co-owned team drafts under Tommy');
 });

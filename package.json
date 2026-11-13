@@ -14,7 +14,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "node --test src/data/data.test.ts src/engine/engine.test.ts src/engine/tracker.test.ts src/engine/history.test.ts src/engine/lineups.test.ts src/engine/drafts.test.ts src/engine/tradeHistory.test.ts src/engine/careers.test.ts scripts/updates.test.ts",
+    "test": "node --test src/data/data.test.ts src/engine/engine.test.ts src/engine/tracker.test.ts src/engine/history.test.ts src/engine/lineups.test.ts src/engine/drafts.test.ts src/engine/tradeHistory.test.ts src/engine/careers.test.ts src/engine/builders.test.ts scripts/updates.test.ts",
     "data": "node scripts/data.ts",
     "data:check": "node scripts/data.ts check"
   },
