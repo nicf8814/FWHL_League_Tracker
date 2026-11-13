@@ -454,9 +454,9 @@ export function RosterBuilders({ H, onOwner }: { H: Hist; onOwner: (o: OwnerKey)
       </div>
       <BuilderTable H={H} rows={rows} onOwner={onOwner} />
       <p className="text-xs text-ink-3">
-        A crown needs {MIN_DRAFTS} drafts, and {MIN_KEEPERS} keepers for the keeper column. Keepers are measured against what every other
-        keeper returned that season, because the keeper price is a rule rather than an auction and the whole field swings with the year;
-        the raw dollars are under Columns. Co-owned seasons count in full for both managers, so the dollar columns are not a league total.
+        A crown needs {MIN_DRAFTS} drafts, and {MIN_KEEPERS} keepers for the keeper column. Keeper value is measured against the average keeper that season,
+        because the keeper price is a rule rather than an auction and every manager's keepers swing together with the year; Beat average is
+        how many of his keepers cleared it. The unadjusted dollars are under Columns. Co-owned seasons count in full for both managers, so the dollar columns are not a league total.
         2026 is in there and moves with each weekly push.
       </p>
     </Section>
@@ -477,16 +477,16 @@ function BuilderTable({ H, rows, onOwner }: { H: Hist; rows: BuilderCareer[]; on
     { id: 'owner', label: 'Manager', left: true, fixed: true, className: 'min-w-[9rem]', value: (b) => who(H, b.owner), cell: (b) => <button type="button" className="link text-left" onClick={() => onOwner(b.owner)}>{who(H, b.owner)}</button> },
     { id: 'seasons', label: 'Seasons', value: (b) => b.seasons },
     { id: 'drafts', label: 'Drafts', className: 'hidden md:table-cell', value: (b) => b.drafts },
-    { id: 'draft', label: 'Draft $/draft', className: '!h-auto py-1.5', value: (b) => b.draft, cell: (b) => (
+    { id: 'draft', label: 'Draft value per season', className: '!h-auto py-1.5', value: (b) => b.draft, cell: (b) => (
       <span className="block"><b className={`font-semibold ${b.draft === null ? '' : tone(b.draft, 2)}`}>{dollars(b.draft)}</b><Bar v={b.draft} lo={dLo} hi={dHi} good={(b.draft ?? 0) >= 0} /></span>
     ) },
     { id: 'picks', label: 'Picks', hidden: true, value: (b) => b.picks },
-    { id: 'keeper', label: 'Keeper $ vs market', className: '!h-auto py-1.5', value: (b) => b.keeper, cell: (b) => (
+    { id: 'keeper', label: 'Keeper value vs average', className: '!h-auto py-1.5', value: (b) => b.keeper, cell: (b) => (
       <span className="block"><b className={`font-semibold ${b.keeper === null ? '' : tone(b.keeper, 1)}`}>{dollars(b.keeper, 1)}</b><Bar v={b.keeper} lo={kLo} hi={kHi} good={(b.keeper ?? 0) >= 0} /></span>
     ) },
-    { id: 'beat', label: 'Beat market', value: (b) => b.beatRate, cell: (b) => (b.beatRate === null ? '–' : <span>{pct(b.beatRate)} <span className="text-ink-3">{b.beat}/{b.keepers}</span></span>) },
+    { id: 'beat', label: 'Beat average', value: (b) => b.beatRate, cell: (b) => (b.beatRate === null ? '–' : <span>{pct(b.beatRate)} <span className="text-ink-3">{b.beat}/{b.keepers}</span></span>) },
     { id: 'keepers', label: 'Keepers', className: 'hidden md:table-cell', value: (b) => b.keepers },
-    { id: 'keeperAbs', label: 'Keeper $/keeper', hidden: true, value: (b) => b.keeperAbs, cell: (b) => dollars(b.keeperAbs, 1) },
+    { id: 'keeperAbs', label: 'Keeper value, raw', hidden: true, value: (b) => b.keeperAbs, cell: (b) => dollars(b.keeperAbs, 1) },
     { id: 'index', label: 'Scoring', value: (b) => b.index, cell: (b) => <span className={tone(b.index - 1, 0.015)}>{fmt(b.index, 3)}</span> },
   ], [H, onOwner, dLo, dHi, kLo, kHi]);
   const t = useTable('roster-builders', cols, rows, { id: 'draft', dir: -1 }, { filters, search });

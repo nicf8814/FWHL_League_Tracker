@@ -91,8 +91,8 @@ export type BuilderMetric = 'draft' | 'keeper' | 'index';
 export const MIN_DRAFTS = 3;
 export const MIN_KEEPERS = 3;
 export const BUILDER_METRICS: { id: BuilderMetric; label: string; note: string }[] = [
-  { id: 'draft', label: 'Draft', note: 'dollars of hindsight value per draft, open-auction picks' },
-  { id: 'keeper', label: 'Keepers', note: 'dollars per keeper against what other keepers returned that year' },
+  { id: 'draft', label: 'Draft', note: 'dollars his auction picks returned above what he paid, per season' },
+  { id: 'keeper', label: 'Keepers', note: 'the same, per keeper, against the average keeper that season' },
   { id: 'index', label: 'Scoring', note: 'points per game against that season’s league average' },
 ];
 
