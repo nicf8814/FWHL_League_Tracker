@@ -13,8 +13,8 @@ import { buildCareerBook, ringRosters, type CareerBook, type PlayerCareer } from
 import { careers, LIFER_SEASONS, ownerName, type Hist } from '../engine/history.ts';
 import { bestAndWorst, historyLines, liveLines, traderCareers, type TradeLine, type TraderCareer, type TraderMetric } from '../engine/traders.ts';
 import { bestAndWorstKeepers, keeperBets, keeperCareers, type KeeperCareer, type KeeperMetric } from '../engine/keeperSkill.ts';
-import { bestAndWorstBuilders, builderCareers, BUILDER_METRICS, MIN_CAPTURE_YEARS, MIN_DRAFTS, ranked, type BuilderCareer, type BuilderMetric } from '../engine/builders.ts';
-import { Empty, fmt, pct, Section, Seg, signed, tone } from '../ui/components.tsx';
+import { bestAndWorstBuilders, builderCareers, BUILDER_METRICS, MIN_DRAFTS, type BuilderCareer, type BuilderMetric } from '../engine/builders.ts';
+import { Empty, fmt, Section, Seg, signed, tone } from '../ui/components.tsx';
 import { DataTable, TableBar, useTable, type Col, type FilterDef } from '../ui/table.tsx';
 import { Stamp } from '../ui/stamp.tsx';
 import { PosTag, useDraftBook, ValueHelp } from './HistoryDrafts.tsx';
@@ -430,19 +430,13 @@ function Crown({ H, label, note, b, num }: { H: Hist; label: string; note: strin
 
 export function RosterBuilders({ H, onOwner }: { H: Hist; onOwner: (o: OwnerKey) => void }) {
   const book = useDraftBook(H);
-  const cb = useCareerBook(H);
   const [everyone, setEveryone] = useState(false);
-  const all = useMemo(
-    () => (book && typeof book !== 'string' && cb && typeof cb !== 'string' ? builderCareers(H, book, careers(H), cb) : []),
-    [H, book, cb],
-  );
-  if (book === null || cb === null) return <p className="text-sm text-ink-3" role="status">Loading the draft and roster history…</p>;
+  const all = useMemo(() => (book && typeof book !== 'string' ? builderCareers(H, book, careers(H)) : []), [H, book]);
+  if (book === null) return <p className="text-sm text-ink-3" role="status">Loading the draft history…</p>;
   if (typeof book === 'string') return <Empty>{book}</Empty>;
-  if (typeof cb === 'string') return <Empty>{cb}</Empty>;
   const rows = everyone ? all : all.filter((b) => b.lifer);
   const num: Record<BuilderMetric, (b: BuilderCareer) => string> = {
-    draft: (b) => dollars(b.draft), keeper: (b) => dollars(b.keeper),
-    index: (b) => fmt(b.index, 3), capture: (b) => pct(b.capture),
+    draft: (b) => dollars(b.draft), keeper: (b) => dollars(b.keeper), index: (b) => fmt(b.index, 3),
   };
   return (
     <Section
@@ -454,14 +448,13 @@ export function RosterBuilders({ H, onOwner }: { H: Hist; onOwner: (o: OwnerKey)
         manager and a 6-season one compare honestly. There is deliberately no combined score: the league's best drafter is also its worst
         keeper picker, and one number would hide that. <ValueHelp />
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-3">
         {BUILDER_METRICS.map((m) => <Crown key={m.id} H={H} label={m.label} note={m.note} b={bestAndWorstBuilders(rows, m.id).best} num={num[m.id]} />)}
       </div>
       <BuilderTable H={H} rows={rows} onOwner={onOwner} />
       <p className="text-xs text-ink-3">
-        A crown needs {MIN_DRAFTS} drafts, or {MIN_CAPTURE_YEARS} seasons of bench detail for capture. Co-owned seasons count in full for both
-        managers, so the dollar columns are not a league total. Scoring and capture come from finished seasons and the live one; 2026 moves
-        with each weekly push.
+        A crown needs {MIN_DRAFTS} drafts. Co-owned seasons count in full for both managers, so the dollar columns are not a league total.
+        2026 is in there and moves with each weekly push.
       </p>
     </Section>
   );
@@ -490,7 +483,6 @@ function BuilderTable({ H, rows, onOwner }: { H: Hist; rows: BuilderCareer[]; on
     ) },
     { id: 'keepers', label: 'Keepers', className: 'hidden md:table-cell', value: (b) => b.keepers },
     { id: 'index', label: 'Scoring', value: (b) => b.index, cell: (b) => <span className={tone(b.index - 1, 0.015)}>{fmt(b.index, 3)}</span> },
-    { id: 'capture', label: 'Capture', value: (b) => b.capture, cell: (b) => (b.capture === null ? '–' : <span className={ranked(b, 'capture') ? '' : 'text-ink-3'}>{pct(b.capture)}{ranked(b, 'capture') ? '' : <span className="text-ink-3"> ({b.captureYears}y)</span>}</span>) },
   ], [H, onOwner, dLo, dHi, kLo, kHi]);
   const t = useTable('roster-builders', cols, rows, { id: 'draft', dir: -1 }, { filters, search });
   return (
