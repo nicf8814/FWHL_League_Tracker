@@ -15,7 +15,7 @@
   {"year":2021,"platform":"ESPN","budget":200,"rounds":15,"ref":"aav","proj":"espn","pts":"season","notes":[]},
   {"year":2022,"platform":"ESPN","budget":200,"rounds":15,"ref":"aav","proj":"espn","pts":"season","notes":[]},
   {"year":2023,"platform":"ESPN","budget":200,"rounds":13,"ref":"aav","proj":"espn","pts":"season","notes":["ESPN preseason projections exist for only 19 of 156 picks. Nic's draft sheet reconstructed the 2023 keepers."]},
-  {"year":2024,"platform":"Sleeper","budget":200,"rounds":13,"ref":"est","proj":"sleeper","pts":"rostered","notes":["Sleeper flags only 10 keepers; Nic's draft sheet lists 30. The price reference is the export's estimate, not a Sleeper number, and Sleeper's projections were pulled after the season."]},
+  {"year":2024,"platform":"Sleeper","budget":200,"rounds":13,"ref":"est","proj":"sleeper","pts":"rostered","notes":["The price reference is the export's estimate, not a Sleeper number, and Sleeper's projections were pulled after the season."]},
   {"year":2025,"platform":"Sleeper","budget":200,"rounds":13,"ref":"est","proj":"sleeper","pts":"rostered","notes":["The price reference is the export's estimate, not a Sleeper number, and Sleeper's projections were pulled after the season."]},
   {"year":2026,"platform":"ESPN","budget":200,"rounds":13,"ref":"aav","proj":"espn","pts":"to-date","notes":[]}
  ],
