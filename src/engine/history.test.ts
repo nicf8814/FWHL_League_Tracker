@@ -56,8 +56,8 @@ test('careers: titles, finals, droughts', () => {
   assert.equal(career(past, 'david-morris').runnerUps.length, 5);
   assert.equal(career(past, 'ryan-cooper').drought, null);
   assert.equal(career(past, 'travis-mattson').drought, 14);
-  assert.equal(careers(past).filter((c) => c.lifer).length, 10, 'Nick counts his co-owned seasons; Tim reaches 10 in 2026');
-  assert.equal(careers(live).filter((c) => c.lifer).length, 11);
+  assert.equal(careers(past).filter((c) => c.lifer).length, 14, 'at 5+ seasons: Mitman, Hovik and Braedyn join; Nick counts his co-owned seasons');
+  assert.equal(careers(live).filter((c) => c.lifer).length, 14, 'Vince is still at 4 with 2026');
 });
 
 test('the live season joins from the league seed', () => {

@@ -10,10 +10,11 @@ import { careersUrl, validateCareers, type Careers } from '../data/careers.ts';
 import type { OwnerKey } from '../data/history.ts';
 import { useLeague } from '../data/store.tsx';
 import { buildCareerBook, ringRosters, type CareerBook, type PlayerCareer } from '../engine/careers.ts';
-import { ownerName, type Hist } from '../engine/history.ts';
+import { careers, LIFER_SEASONS, ownerName, type Hist } from '../engine/history.ts';
 import { bestAndWorst, historyLines, liveLines, traderCareers, type TradeLine, type TraderCareer, type TraderMetric } from '../engine/traders.ts';
 import { bestAndWorstKeepers, keeperBets, keeperCareers, type KeeperCareer, type KeeperMetric } from '../engine/keeperSkill.ts';
-import { Empty, fmt, Section, signed, tone } from '../ui/components.tsx';
+import { bestAndWorstBuilders, builderCareers, BUILDER_METRICS, MIN_CAPTURE_YEARS, MIN_DRAFTS, ranked, type BuilderCareer, type BuilderMetric } from '../engine/builders.ts';
+import { Empty, fmt, pct, Section, Seg, signed, tone } from '../ui/components.tsx';
 import { DataTable, TableBar, useTable, type Col, type FilterDef } from '../ui/table.tsx';
 import { Stamp } from '../ui/stamp.tsx';
 import { PosTag, useDraftBook, ValueHelp } from './HistoryDrafts.tsx';
@@ -394,5 +395,108 @@ function KeeperBetTable({ H, rows }: { H: Hist; rows: ReturnType<typeof keeperBe
       <TableBar t={t} noun="keepers" file="fwhl-keepers-kept" />
       <DataTable t={t} rowKey={(b, i) => `${b.year}-${b.name}-${i}`} stickyId="name" limit={100} minWidth="min-w-[52rem]" empty="No keeper matches these filters." />
     </Section>
+  );
+}
+
+// ---------- roster building (Nic, Nov 13) ----------
+// Four measures, each ranked on its own. No blended score: the whole finding is that the best
+// drafter in the league is also its worst keeper picker, and a single number hides that.
+function Bar({ v, lo, hi, good }: { v: number | null; lo: number; hi: number; good: boolean }) {
+  if (v === null) return null;
+  const span = hi - lo || 1;
+  const zero = ((0 - lo) / span) * 100, at = ((v - lo) / span) * 100;
+  const [from, w] = v >= 0 ? [Math.max(0, Math.min(zero, at)), Math.abs(at - zero)] : [Math.max(0, at), Math.abs(zero - at)];
+  return (
+    <span className="relative mt-1 block h-1 w-full rounded-full bg-sunk" aria-hidden="true">
+      {lo < 0 && hi > 0 && <span className="absolute inset-y-[-1px] w-px bg-rule-strong" style={{ left: `${zero}%` }} />}
+      <span className={`absolute inset-y-0 rounded-full ${good ? 'bg-gain' : 'bg-loss'}`} style={{ left: `${from}%`, width: `${Math.max(w, 1.5)}%` }} />
+    </span>
+  );
+}
+
+// Rounded auction dollars; a value that rounds to zero is plain "$0", never "−$0".
+const dollars = (v: number | null) => (v === null ? '–' : Math.abs(v) < 0.5 ? '$0' : signed(v, 0).replace(/^([+−])/, '$1$'));
+
+function Crown({ H, label, note, b, num }: { H: Hist; label: string; note: string; b: BuilderCareer | null; num: (b: BuilderCareer) => string }) {
+  return (
+    <div className="border-l-2 border-accent-ink pl-3">
+      <span className="text-xs font-semibold uppercase tracking-wider text-ink-3">{label}</span>
+      <br />
+      {b ? <><b className="headline-sm">{who(H, b.owner)}</b> <span className="num">{num(b)}</span></> : <span className="text-sm text-ink-3">Not enough to judge</span>}
+      <span className="block text-xs text-ink-3">{note}</span>
+    </div>
+  );
+}
+
+export function RosterBuilders({ H, onOwner }: { H: Hist; onOwner: (o: OwnerKey) => void }) {
+  const book = useDraftBook(H);
+  const cb = useCareerBook(H);
+  const [everyone, setEveryone] = useState(false);
+  const all = useMemo(
+    () => (book && typeof book !== 'string' && cb && typeof cb !== 'string' ? builderCareers(H, book, careers(H), cb) : []),
+    [H, book, cb],
+  );
+  if (book === null || cb === null) return <p className="text-sm text-ink-3" role="status">Loading the draft and roster history…</p>;
+  if (typeof book === 'string') return <Empty>{book}</Empty>;
+  if (typeof cb === 'string') return <Empty>{cb}</Empty>;
+  const rows = everyone ? all : all.filter((b) => b.lifer);
+  const num: Record<BuilderMetric, (b: BuilderCareer) => string> = {
+    draft: (b) => dollars(b.draft), keeper: (b) => dollars(b.keeper),
+    index: (b) => fmt(b.index, 3), capture: (b) => pct(b.capture),
+  };
+  return (
+    <Section
+      title="Who builds the best roster"
+      aside={<Seg label="Managers shown" value={everyone ? 'all' : 'lifers'} options={[['lifers', `Lifers (${LIFER_SEASONS}+ seasons)`], ['all', 'Everyone']]} onChange={(v) => setEveryone(v === 'all')} />}
+    >
+      <div className="max-w-[75ch] text-sm text-ink-2">
+        Four measures of roster building, each ranked on its own and each a <b className="font-medium text-ink">rate</b>, so a 17-season
+        manager and a 6-season one compare honestly. There is deliberately no combined score: the league's best drafter is also its worst
+        keeper picker, and one number would hide that. <ValueHelp />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {BUILDER_METRICS.map((m) => <Crown key={m.id} H={H} label={m.label} note={m.note} b={bestAndWorstBuilders(rows, m.id).best} num={num[m.id]} />)}
+      </div>
+      <BuilderTable H={H} rows={rows} onOwner={onOwner} />
+      <p className="text-xs text-ink-3">
+        A crown needs {MIN_DRAFTS} drafts, or {MIN_CAPTURE_YEARS} seasons of bench detail for capture. Co-owned seasons count in full for both
+        managers, so the dollar columns are not a league total. Scoring and capture come from finished seasons and the live one; 2026 moves
+        with each weekly push.
+      </p>
+    </Section>
+  );
+}
+
+function BuilderTable({ H, rows, onOwner }: { H: Hist; rows: BuilderCareer[]; onOwner: (o: OwnerKey) => void }) {
+  const range = (f: (b: BuilderCareer) => number | null) => {
+    const vs = rows.map(f).filter((v): v is number => v !== null);
+    return [Math.min(0, ...vs), Math.max(0, ...vs)] as const;
+  };
+  const [dLo, dHi] = range((b) => b.draft), [kLo, kHi] = range((b) => b.keeper);
+  const filters = useMemo<FilterDef<BuilderCareer>[]>(() => [
+    { id: 'now', label: 'Manager', options: [['all', 'Everyone'], ['in', 'Still in the league']], test: (b) => b.active },
+  ], []);
+  const search = useMemo(() => ({ label: 'Find a manager', placeholder: 'Name', of: (b: BuilderCareer) => who(H, b.owner) }), [H]);
+  const cols = useMemo<Col<BuilderCareer>[]>(() => [
+    { id: 'owner', label: 'Manager', left: true, fixed: true, className: 'min-w-[9rem]', value: (b) => who(H, b.owner), cell: (b) => <button type="button" className="link text-left" onClick={() => onOwner(b.owner)}>{who(H, b.owner)}</button> },
+    { id: 'seasons', label: 'Seasons', value: (b) => b.seasons },
+    { id: 'drafts', label: 'Drafts', className: 'hidden md:table-cell', value: (b) => b.drafts },
+    { id: 'draft', label: 'Draft $/draft', className: '!h-auto py-1.5', value: (b) => b.draft, cell: (b) => (
+      <span className="block"><b className={`font-semibold ${b.draft === null ? '' : tone(b.draft, 2)}`}>{dollars(b.draft)}</b><Bar v={b.draft} lo={dLo} hi={dHi} good={(b.draft ?? 0) >= 0} /></span>
+    ) },
+    { id: 'picks', label: 'Picks', hidden: true, value: (b) => b.picks },
+    { id: 'keeper', label: 'Keeper $/draft', className: '!h-auto py-1.5', value: (b) => b.keeper, cell: (b) => (
+      <span className="block"><b className={`font-semibold ${b.keeper === null ? '' : tone(b.keeper, 2)}`}>{dollars(b.keeper)}</b><Bar v={b.keeper} lo={kLo} hi={kHi} good={(b.keeper ?? 0) >= 0} /></span>
+    ) },
+    { id: 'keepers', label: 'Keepers', className: 'hidden md:table-cell', value: (b) => b.keepers },
+    { id: 'index', label: 'Scoring', value: (b) => b.index, cell: (b) => <span className={tone(b.index - 1, 0.015)}>{fmt(b.index, 3)}</span> },
+    { id: 'capture', label: 'Capture', value: (b) => b.capture, cell: (b) => (b.capture === null ? '–' : <span className={ranked(b, 'capture') ? '' : 'text-ink-3'}>{pct(b.capture)}{ranked(b, 'capture') ? '' : <span className="text-ink-3"> ({b.captureYears}y)</span>}</span>) },
+  ], [H, onOwner, dLo, dHi, kLo, kHi]);
+  const t = useTable('roster-builders', cols, rows, { id: 'draft', dir: -1 }, { filters, search });
+  return (
+    <>
+      <TableBar t={t} noun="managers" file="fwhl-roster-builders" />
+      <DataTable t={t} rowKey={(b) => b.owner} stickyId="owner" minWidth="min-w-[48rem]" empty="No manager matches these filters." />
+    </>
   );
 }

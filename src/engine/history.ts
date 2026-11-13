@@ -6,7 +6,7 @@ import type { Index } from './league.ts';
 import { standings } from './league.ts';
 import { luck, type Luck, type Row } from './luck.ts';
 
-export const LIFER_SEASONS = 10;
+export const LIFER_SEASONS = 5;
 
 export interface SeasonRow {
   owner: OwnerKey;
