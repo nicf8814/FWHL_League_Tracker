@@ -46,7 +46,7 @@ export function buildHistory(dir = 'data/history'): History {
   for (const r of matchups) { r['Home Owner'] = who(r['Home Owner']!, yearOf(r)); r['Away Owner'] = who(r['Away Owner']!, yearOf(r)); }
   // sleeper-scores.csv: Sleeper's own score for every 2024-25 game, from the Sleeper roster export
   // (data/history/rosters). The league export's Sleeper scores run up to about 2 points off.
-  const sleeperScore = new Map(table(dir, 'sleeper-scores.csv').map((r) => [`${r.season}|${r.week}|${r.owner}`, Number(r.score)]));
+  const sleeperScore = new Map(table(dir, 'sleeper-scores.csv').map((r) => [`${r.season}|${r.week}|${who(r.owner!, Number(r.season))}`, Number(r.score)]));
   for (const r of matchups) {
     if (!SLEEPER_YEARS.includes(yearOf(r))) continue;
     for (const side of ['Home', 'Away']) {
