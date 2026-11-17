@@ -26,6 +26,14 @@ test('every draft since 2010, every owner and Sleeper account matched', () => {
   assert.ok(owners(2022).has('tommy-teves'), 'the co-owned team drafts under Tommy');
 });
 
+test('2024 keepers come from the league keeper list, not the Sleeper flag', () => {
+  const kept = book.byYear.get(2024)!.filter((x) => x.keeper);
+  assert.equal(kept.length, 30);
+  assert.ok(pick('Kyren Williams', 2024).keeper, 'unflagged in the Sleeper export');
+  assert.ok(pick('Tee Higgins', 2024).keeper, 'flagged in the export too');
+  assert.ok(!pick('Christian McCaffrey', 2024).keeper, 'drafted among the keeper rows, not kept');
+});
+
 test('value: Kelce 2020 worked through by hand', () => {
   const k = pick('Travis Kelce', 2020);
   const b = book.basis.get(2020)!;

@@ -176,6 +176,7 @@ npm run data -- drafts [--dry-run]
 - `data/history/drafts/espn-2010-2023-2026.json` and `sleeper-2024-2025.json`: the draft exports, as received.
 - `accounts.csv`: draft names that differ from the history owner names. ESPN rows (season blank = every season) cover "Clint Helling", "Nic Ferrara" and the co-owned team; Sleeper rows map each season's display name (`nicf8814`, `braejones12`, ...). The build stops on any name it can't place, so a new Sleeper account gets a row here.
 - `draft-notes.csv`: one line per season where the data is partial (no keeper flags in 2010, no ESPN average value in 2017 and 2019, Sleeper's keeper flag and projections in 2024-25). Shown on that season's draft.
+- `keepers.csv`: the complete keeper list for a season whose export flags are wrong (`season,owner,player,pos,price,note`). For a season it names, a pick is a keeper only if it is listed, and the build stops if a listed player, owner or price doesn't match a pick. 2024 is from the league's Sleeper keeper list: Sleeper flagged only 10 of the 30.
 - Players match across ESPN and Sleeper by name without punctuation or suffix, plus position.
 - Weekly starts and Sleeper season points come from the lineups the same build makes (weeks 1-17, points while on a league roster).
 - Value is worked out in the browser (`src/engine/drafts.ts`), so the 2026 draft's points and starts follow each weekly results push without rebuilding this file. The page explains the method behind the (i) button.
