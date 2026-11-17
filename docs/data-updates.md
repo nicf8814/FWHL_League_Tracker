@@ -163,6 +163,8 @@ npm run data -- lineups [--dry-run]
 
 `npm run data:check` fails while the files are out of date with the exports. A new season's export goes in `data/history/rosters/` (extend `scripts/lineups.ts` for a new file name), then run the command.
 
+The season being played has no file and needs none: `liveLineups` (`src/engine/lineups.ts`) builds the same shape from `fwhl-2026.json`, so the view follows each weekly results push on its own. It shows the weeks where every game is final, and a starter shows his own position because the seed records `start`/`bench`/`ir` but not which lineup slot he filled. When the season ends and its export lands here, the file takes over with no further change.
+
 ### Draft history
 
 The History page shows every auction since 2010: a **Drafts** tab in All seasons (search, quick questions, filters written as one sentence), a **Draft** view in each season (pick a team for its roster, prices, points, value and weekly starts), and a player history sheet behind every player name. It reads `public/seed/drafts.json` (about 70 KB compressed), loaded only when a draft view opens. Built, never edited by hand:
