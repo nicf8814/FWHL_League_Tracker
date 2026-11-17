@@ -2,6 +2,7 @@
 // Points are compared within a season ("index": 1.00 = that season's league average per team-game)
 // because scoring changed over time (Sleeper years score about a third more).
 import type { History, HistOwner, HistSeason, OwnerKey } from '../data/history.ts';
+import type { TeamId } from '../data/schema.ts';
 import type { Index } from './league.ts';
 import { standings } from './league.ts';
 import { luck, type Luck, type Row } from './luck.ts';
@@ -118,6 +119,11 @@ export function buildHist(h: History, idx?: Index): Hist {
 }
 
 export const ownerName = (H: Hist, o: OwnerKey) => H.owners.get(o)?.name ?? o;
+
+// Live-season team id -> owner key (owners.csv team2026). Every builder that layers the league seed
+// on top of the history file needs this same map, so it lives here.
+export const teamOwners = (H: Hist): Map<TeamId, OwnerKey> =>
+  new Map([...H.owners.values()].filter((o) => o.teamId !== null && !o.filler).map((o) => [o.teamId!, o.key]));
 const counts = (H: Hist, o: OwnerKey) => !H.owners.get(o)?.filler;
 
 // ---------- Seats ----------

@@ -1,6 +1,10 @@
 // Weekly lineups for past seasons: public/seed/lineups/<year>.json, one file per season, built
 // from the roster exports in data/history/rosters/ by `npm run data -- lineups`. The History page
 // loads a season's file only when someone opens that season's weeks.
+//
+// The season being played has no file: engine/lineups.ts builds the same shape from the league seed
+// (liveLineups), so the week-by-week view works all season and switches to the file once the
+// season's export lands.
 import type { OwnerKey } from './history.ts';
 
 // [player index, lineup slot, actual points, projected points]. Player index -1 = an empty slot.

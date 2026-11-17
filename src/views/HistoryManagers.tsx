@@ -10,7 +10,7 @@ import { careersUrl, validateCareers, type Careers } from '../data/careers.ts';
 import type { OwnerKey } from '../data/history.ts';
 import { useLeague } from '../data/store.tsx';
 import { buildCareerBook, ringRosters, type CareerBook, type PlayerCareer } from '../engine/careers.ts';
-import { careers, LIFER_SEASONS, ownerName, type Hist } from '../engine/history.ts';
+import { careers, LIFER_SEASONS, ownerName, teamOwners, type Hist } from '../engine/history.ts';
 import { bestAndWorst, historyLines, liveLines, traderCareers, type TradeLine, type TraderCareer, type TraderMetric } from '../engine/traders.ts';
 import { bestAndWorstKeepers, keeperBets, keeperCareers, type KeeperCareer, type KeeperMetric } from '../engine/keeperSkill.ts';
 import { bestAndWorstBuilders, builderCareers, BUILDER_METRICS, MIN_DRAFTS, MIN_KEEPERS, type BuilderCareer, type BuilderMetric } from '../engine/builders.ts';
@@ -36,7 +36,7 @@ export function useCareerBook(H: Hist): CareerBook | string | null {
   useEffect(() => { let live = true; loadCareers().then((v) => live && setC(v)); return () => { live = false; }; }, []);
   return useMemo(() => {
     if (c === null || typeof c === 'string') return c;
-    const byTeam = new Map([...H.owners.values()].filter((o) => o.teamId !== null && !o.filler).map((o) => [o.teamId!, o.key]));
+    const byTeam = teamOwners(H);
     const live = H.seasons.find((s) => s.live);
     return buildCareerBook(c, live ? { idx, owner: (t) => byTeam.get(t) } : undefined);
   }, [c, H, idx]);
@@ -198,7 +198,7 @@ export function Traders({ H, onOwner }: { H: Hist; onOwner: (o: OwnerKey) => voi
   const [metric, setMetric] = useState<TraderMetric>('score');
   const lines = useMemo<TradeLine[] | null>(() => {
     if (T === null || typeof T === 'string') return null;
-    const byTeam = new Map([...H.owners.values()].filter((o) => o.teamId !== null && !o.filler).map((o) => [o.teamId!, o.key]));
+    const byTeam = teamOwners(H);
     const live = H.seasons.find((s) => s.live) ? liveLines(V, (t) => byTeam.get(t)) : [];
     return [...historyLines(T), ...live];
   }, [T, H, V]);

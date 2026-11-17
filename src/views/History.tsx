@@ -20,7 +20,7 @@ const URL_ = `${import.meta.env.BASE_URL}seed/history.json`;
 type Tab = 'champions' | 'owners' | 'players' | 'builders' | 'trading' | 'keepers' | 'luck' | 'rivals' | 'records' | 'drafts' | 'trades';
 const TABS: [Tab, string][] = [['champions', 'Champions'], ['owners', 'Owners'], ['players', 'All-time players'], ['builders', 'Roster building'], ['trading', 'Trading'], ['keepers', 'Keepers'], ['luck', 'Luck'], ['rivals', 'Rivals'], ['records', 'Records'], ['drafts', 'Drafts'], ['trades', 'Trades']];
 type SeasonView = 'standings' | 'weeks' | 'draft' | 'trades';
-const seasonViews = (s: Season): [SeasonView, string][] => [['standings', 'Standings'], ...(s.live ? [] : [['weeks', 'Week by week'] as [SeasonView, string]]), ['draft', 'Draft'], ['trades', 'Trades']];
+const seasonViews = (): [SeasonView, string][] => [['standings', 'Standings'], ['weeks', 'Week by week'], ['draft', 'Draft'], ['trades', 'Trades']];
 
 function useHistoryFile() {
   const [state, setState] = useState<HistoryFile | string | null>(null);
@@ -61,7 +61,7 @@ function Browser({ H, all, query, go }: { H: Hist; all: Career[]; query: URLSear
   const wk = parseWk(query.get('wk'));
   const seasonParam = query.get('season') ?? query.get('year') ?? (wk ? String(wk.year) : query.get('tab') || query.get('vs') ? 'all' : 'all');
   const s = seasonParam === 'all' ? undefined : H.byYear.get(Number(seasonParam));
-  const views: [string, string][] = s ? seasonViews(s) : TABS;
+  const views: [string, string][] = s ? seasonViews() : TABS;
   const raw = query.get('view') ?? (s ? (wk ? 'weeks' : 'standings') : query.get('tab') ?? 'champions');
   const view = views.find(([v]) => v === raw)?.[0] ?? views[0]![0];
   const pick = (season: string) => go({ season, view: season === 'all' ? (TABS.some(([t]) => t === view) ? view : 'champions') : (['standings', 'weeks', 'draft', 'trades'].includes(view) ? view : 'standings'), year: null, tab: null, wk: null, m: null, vs: null });
@@ -168,7 +168,7 @@ const parseWk = (v: string | null) => { const m = v?.match(/^(\d{4})-(\d+)$/); r
 function SeasonPanel({ H, s, go, view, weeks }: { H: Hist; s: Season; go: Go; view: SeasonView; weeks: WeekState | null }) {
   const [ws, setWs] = useState<WeekState>(weeks ?? { week: null, open: null });
   const toWeeks = (w: WeekState) => { setWs(w); go({ wk: `${s.year}-${w.week ?? 1}`, m: w.open }); };
-  if (view === 'weeks' && !s.live) return <SeasonWeeks H={H} s={s} state={ws} onState={toWeeks} onOwner={(o) => go({ owner: o })} />;
+  if (view === 'weeks') return <SeasonWeeks H={H} s={s} state={ws} onState={toWeeks} onOwner={(o) => go({ owner: o })} />;
   if (view === 'draft') return <SeasonDraft H={H} s={s} />;
   if (view === 'trades') return <SeasonTrades H={H} s={s} />;
   return <SeasonStandings H={H} s={s} go={go} />;

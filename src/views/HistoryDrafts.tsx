@@ -6,7 +6,7 @@ import { useLeague } from '../data/store.tsx';
 import { draftsUrl, validateDrafts, type DraftSeason, type Drafts } from '../data/drafts.ts';
 import type { OwnerKey } from '../data/history.ts';
 import { buildDraftBook, ordinal, posRank, REPLACEMENT, type DraftBook, type DraftPick } from '../engine/drafts.ts';
-import { crewName, ownerName, type Hist, type Season } from '../engine/history.ts';
+import { crewName, ownerName, teamOwners, type Hist, type Season } from '../engine/history.ts';
 import { Empty, fmt, Seg, Sheet, signed, tone } from '../ui/components.tsx';
 import { Filters } from '../ui/filters.tsx';
 import { DataTable, TableBar, useTable, type Col } from '../ui/table.tsx';
@@ -27,7 +27,7 @@ export function useDraftBook(H: Hist): DraftBook | string | null {
   useEffect(() => { let live = true; loadDrafts().then((v) => live && setD(v)); return () => { live = false; }; }, []);
   return useMemo(() => {
     if (d === null || typeof d === 'string') return d;
-    const byTeam = new Map([...H.owners.values()].filter((o) => o.teamId !== null && !o.filler).map((o) => [o.teamId!, o.key]));
+    const byTeam = teamOwners(H);
     const year = H.seasons.find((s) => s.live)?.year;
     return buildDraftBook(d, year ? { year, idx, teamOwner: (t) => byTeam.get(t) } : undefined);
   }, [d, H, idx]);

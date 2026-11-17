@@ -1,11 +1,13 @@
-// A past season's weeks, in layers: pick a week, see its scoreboard, open a game for the box score
-// (starters side by side, bench folded away), tap a player for his season. Loads the season's
-// lineups file only when this view opens.
-import { useEffect, useState, type ReactNode } from 'react';
+// A season's weeks, in layers: pick a week, see its scoreboard, open a game for the box score
+// (starters side by side, bench folded away), tap a player for his season. A finished season loads
+// its lineups file only when this view opens; the live season is built from the league seed
+// already in memory (engine/lineups.ts), so it needs no file and no fetch.
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { OwnerKey } from '../data/history.ts';
 import { lineupsUrl, validateLineups, type Lineups, type Spot, type TeamWeek } from '../data/lineups.ts';
-import { crewName, type Game, type Hist, type Season } from '../engine/history.ts';
-import { benchBeats, benchTotal, EMPTY, playerLog, startersTotal } from '../engine/lineups.ts';
+import { useLeague } from '../data/store.tsx';
+import { crewName, teamOwners, type Game, type Hist, type Season } from '../engine/history.ts';
+import { benchBeats, benchTotal, EMPTY, liveLineups, playerLog, startersTotal } from '../engine/lineups.ts';
 import { Empty, fmt, Sheet } from '../ui/components.tsx';
 
 const cache = new Map<number, Promise<Lineups | string>>();
@@ -18,20 +20,30 @@ function load(year: number): Promise<Lineups | string> {
   return cache.get(year)!;
 }
 
-function useLineups(year: number) {
+// year null: nothing to fetch (the live season is built in memory instead).
+function useLineups(year: number | null) {
   const [L, setL] = useState<Lineups | string | null>(null);
-  useEffect(() => { let live = true; load(year).then((v) => live && setL(v)); return () => { live = false; }; }, [year]);
+  useEffect(() => {
+    if (year === null) return;
+    let live = true;
+    load(year).then((v) => live && setL(v));
+    return () => { live = false; };
+  }, [year]);
   return L;
 }
 
 export interface WeekState { week: number | null; open: OwnerKey | null }
 
 export default function SeasonWeeks({ H, s, state, onState, onOwner }: { H: Hist; s: Season; state: WeekState; onState: (w: WeekState) => void; onOwner: (o: OwnerKey) => void }) {
-  const L = useLineups(s.year);
+  const { idx } = useLeague();
+  const fetched = useLineups(s.live ? null : s.year);
+  const L = useMemo(() => (s.live ? liveLineups(idx, (t) => teamOwners(H).get(t)) : fetched), [s.live, idx, H, fetched]);
   const [player, setPlayer] = useState<number | null>(null);
   if (L === null) return <p className="text-sm text-ink-3" role="status">Loading {s.year} lineups…</p>;
   if (typeof L === 'string') return <Empty>{L}</Empty>;
   const weeks = [...new Set([...Object.keys(L.weeks).map(Number), ...s.games.map((g) => g.week)])].sort((a, b) => a - b);
+  // A season that has not finished a week yet (the live one in September) has nothing to show here.
+  if (!weeks.length) return <Empty>{s.live ? 'No week has finished yet this season. Box scores appear here once a week is final.' : `No weeks were exported for ${s.year}.`}</Empty>;
   const week = state.week !== null && weeks.includes(state.week) ? state.week : weeks[0]!;
   const games = s.games.filter((g) => g.week === week).sort((a, b) => rank(a) - rank(b));
   const playing = new Set(games.flatMap((g) => [g.home, g.away]));
