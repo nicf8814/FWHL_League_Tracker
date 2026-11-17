@@ -89,7 +89,7 @@ function PickTable({ H, book, rows, onPlayer }: { H: Hist; book: DraftBook; rows
     { id: 'round', label: 'Round', hidden: true, value: (x) => x.round },
     { id: 'overall', label: 'Pick', hidden: true, value: (x) => x.overall },
   ], [H, book, onPlayer]);
-  const t = useTable('draft-search', cols, rows, { id: 'value', dir: -1 });
+  const t = useTable('draft-search', cols, rows, { id: 'value', dir: -1 }, { phone: ['year', 'owner', 'value'] });
   return (
     <>
       <TableBar t={t} noun="picks" file="fwhl-draft-picks" />

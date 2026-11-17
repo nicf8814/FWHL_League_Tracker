@@ -13,6 +13,7 @@ const PLAYER_VIEWS = {
   charts: ['name', 'pos', 'owner', 'value', 'market', 'model', 'peaked', 'menton', 'fpros', 'move'],
   keepers: ['name', 'pos', 'owner', 'value', 'season', 'keep'],
 };
+const PHONE_SIMPLE = ['name', 'pos', 'value', 'proj']; // Simple on phones (Nov 17)
 const sameCols = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x));
 
 export default function Players() {
@@ -64,12 +65,13 @@ export default function Players() {
       { id: 'rank', label: 'ESPN rank', left: true, hidden: true, value: (p) => idx.stats.get(p.id)?.posRank },
     ];
   }, [idx, V, base, open, hist, since, latest]);
-  const t = useTable('players', cols, rows, { id: 'value', dir: -1 }, { filters, search, shown: PLAYER_VIEWS.simple });
-  const view = (Object.keys(PLAYER_VIEWS) as (keyof typeof PLAYER_VIEWS)[]).find((v) => sameCols(PLAYER_VIEWS[v], cols.filter((c) => !t.hidden.includes(c.id)).map((c) => c.id))) ?? 'custom';
+  const t = useTable('players', cols, rows, { id: 'value', dir: -1 }, { filters, search, shown: PLAYER_VIEWS.simple, phone: PHONE_SIMPLE });
+  const views = t.phone ? { ...PLAYER_VIEWS, simple: PHONE_SIMPLE } : PLAYER_VIEWS;
+  const view = (Object.keys(views) as (keyof typeof views)[]).find((v) => sameCols(views[v], cols.filter((c) => !t.hidden.includes(c.id)).map((c) => c.id))) ?? 'custom';
 
   return (
     <div className="grid grid-cols-1 gap-4">
-      <Seg label="Columns" value={view} options={[['simple', 'Simple'], ['charts', 'Charts'], ['keepers', 'Keepers'], ...(view === 'custom' ? [['custom', 'Custom'] as const] : [])] as const} onChange={(v) => v !== 'custom' && t.setHidden(cols.filter((c) => !PLAYER_VIEWS[v].includes(c.id)).map((c) => c.id))} />
+      <Seg label="Columns" value={view} options={[['simple', 'Simple'], ['charts', 'Charts'], ['keepers', 'Keepers'], ...(view === 'custom' ? [['custom', 'Custom'] as const] : [])] as const} onChange={(v) => v !== 'custom' && t.setHidden(cols.filter((c) => !views[v].includes(c.id)).map((c) => c.id))} />
       <TableBar t={t} noun="players" file={`fwhl-players-wk${idx.currentWeek}`}>
         {view === 'charts' && (
           <label className="grid min-w-0 gap-1 text-xs font-semibold uppercase tracking-wider text-ink-3">

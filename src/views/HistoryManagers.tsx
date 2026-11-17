@@ -84,7 +84,7 @@ function CareerTable({ H, book, onPick }: { H: Hist; book: CareerBook; onPick: (
     { id: 'rosterWeeks', label: 'Weeks rostered', hidden: true, value: (p) => p.rosterWeeks },
     { id: 'owners', label: 'Managers', left: true, hidden: true, className: 'min-w-[14rem] whitespace-normal text-xs text-ink-2', value: (p) => p.owners.map((o) => who(H, o)).join(', ') },
   ], [H, onPick]);
-  const t = useTable('alltime-players', cols, rows, { id: 'startPts', dir: -1 }, { filters, search });
+  const t = useTable('alltime-players', cols, rows, { id: 'startPts', dir: -1 }, { filters, search , phone: ['pos', 'startPts', 'rings'] });
   const top = t.sorted[0];
   return (
     <Section title="All-time players" aside={`${book.through}${book.live ? ` + ${book.live} so far` : ''} · ${rows.length} players`}>
@@ -116,7 +116,7 @@ function RingLeaders({ H, book, onPick }: { H: Hist; book: CareerBook; onPick: (
     { id: 'with', label: 'For', left: true, className: 'min-w-[12rem] whitespace-normal text-sm text-ink-2', value: (p) => [...new Set(p.seasons.filter((s) => s.ring).map((s) => who(H, s.owner)))].join(', ') },
     { id: 'startPts', label: 'Starter pts', value: (p) => p.startPts, cell: (p) => fmt(p.startPts, 0) },
   ], [H, onPick]);
-  const t = useTable('ring-leaders', cols, rows, { id: 'rings', dir: -1 }, { filters, search });
+  const t = useTable('ring-leaders', cols, rows, { id: 'rings', dir: -1 }, { filters, search , phone: ['rings', 'with'] });
   return (
     <Section title="On the most championship rosters" aside="Counted once per title">
       <p className="max-w-[75ch] text-sm text-ink-2">A player counts for a title if he was on the champion's roster at the end of that season — the last week of lineups, or the end-of-season roster for the seasons that kept starters only.</p>
@@ -258,7 +258,7 @@ function TraderTable({ H, rows, onOwner }: { H: Hist; rows: TraderCareer[]; onOw
     { id: 'best', label: 'Best trade', left: true, hidden: true, className: 'min-w-[14rem] whitespace-normal text-xs text-ink-2', value: (c) => (c.best ? `${c.best.year} got ${c.best.got.join(', ')}` : '') },
     { id: 'years', label: 'Seasons', left: true, hidden: true, className: 'text-xs text-ink-2', value: (c) => c.years.join(' ') },
   ], [H, onOwner]);
-  const t = useTable('traders', cols, rows, { id: 'grade', dir: -1 }, { filters, search });
+  const t = useTable('traders', cols, rows, { id: 'grade', dir: -1 }, { filters, search , phone: ['trades', 'grade', 'parGain'] });
   return (
     <>
       <TableBar t={t} noun="managers" file="fwhl-trading-careers" />
@@ -286,7 +286,7 @@ function TradeLines({ H, lines }: { H: Hist; lines: TradeLine[] }) {
     { id: 'value', label: 'Chart value', hidden: true, value: (l) => l.value, cell: (l) => (l.value === null ? '–' : signed(l.value, 0)) },
     { id: 'partner', label: 'With', left: true, hidden: true, className: 'text-ink-2', value: (l) => who(H, l.partner) },
   ], [H]);
-  const t = useTable('trade-lines', cols, lines, { id: 'year', dir: -1 }, { filters, search });
+  const t = useTable('trade-lines', cols, lines, { id: 'year', dir: -1 }, { filters, search , phone: ['owner', 'grade', 'raw'] });
   return (
     <Section title="Every trade, both sides" aside={`${lines.length} sides`}>
       <TableBar t={t} noun="sides" file="fwhl-trade-sides" />
@@ -360,7 +360,7 @@ function KeeperCareerTable({ H, rows, onOwner }: { H: Hist; rows: KeeperCareer[]
     { id: 'best', label: 'Best keeper', left: true, hidden: true, className: 'min-w-[12rem] text-xs text-ink-2', value: (c) => (c.best ? `${c.best.name} ${c.best.year}` : '') },
     { id: 'worst', label: 'Worst keeper', left: true, hidden: true, className: 'min-w-[12rem] text-xs text-ink-2', value: (c) => (c.worst ? `${c.worst.name} ${c.worst.year}` : '') },
   ], [H, onOwner]);
-  const t = useTable('keeper-careers', cols, rows, { id: 'par', dir: -1 }, { filters, search });
+  const t = useTable('keeper-careers', cols, rows, { id: 'par', dir: -1 }, { filters, search , phone: ['keepers', 'par', 'hits'] });
   return (
     <>
       <TableBar t={t} noun="managers" file="fwhl-keeper-careers" />
@@ -389,7 +389,7 @@ function KeeperBetTable({ H, rows }: { H: Hist; rows: ReturnType<typeof keeperBe
     { id: 'par', label: 'Points over repl.', value: (b) => b.par, cell: (b) => fmt(b.par, 0) },
     { id: 'pts', label: 'Season pts', hidden: true, value: (b) => b.pick.pts, cell: (b) => fmt(b.pick.pts, 0) },
   ], [H]);
-  const t = useTable('keeper-bets', cols, rows, { id: 'value', dir: -1 }, { filters, search });
+  const t = useTable('keeper-bets', cols, rows, { id: 'value', dir: -1 }, { filters, search , phone: ['year', 'owner', 'value'] });
   return (
     <Section title="Every keeper kept" aside={`${rows.length} since 2011`}>
       <TableBar t={t} noun="keepers" file="fwhl-keepers-kept" />
@@ -489,7 +489,7 @@ function BuilderTable({ H, rows, onOwner }: { H: Hist; rows: BuilderCareer[]; on
     { id: 'keeperAbs', label: 'Keeper value, raw', hidden: true, value: (b) => b.keeperAbs, cell: (b) => dollars(b.keeperAbs, 1) },
     { id: 'index', label: 'Scoring', value: (b) => b.index, cell: (b) => <span className={tone(b.index - 1, 0.015)}>{fmt(b.index, 3)}</span> },
   ], [H, onOwner, dLo, dHi, kLo, kHi]);
-  const t = useTable('roster-builders', cols, rows, { id: 'draft', dir: -1 }, { filters, search });
+  const t = useTable('roster-builders', cols, rows, { id: 'draft', dir: -1 }, { filters, search , phone: ['draft', 'keeper', 'index'] });
   return (
     <>
       <TableBar t={t} noun="managers" file="fwhl-roster-builders" />

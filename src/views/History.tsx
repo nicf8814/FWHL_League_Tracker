@@ -263,7 +263,7 @@ function ChampionTable({ H, done, go, champLuck }: { H: Hist; done: Season[]; go
     { id: 'luck', label: 'Luck', value: (s) => champ(s)?.luck ?? null, cell: (s) => { const c = champ(s); return c ? <Luck v={c.luck} /> : '–'; } },
     { id: 'platform', label: 'Platform', left: true, hidden: true, className: 'text-ink-2', value: (s) => s.platform },
   ], [H, go]);
-  const t = useTable('champions', cols, done, { id: 'year', dir: -1 }, { filters });
+  const t = useTable('champions', cols, done, { id: 'year', dir: -1 }, { filters , phone: ['champion', 'runner'] });
   return (
     <Section title="Champions" aside={`${champLuck} of ${done.length} champions had a lucky regular season`}>
       <TableBar t={t} noun="titles" file="fwhl-champions" />
@@ -295,7 +295,7 @@ function Owners({ H, all, go }: { H: Hist; all: Career[]; go: Go }) {
   const lifers = useMemo(() => all.filter((c) => c.lifer), [all]);
   const [everyone, setEveryone] = useState(false);
   const rows = everyone ? all : lifers;
-  const t = useTable('owner-careers', cols, rows, { id: 'titles', dir: -1 }, { filters: useMemo(() => filters.slice(1), [filters]), search });
+  const t = useTable('owner-careers', cols, rows, { id: 'titles', dir: -1 }, { filters: useMemo(() => filters.slice(1), [filters]), search , phone: ['rec', 'titles', 'index'] });
   return (
     <Section title="Career records" aside={<Seg label="Owners shown" value={everyone ? 'all' : 'lifers'} options={[['lifers', `Lifers (${LIFER_SEASONS}+ seasons)`], ['all', 'Everyone']]} onChange={(v) => setEveryone(v === 'all')} />}>
       <TableBar t={t} noun="owners" file="fwhl-owner-careers" />
@@ -354,7 +354,7 @@ function OwnerSeasons({ H, c, go }: { H: Hist; c: Career; go: Go }) {
     { id: 'xw', label: 'xW', className: 'text-ink-2', value: (s) => s.xw, cell: (s) => fmt(s.xw) },
     { id: 'luck', label: 'Luck', value: (s) => s.luck, cell: (s) => <Luck v={s.luck} /> },
   ], [H, go]);
-  const t = useTable('owner-seasons', cols, c.seasons, { id: 'year', dir: -1 }, { filters });
+  const t = useTable('owner-seasons', cols, c.seasons, { id: 'year', dir: -1 }, { filters , phone: ['rec', 'finish', 'pf'] });
   return (
     <Section title="Season by season">
       <TableBar t={t} noun="seasons" file={`fwhl-${c.owner}-seasons`} />
@@ -378,7 +378,7 @@ function OwnerH2H({ H, rivals, go }: { H: Hist; rivals: Rival[]; go: Go }) {
     { id: 'playoffs', label: 'Playoffs', value: (r) => r.h.playoffW - r.h.playoffL, cell: (r) => (r.h.playoffW + r.h.playoffL ? rec(r.h.playoffW, r.h.playoffL) : '–') },
     { id: 'avg', label: 'Avg score', className: 'text-ink-2', value: (r) => r.h.pf / Math.max(1, r.h.games.length), cell: (r) => `${fmt(r.h.pf / r.h.games.length)} – ${fmt(r.h.pa / r.h.games.length)}` },
   ], [H, go]);
-  const t = useTable('owner-h2h', cols, rivals, { id: 'games', dir: -1 }, { filters, search });
+  const t = useTable('owner-h2h', cols, rivals, { id: 'games', dir: -1 }, { filters, search , phone: ['games', 'rec', 'win'] });
   return (
     <Section title="Head to head" aside="Regular season and playoffs, 4+ games">
       <TableBar t={t} noun="opponents" file="fwhl-head-to-head" />
@@ -428,7 +428,7 @@ function SeasonLuckTable({ H, rows, go }: { H: Hist; rows: LuckRow[]; go: Go }) 
     { id: 'index', label: 'Pts vs avg', value: (r) => r.index, cell: (r) => vsAvg(r.index) },
     { id: 'finish', label: 'Finish', value: (r) => r.finish, cell: (r) => (r.live ? 'live' : place(r.finish)) },
   ], [H, go]);
-  const t = useTable('season-luck', cols, rows, { id: 'luck', dir: -1 }, { filters, search });
+  const t = useTable('season-luck', cols, rows, { id: 'luck', dir: -1 }, { filters, search , phone: ['year', 'luck', 'rec'] });
   return (
     <Section title="Every season by luck" aside={`${rows.length} owner-seasons`}>
       <TableBar t={t} noun="seasons" file="fwhl-season-luck" />
@@ -613,7 +613,7 @@ function EveryGame({ H, go }: { H: Hist; go: Go }) {
     { id: 'year', label: 'Season', hidden: true, value: (r) => r.year },
     { id: 'week', label: 'Week', hidden: true, value: (r) => r.week },
   ], [H, go]);
-  const t = useTable('every-game', cols, rows, { id: 'pts', dir: -1 }, { filters, search });
+  const t = useTable('every-game', cols, rows, { id: 'pts', dir: -1 }, { filters, search , phone: ['pts', 'opp', 'result'] });
   return (
     <Section title="Every game" aside={`${rows.length.toLocaleString()} team-games since ${H.seasons[0]!.year}`}>
       <p className="max-w-[70ch] text-sm text-ink-2">One row per team per game. Sort any column, narrow it with the filters, and the ranking follows what is left.</p>

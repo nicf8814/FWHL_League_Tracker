@@ -34,7 +34,7 @@ export default function Teams() {
     { id: 'keep', label: "Keep '27", hidden: true, value: (p) => { const k = idx.keeper.get(p); return k ? k.cost ?? 'No' : null; }, cell: (p) => { const k = idx.keeper.get(p); return k ? (k.cost === null ? 'No' : `$${k.cost}`) : '–'; } },
     { id: 'bye', label: 'Bye', hidden: true, value: (p) => idx.players.get(p)?.bye },
   ], [idx, base, V, open, role]);
-  const t = useTable('roster', cols, roster, { id: 'value', dir: -1 }, { filters, search });
+  const t = useTable('roster', cols, roster, { id: 'value', dir: -1 }, { filters, search , phone: ['role', 'proj', 'season'] });
 
   return (
     <div className="grid grid-cols-1 gap-8">

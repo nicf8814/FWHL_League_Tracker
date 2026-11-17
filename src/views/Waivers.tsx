@@ -38,7 +38,7 @@ export default function Waivers() {
     { id: 'cut', label: 'Cut', left: true, className: 'text-ink-2', value: (r) => (r.drop ? idx.players.get(r.drop)?.name : null) },
   ], [idx, base, V, open]);
 
-  const t = useTable('waivers', cols, rows, { id: 'gain', dir: -1 }, { filters, search });
+  const t = useTable('waivers', cols, rows, { id: 'gain', dir: -1 }, { filters, search , phone: ['gain', 'cut'] });
   if (me === null) return <Empty>Pick your team in Data &amp; settings to rank free agents for your lineup.</Empty>;
   const best = t.sorted[0];
   return (

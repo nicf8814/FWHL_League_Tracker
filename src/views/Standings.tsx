@@ -43,7 +43,7 @@ export default function Standings() {
       { id: 'allplay', label: 'All-play', className: 'text-ink-2', value: (r) => lk(r).allPlay.w, cell: (r) => `${lk(r).allPlay.w}-${lk(r).allPlay.l}${lk(r).allPlay.t ? `-${lk(r).allPlay.t}` : ''}` },
       {
         id: 'odds', label: 'Playoffs', value: (r) => sim?.odds[r.teamId] ?? null,
-        cell: (r) => (sim ? <span className="inline-flex items-center justify-end gap-2"><span className="meter w-16 sm:w-24" aria-hidden="true"><span className={pctTone(sim.odds[r.teamId]!)} style={{ width: `${Math.max(2, sim.odds[r.teamId]! * 100)}%` }} /></span><span className="w-11 font-semibold">{pct(sim.odds[r.teamId])}</span></span> : '…'),
+        cell: (r) => (sim ? <span className="inline-flex items-center justify-end gap-2"><span className="meter w-10 sm:w-24" aria-hidden="true"><span className={pctTone(sim.odds[r.teamId]!)} style={{ width: `${Math.max(2, sim.odds[r.teamId]! * 100)}%` }} /></span><span className="w-11 font-semibold">{pct(sim.odds[r.teamId])}</span></span> : '…'),
       },
       { id: 'byRecord', label: `Top ${byRecord} by record`, className: 'text-ink-2', value: (r) => sim?.byRecord[r.teamId] ?? null, cell: (r) => (sim ? pct(sim.byRecord[r.teamId]) : '…') },
       { id: 'byPf', label: `Seed ${byRecord + 1} by PF`, className: 'text-ink-2', value: (r) => sim?.byPf[r.teamId] ?? null, cell: (r) => (sim ? pct(sim.byPf[r.teamId]) : '…') },
@@ -52,7 +52,7 @@ export default function Standings() {
   }, [idx, L, sim, history, byRecord]);
 
   // Simple and Full keep their own column choice, so the detail switch always changes what you see.
-  const t = useTable(full ? 'standings.full' : 'standings.simple', cols, rows, { id: 'seed', dir: 1 }, { filters, search, shown: full ? undefined : SIMPLE });
+  const t = useTable(full ? 'standings.full' : 'standings.simple', cols, rows, { id: 'seed', dir: 1 }, { filters, search, shown: full ? undefined : SIMPLE, phone: full ? undefined : ['rec', 'pf', 'odds'] });
 
   // Headline (Nov 11, item E): who's in, and the bubble.
   const locks = sim ? rows.filter((r) => sim.odds[r.teamId]! >= 0.99).sort((a, b) => a.seed - b.seed) : [];

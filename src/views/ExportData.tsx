@@ -262,9 +262,9 @@ export default function ExportData() {
         {groups.map((g) => (
           <fieldset key={g} className="grid gap-1 border-t border-ink pt-2">
             <legend className="sr-only">{g}</legend>
-            <div className="flex items-baseline justify-between gap-4">
+            <div className="flex items-center justify-between gap-4">
               <h3 className="text-base font-semibold">{g}</h3>
-              <button type="button" className="link text-sm" onClick={() => { const ids = sets.filter((s) => s.group === g).map((s) => s.id); setPicked((p) => (ids.every((i) => p.includes(i)) ? p.filter((i) => !ids.includes(i)) : [...new Set([...p, ...ids])])); }}>
+              <button type="button" className="link min-h-11 px-2 text-sm" onClick={() => { const ids = sets.filter((s) => s.group === g).map((s) => s.id); setPicked((p) => (ids.every((i) => p.includes(i)) ? p.filter((i) => !ids.includes(i)) : [...new Set([...p, ...ids])])); }}>
                 {sets.filter((s) => s.group === g).every((s) => picked.includes(s.id)) ? 'None' : 'All'}
               </button>
             </div>
