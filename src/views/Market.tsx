@@ -72,7 +72,7 @@ function MarketTable({ tkey, rows, kind, me, file }: { tkey: string; rows: Row[]
       ? [{ id: 'build', label: 'Trade', left: true, value: () => '', cell: (r: Row) => <a className="link text-sm" href={href('analyzer', tradeToQuery({ a: me, b: idx.owner.get(r.p)!, aGives: [], bGives: [r.p] }))}>Build one</a> }]
       : []),
   ], [idx, V, open, kind, me]);
-  const t = useTable(tkey, cols, rows, { id: 'edge', dir: kind === 'buy' ? -1 : 1 }, { filters, search });
+  const t = useTable(tkey, cols, rows, { id: 'edge', dir: kind === 'buy' ? -1 : 1 }, { filters, search , phone: ['owner', 'edge'] });
   return (
     <>
       <TableBar t={t} noun="players" file={file} />

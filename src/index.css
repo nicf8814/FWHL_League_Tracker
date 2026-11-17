@@ -267,6 +267,14 @@
   .tbl .stick { position: sticky; left: 0; z-index: 2; background: var(--paper); box-shadow: inset -1px 0 0 var(--rule); }
   .tbl tbody tr:hover .stick { background: var(--sunk); }
   .tbl th.stick { z-index: 3; }
+  /* Phones: tighter cells so a two- or three-column table fits a 360px screen */
+  @media (max-width: 47.99rem) {
+    .tbl th, .tbl td { padding-inline: 0.375rem; }
+    .tbl th:first-child, .tbl td:first-child { padding-left: 0.75rem; }
+    .tbl th:last-child, .tbl td:last-child { padding-right: 0.75rem; }
+    /* Text columns may wrap to a second line instead of pushing the table wider than the screen. */
+    .tbl td.l { white-space: normal; padding-block: 0.375rem; }
+  }
 
   .link {
     text-decoration: underline; text-decoration-color: var(--rule-strong); text-underline-offset: 3px; text-align: left;
@@ -333,4 +341,7 @@ input[type='checkbox'] { accent-color: var(--primary); width: 1.125rem; height: 
    tablet breakpoint. Unlayered, so it outranks the text-sm utilities on filters and the team picker. */
 @media (max-width: 47.99rem) {
   input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']), select, textarea { font-size: var(--text-base); }
+  /* shortcut: views give name columns a min-w-[…] for desktop; phones drop it here rather than in every
+     view. Unlayered so it outranks the utility. Revisit if a view ever needs a minimum width on phones. */
+  .tbl :is(th, td)[class*='min-w-['] { min-width: 0; }
 }

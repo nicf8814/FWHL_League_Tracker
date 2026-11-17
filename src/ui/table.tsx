@@ -33,13 +33,21 @@ export interface TableOpts<R> {
   filters?: FilterDef<R>[];
   search?: { label?: string; placeholder?: string; of: (r: R) => string }; // free-text match
   shown?: string[]; // ids visible by default (others start hidden)
+  phone?: string[]; // ids visible by default on phones, below 768px (others start hidden there)
 }
+
+// Phones (Nov 17): tables with a `phone` list start on two or three columns and drop their minimum width,
+// so they fit a 360px screen instead of scrolling sideways. Decided once per visit, so turning the phone
+// sideways doesn't reshuffle the columns. "Columns" still adds any of them back.
+const isPhone = () => { try { return typeof matchMedia === 'function' && matchMedia('(max-width: 47.99rem)').matches; } catch { return false; } };
 
 export function useTable<R>(key: string, cols: Col<R>[], rows: R[], initial: Sort, opts: TableOpts<R> | string[] = {}) {
   // shortcut: the old signature passed the default column list directly; both work while views migrate.
   const o: TableOpts<R> = Array.isArray(opts) ? { shown: opts } : opts;
   const filters = useMemo(() => o.filters ?? [], [o.filters]);
-  const defaults = () => (o.shown ? cols.filter((c) => !c.fixed && !o.shown!.includes(c.id)) : cols.filter((c) => c.hidden)).map((c) => c.id);
+  const [narrow] = useState(isPhone);
+  const phone = narrow && !!o.phone;
+  const defaults = () => (phone ? cols.filter((c) => !c.fixed && !o.phone!.includes(c.id)) : o.shown ? cols.filter((c) => !c.fixed && !o.shown!.includes(c.id)) : cols.filter((c) => c.hidden)).map((c) => c.id);
   // v2 key: the column views (Nov 11) start everyone on Simple instead of the old 14 columns.
   const saved = (k: string) => ({ sort: read<Sort>(`fwhl.table.${k}.sort`, initial), hidden: read<string[]>(`fwhl.table.${k}.hidden.v2`, defaults()) });
   // One state object so a table that swaps key (Simple vs Full) picks up that key's saved choices.
@@ -78,7 +86,7 @@ export function useTable<R>(key: string, cols: Col<R>[], rows: R[], initial: Sor
   const reset = () => { setPicked(start); setSearch(''); setSort(initial); setHidden(defaults()); };
 
   return {
-    sorted, all: rows, filtered, visible, sort, toggleSort, hidden, setHidden, cols, defaults,
+    sorted, all: rows, filtered, visible, sort, toggleSort, hidden, setHidden, cols, defaults, phone,
     filters, picked, setFilter, search, setSearch, searchable: o.search, reset, changed, filtersChanged, total: rows.length,
   };
 }
@@ -180,7 +188,7 @@ export function DataTable<R>({ t, rowKey, rowClass, stickyId, limit, minWidth, r
   if (!t.sorted.length) return <p className="border border-dashed border-rule-strong px-4 py-6 text-center text-sm text-ink-3">{empty}</p>;
   return (
     <div className="-mx-4 overflow-x-auto md:mx-0">
-      <table className={`tbl ${minWidth ?? ''}`}>
+      <table className={`tbl ${t.phone ? '' : (minWidth ?? '')}`}>
         <thead>
           <tr>
             {rank && <th className="l w-10">#</th>}

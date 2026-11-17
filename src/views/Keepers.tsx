@@ -63,7 +63,7 @@ function KeeperTable({ tkey, rows, keep, showOwner, file }: { tkey: string; rows
     { id: 'rank', label: 'Rank', className: 'text-ink-2', value: (c) => c.rank, cell: (c) => `${idx.players.get(c.pid)!.pos}${c.rank}` },
     { id: 'note', label: 'Contract', left: true, className: 'min-w-[14rem] whitespace-normal text-xs text-ink-2', value: (c) => c.note },
   ], [idx, open, showOwner]);
-  const t = useTable(tkey, cols, rows, { id: 'surplus', dir: -1 }, { filters, search });
+  const t = useTable(tkey, cols, rows, { id: 'surplus', dir: -1 }, { filters, search , phone: showOwner ? ['owner', 'surplus', 'call'] : ['surplus', 'call', 'cost'] });
   return (
     <>
       <TableBar t={t} noun="players" file={file} />

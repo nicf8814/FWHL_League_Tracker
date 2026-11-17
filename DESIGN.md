@@ -50,7 +50,7 @@ Six sizes only (Tailwind's scale is reset): xs 12, sm 14, base 16, lg 20, xl 28,
 | 768 to 1023 px | Tab row under the header | Single column, wider tables |
 | ≥ 1024 px | Left rail with data freshness and your team | Analyzer is a three-column trade slip; finder is controls left, offers right; tables are dense |
 
-Wide tables scroll sideways inside their own box with the first column sticky. The page itself never scrolls sideways (checked at 390, 820 and 1440 px).
+Wide tables scroll sideways inside their own box with the first column sticky. On phones (< 768 px) each table starts on its `phone` column set (two or three columns, always including the one it sorts by), drops its minimum width, tightens cell padding and lets text columns wrap, so it fits a 390 px screen; "Columns" adds the rest back. Form fields are 16 px on phones so iOS doesn't zoom on focus. The page itself never scrolls sideways (checked at 390, 820 and 1440 px).
 
 Spacing stays on a 4px base. Rows in tables are 40px; anything tappable is at least 44px tall.
 
