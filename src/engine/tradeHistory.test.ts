@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { validateTrades } from '../data/trades.ts';
 import { buildHistory } from '../../scripts/history.ts';
-import { buildTrades, formatTrades } from '../../scripts/trades.ts';
-import { bestLineup, parseSlots } from './tradeHistory.ts';
+import { buildTrades, formatTrades, seasonRules } from '../../scripts/trades.ts';
+import { bestLineup, parseSlots, standings, type SeasonInput } from './tradeHistory.ts';
 
 const dir = new URL('../../data/history', import.meta.url).pathname;
 const h = buildHistory(dir);
@@ -25,6 +25,19 @@ test('every trade 2018-2025, both platforms, owners matched', () => {
   assert.equal(trades.trades.filter((t) => t.confidence === 'likely').length, 28);
   assert.ok(trades.trades.every((t) => t.year >= 2018 && t.year <= 2025), 'the live season stays on the Tracker');
   assert.ok(report.unseen.length <= 2);
+});
+
+test('playoff rules by season give the real playoff field (but 2011)', () => {
+  for (const s of h.seasons) {
+    const S = { playoffTeams: s.playoffTeams, rules: seasonRules(dir, s.year), games: s.games.filter((g) => g[0] <= s.regularWeeks).map(([week, home, away, hs, as]) => ({ week, home, away, hs, as })) } as SeasonInput;
+    const st = standings(S, (_w, _o, r) => r);
+    const real = s.teams.filter((t) => t.finish !== null && t.finish <= s.playoffTeams).map((t) => t.owner).sort();
+    const ours = s.teams.filter((t) => st(t.owner).playoffs).map((t) => t.owner).sort();
+    if (s.year === 2011) assert.notDeepEqual(ours, real, '2011 now fits: drop the shortcut in standings()');
+    else assert.deepEqual(ours, real, String(s.year));
+  }
+  const tommy = find(2023, 'tommy-teves', "De'Von Achane").sides.find((x) => x.owner === 'tommy-teves')!;
+  assert.deepEqual([tommy.record.w, tommy.record.l, tommy.record.seed, tommy.record.playoffs], [7, 7, 6, true], '2023: 7-7 Tommy took seed 6 on points for');
 });
 
 test('with the trade left in, the replay reproduces every official record', () => {

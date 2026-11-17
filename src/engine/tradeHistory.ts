@@ -10,7 +10,8 @@
 //     started someone else. The live Tracker skips those weeks the same way (no score that week).
 //   Keepers: what really happened the next season, kept value (worth - keeper price) by this side minus
 //     by the partner, weighted 25%, counted only once that next season is over.
-//   Replay: each week again with the trade undone (best lineup with and without the players), for the
+//   Replay: each week again with the trade undone (best lineup with and without the players), seeded
+//     by that season's rules (data/history/rules.csv: points-for 6th seed, tiebreaks, top-6 weeks), for the
 //     record, seed and playoff spot.
 import type { OwnerKey } from '../data/history.ts';
 import type { Lineups } from '../data/lineups.ts';
@@ -30,6 +31,13 @@ export interface SeasonInput {
   playoffTeams: number;
   lastWeek: number; // last week with games
   finish: Map<OwnerKey, number | null>;
+  rules: SeasonRules;
+}
+// The league's playoff rules that season (data/history/rules.csv).
+export interface SeasonRules {
+  seedsByRecord: number; // seeds 1..N by record; the rest of the playoff field by points for
+  tiebreak: 'pf' | 'h2h'; // ties on record: points for, or head-to-head win % among the tied teams then points for
+  top6Weeks: number[]; // weeks scored top 6 = W, bottom 6 = L instead of head to head
 }
 export interface TradeInput { week: number; sides: [{ owner: OwnerKey; gets: string[] }, { owner: OwnerKey; gets: string[] }] }
 export interface NextKeepers { final: boolean; kept: (owner: OwnerKey, key: string) => { price: number; value: number | null } | null }
@@ -89,19 +97,47 @@ export function indexSeason(S: SeasonInput): Map<number, WeekIndex> {
 
 const posOf = (W: Map<number, WeekIndex>, k: string, fallback: string) => { for (const wk of W.values()) { const a = wk.roster; for (const r of a.values()) { const f = r.find((x) => x.key === k); if (f) return f.pos; } } return fallback; };
 
-function standings(S: SeasonInput, score: (week: number, o: OwnerKey, real: number) => number) {
+// Records and seeds under that season's rules, with each team's weekly score from `score`.
+// shortcut: these rules give the real playoff field in every season but 2011, where a three-way tie
+// at 7-6 (each 1-1 against the others) went a way no rule here explains. Revisit if Nic finds it.
+export function standings(S: SeasonInput, score: (week: number, o: OwnerKey, real: number) => number) {
   const T = new Map<OwnerKey, { w: number; l: number; t: number; pf: number }>();
+  const rec = (o: OwnerKey) => { let r = T.get(o); if (!r) { r = { w: 0, l: 0, t: 0, pf: 0 }; T.set(o, r); } return r; };
+  const h2h = new Map<string, [number, number]>(); // "a|b" -> [a's wins against b, games]
+  const top6 = new Map<number, [OwnerKey, number][]>();
   for (const g of S.games) {
     const h = score(g.week, g.home, g.hs), a = score(g.week, g.away, g.as);
-    for (const [o, f, x] of [[g.home, h, a], [g.away, a, h]] as const) {
-      const r = T.get(o) ?? { w: 0, l: 0, t: 0, pf: 0 };
-      if (f > x) r.w++; else if (f < x) r.l++; else r.t++;
-      r.pf += f; T.set(o, r);
+    rec(g.home).pf += h; rec(g.away).pf += a;
+    if (S.rules.top6Weeks.includes(g.week)) { top6.set(g.week, [...(top6.get(g.week) ?? []), [g.home, h], [g.away, a]]); continue; }
+    for (const [o, p, f, x] of [[g.home, g.away, h, a], [g.away, g.home, a, h]] as const) {
+      const r = rec(o), m = h2h.get(`${o}|${p}`) ?? [0, 0];
+      if (f > x) { r.w++; m[0]++; } else if (f < x) r.l++; else { r.t++; m[0] += 0.5; }
+      m[1]++; h2h.set(`${o}|${p}`, m);
     }
   }
-  // shortcut: seeds by win share then points for; the league's real tiebreaks can differ in rare ties.
-  const order = [...T].sort((a, b) => (b[1].w + b[1].t / 2) - (a[1].w + a[1].t / 2) || b[1].pf - a[1].pf).map(([o]) => o);
-  return (o: OwnerKey) => { const r = T.get(o)!; const seed = order.indexOf(o) + 1; return { w: r.w, l: r.l, t: r.t, seed, playoffs: seed <= S.playoffTeams }; };
+  for (const arr of top6.values()) for (const [o, sc] of arr) {
+    const above = arr.filter((x) => x[1] > sc).length, level = arr.filter((x) => x[1] === sc).length; // level counts o too
+    const r = rec(o);
+    if (above + level <= 6) r.w++; else if (above >= 6) r.l++; else r.t++; // a tie across the line is a tie
+  }
+  const wins = (o: OwnerKey) => T.get(o)!.w + T.get(o)!.t / 2, pf = (o: OwnerKey) => T.get(o)!.pf;
+  const byRecord = [...T.keys()].sort((a, b) => wins(b) - wins(a) || pf(b) - pf(a));
+  const order: OwnerKey[] = [];
+  for (let i = 0; i < byRecord.length;) {
+    let j = i;
+    while (j < byRecord.length && wins(byRecord[j]!) === wins(byRecord[i]!)) j++;
+    const g = byRecord.slice(i, j);
+    if (S.rules.tiebreak === 'h2h' && g.length > 1) {
+      const pct = (o: OwnerKey) => { let w = 0, n = 0; for (const p of g) { const m = h2h.get(`${o}|${p}`); if (p !== o && m) { w += m[0]; n += m[1]; } } return n ? w / n : 0.5; };
+      g.sort((a, b) => pct(b) - pct(a) || pf(b) - pf(a));
+    }
+    order.push(...g);
+    i = j;
+  }
+  const top = order.slice(0, S.rules.seedsByRecord);
+  const wild = order.slice(S.rules.seedsByRecord).sort((a, b) => pf(b) - pf(a)).slice(0, Math.max(0, S.playoffTeams - S.rules.seedsByRecord));
+  const seeds = [...top, ...wild, ...order.filter((o) => !top.includes(o) && !wild.includes(o))];
+  return (o: OwnerKey) => { const r = T.get(o)!; const seed = seeds.indexOf(o) + 1; return { w: r.w, l: r.l, t: r.t, seed, playoffs: seed <= S.playoffTeams }; };
 }
 
 export function gradeTrade(S: SeasonInput, W: Map<number, WeekIndex>, t: TradeInput, next: NextKeepers | null, playerIdx: (k: string) => number):

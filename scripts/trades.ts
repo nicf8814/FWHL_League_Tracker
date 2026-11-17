@@ -8,7 +8,7 @@ import { playerKey } from '../src/data/drafts.ts';
 import type { Lineups } from '../src/data/lineups.ts';
 import type { HistTrade, Trades } from '../src/data/trades.ts';
 import { buildDraftBook } from '../src/engine/drafts.ts';
-import { gradeTrade, indexSeason, parseSlots, type SeasonInput } from '../src/engine/tradeHistory.ts';
+import { gradeTrade, indexSeason, parseSlots, type SeasonInput, type SeasonRules } from '../src/engine/tradeHistory.ts';
 import { buildDrafts } from './drafts.ts';
 import { ownerKey } from './history.ts';
 import { buildLineups } from './lineups.ts';
@@ -25,6 +25,15 @@ const table = (dir: string, file: string): Record<string, string>[] => {
 };
 
 export interface TradesReport { seasons: string[]; unseen: string[] }
+
+// Playoff rules for a season: the last row of rules.csv starting on or before it.
+export function seasonRules(dir: string, y: number): SeasonRules {
+  const r = table(dir, 'rules.csv').filter((x) => Number(x.from) <= y).sort((a, b) => Number(a.from) - Number(b.from)).at(-1);
+  if (!r) throw new Error(`rules.csv has no rules for ${y}`);
+  const tiebreak = r.tiebreak === 'h2h' ? 'h2h' : r.tiebreak === 'pf' ? 'pf' : null;
+  if (!tiebreak) throw new Error(`rules.csv ${r.from}: tiebreak must be pf or h2h`);
+  return { seedsByRecord: Number(r.seeds_by_record), tiebreak, top6Weeks: (r.top6_weeks ?? '').split(' ').filter(Boolean).map(Number) };
+}
 
 export function buildTrades(h: History, dir = 'data/history', lineups?: Lineups[]): { trades: Trades; report: TradesReport } {
   const errors: string[] = [];
@@ -52,6 +61,7 @@ export function buildTrades(h: History, dir = 'data/history', lineups?: Lineups[
       games: s.games.filter((g) => g[0] <= s.regularWeeks).map(([week, home, away, hs, as]) => ({ week, home, away, hs, as })),
       lastWeek: Math.max(...s.games.map((g) => g[0])),
       finish: new Map(s.teams.map((t) => [t.owner, t.finish])),
+      rules: seasonRules(dir, y),
     };
     const v = { S, W: indexSeason(S) };
     seasons.set(y, v);
