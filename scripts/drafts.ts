@@ -28,6 +28,23 @@ export function buildDrafts(h: History, dir = 'data/history', lineups?: Lineups[
   const sleeper = JSON.parse(readFileSync(join(dir, 'drafts/sleeper-2024-2025.json'), 'utf8')) as { seasons: { season: string; budget: number; rounds: number; picks: SleeperPick[] }[] };
   const accounts = table(dir, 'accounts.csv');
   const notes = table(dir, 'draft-notes.csv');
+  // keepers.csv: the complete keeper list for each season it names, from the league's own records.
+  // It replaces the export's keeper flags for that season (Sleeper flagged only some 2024 keepers).
+  const keeperList = new Map<number, Map<string, { owner: OwnerKey; price: number; used: boolean }>>();
+  for (const r of table(dir, 'keepers.csv')) {
+    const y = Number(r.season), m = keeperList.get(y) ?? new Map();
+    keeperList.set(y, m);
+    m.set(playerKey(r.player!, r.pos!), { owner: ownerKey(r.owner!), price: Number(r.price), used: false });
+  }
+  const isKeeper = (y: number, k: string, owner: OwnerKey, price: number, flag: boolean): 0 | 1 => {
+    const m = keeperList.get(y);
+    if (!m) return flag ? 1 : 0;
+    const x = m.get(k);
+    if (!x) return 0;
+    if (x.owner !== owner || x.price !== price) errors.push(`keepers.csv ${y} ${k}: list says ${x.owner} $${x.price}, draft says ${owner} $${price}`);
+    x.used = true;
+    return 1;
+  };
   const L = lineups ?? buildLineups(h, join(dir, 'rosters'));
 
   // Owners each season may draft for: the season's teams, or the live league's.
@@ -77,7 +94,7 @@ export function buildDrafts(h: History, dir = 'data/history', lineups?: Lineups[
         const o = account('espn', s.season, q.ownerName);
         if (!ok.has(o)) unmatched.add(`${s.season} ESPN owner "${q.ownerName}"`);
         const { i, k } = player(q.player, q.position);
-        picks.push([s.season, i, o, q.draftValue, q.keeper ? 1 : 0, round2(q.espnProjectedValue), round2(q.projectedPoints), round2(q.actualSeasonPoints), q.round, q.overallPick, heldFor(s.season, k)]);
+        picks.push([s.season, i, o, q.draftValue, isKeeper(s.season, k, o, q.draftValue, q.keeper), round2(q.espnProjectedValue), round2(q.projectedPoints), round2(q.actualSeasonPoints), q.round, q.overallPick, heldFor(s.season, k)]);
       }
       const live = s.season === h.current.year;
       seasons.push({ year: s.season, platform: 'ESPN', budget: 200, rounds: Math.max(...s.picks.map((q) => q.round)), ref: 'aav', proj: 'espn', pts: live ? 'to-date' : 'season', notes: note(s.season) });
@@ -88,12 +105,13 @@ export function buildDrafts(h: History, dir = 'data/history', lineups?: Lineups[
         const o = account('sleeper', y, q.drafted_by.display_name);
         if (!ok.has(o)) unmatched.add(`${y} Sleeper account "${q.drafted_by.display_name}" (add it to accounts.csv)`);
         const { i, k } = player(q.player.name, q.player.position);
-        picks.push([y, i, o, q.actual_price, q.keeper ? 1 : 0, round2(q.projected_price_est), round2(q.projected_points), round2(rostered.get(`${y}|${k}`)), q.round, q.pick_no, heldFor(y, k)]);
+        picks.push([y, i, o, q.actual_price, isKeeper(y, k, o, q.actual_price, q.keeper), round2(q.projected_price_est), round2(q.projected_points), round2(rostered.get(`${y}|${k}`)), q.round, q.pick_no, heldFor(y, k)]);
       }
       seasons.push({ year: y, platform: 'Sleeper', budget: s.budget, rounds: s.rounds, ref: 'est', proj: 'sleeper', pts: 'rostered', notes: note(y) });
     } })),
   ].sort((a, b) => a.y - b.y);
   for (const x of inputs) x.run();
+  for (const [y, m] of keeperList) for (const [k, x] of m) if (!x.used) errors.push(`keepers.csv ${y} ${k} (${x.owner}): no such pick in the ${y} draft`);
   errors.push(...unmatched);
   if (errors.length) throw new Error(`draft inputs do not add up:\n- ${errors.join('\n- ')}`);
 
