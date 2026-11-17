@@ -118,7 +118,7 @@ export function TableTools<R>({ t, file }: { t: Table<R>; file: string }) {
         <fieldset className="absolute right-0 z-20 mt-1 grid w-56 gap-0.5 border border-rule-strong bg-surface p-3">
           <legend className="sr-only">Columns to show</legend>
           {t.cols.filter((c) => !c.fixed).map((c) => (
-            <label key={c.id} className="flex min-h-9 items-center gap-2 text-sm">
+            <label key={c.id} className="flex min-h-11 items-center gap-2 text-sm">
               <input type="checkbox" checked={!t.hidden.includes(c.id)} onChange={(e) => t.setHidden(e.target.checked ? t.hidden.filter((h) => h !== c.id) : [...t.hidden, c.id])} />
               {c.label}
             </label>

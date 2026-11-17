@@ -81,7 +81,8 @@ export function App() {
           <header className="sticky top-0 z-20 border-b border-rule bg-paper pt-[env(safe-area-inset-top)]">
             <div className="mx-auto flex h-14 max-w-[90rem] items-center gap-3 px-4 md:px-6 lg:px-8">
               <Wordmark className="lg:hidden" />
-              <span className="min-w-0 truncate font-display text-lg font-extrabold [font-stretch:85%] lg:text-xl">{sec.label}</span>
+              {/* With the team picker showing, phones drop the section name (the bottom bar already shows it) so the picker isn't cut off. */}
+              <span className={`min-w-0 truncate font-display text-lg font-extrabold [font-stretch:85%] lg:text-xl ${TEAM_PAGES.has(route) && !retired ? 'hidden sm:inline' : ''}`}>{sec.label}</span>
               {TEAM_PAGES.has(route) && !retired ? <TeamPicker /> : <span className="flex-1" />}
               <span className={`num hidden text-xs md:inline ${dl.days <= 7 && !dl.passed ? 'text-loss' : 'text-ink-3'}`}>{dl.label}</span>
               <DetailSwitch />
@@ -147,7 +148,7 @@ function DetailSwitch() {
   return (
     <div role="group" aria-label="Detail" className="flex border border-rule-strong text-[13px]">
       {(['simple', 'full'] as const).map((v) => (
-        <button key={v} type="button" aria-pressed={d === v} onClick={() => setDetail(v)} className={`min-h-9 px-2.5 font-medium sm:px-3 ${d === v ? 'bg-primary text-primary-ink' : 'text-ink-2'}`}>{v === 'simple' ? 'Simple' : 'Full'}</button>
+        <button key={v} type="button" aria-pressed={d === v} onClick={() => setDetail(v)} className={`min-h-11 px-2.5 font-medium sm:px-3 ${d === v ? 'bg-primary text-primary-ink' : 'text-ink-2'}`}>{v === 'simple' ? 'Simple' : 'Full'}</button>
       ))}
     </div>
   );
@@ -164,7 +165,7 @@ function Tab({ page, active }: { page: Page; active: boolean }) {
 
 function Wordmark({ className = '' }: { className?: string }) {
   return (
-    <a href={href('home')} className={`flex items-center gap-2 ${className}`} aria-label="FWHL home">
+    <a href={href('home')} className={`flex min-h-11 items-center gap-2 ${className}`} aria-label="FWHL home">
       <span className="font-display text-xl font-extrabold leading-none tracking-tight [font-stretch:70%]">FWHL</span>
       <span className="h-3 w-1.5 bg-accent" aria-hidden="true" />
     </a>

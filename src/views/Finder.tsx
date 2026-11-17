@@ -186,7 +186,7 @@ function TagList({ team, tags, onTag }: { team: TeamId; tags: Record<PlayerId, T
           <li key={p} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-rule py-1">
             <PosMark pos={idx.players.get(p)!.pos} />
             <span className="min-w-0 text-sm"><PlayerName pid={p} onOpen={open} /></span>
-            <div className="seg [&>button]:min-h-9 [&>button]:min-w-0 [&>button]:px-2 [&>button]:text-xs" role="group" aria-label={`Tag ${idx.players.get(p)?.name}`}>
+            <div className="seg [&>button]:min-h-11 [&>button]:min-w-0 [&>button]:px-2 [&>button]:text-xs" role="group" aria-label={`Tag ${idx.players.get(p)?.name}`}>
               {(['sell', 'open', 'keep'] as const).map((x) => (
                 <button key={x} type="button" aria-pressed={t === x} onClick={() => onTag(p, x)}
                   className={t === x && x === 'sell' ? '!bg-gain !text-paper' : t === x && x === 'keep' ? '!bg-loss !text-paper' : ''}>
@@ -214,7 +214,7 @@ function WantPicker({ team, want, onChange }: { team: TeamId; want: PlayerId[]; 
         <ul className="flex flex-wrap gap-2">
           {want.map((p) => (
             <li key={p}>
-              <button type="button" className="btn min-h-9 px-2 text-xs" onClick={() => onChange(want.filter((x) => x !== p))} aria-label={`Remove ${idx.players.get(p)?.name}`}>
+              <button type="button" className="btn px-2 text-xs" onClick={() => onChange(want.filter((x) => x !== p))} aria-label={`Remove ${idx.players.get(p)?.name}`}>
                 {idx.players.get(p)?.name} <span aria-hidden="true">×</span>
               </button>
             </li>

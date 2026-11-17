@@ -328,3 +328,9 @@
 
 input[type='range'] { accent-color: var(--primary); width: 100%; min-height: 2.75rem; }
 input[type='checkbox'] { accent-color: var(--primary); width: 1.125rem; height: 1.125rem; }
+
+/* Phones: iOS Safari zooms the page when a focused field's text is under 16px, so fields are 16px below the
+   tablet breakpoint. Unlayered, so it outranks the text-sm utilities on filters and the team picker. */
+@media (max-width: 47.99rem) {
+  input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']), select, textarea { font-size: var(--text-base); }
+}
