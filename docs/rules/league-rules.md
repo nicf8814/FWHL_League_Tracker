@@ -54,7 +54,7 @@ Head to head.
 - Receiving: 1.5 / 10 yds (0.15/yd), TD 6, 2-pt 2.
 - Misc: KR TD 6, PR TD 6, fumble recovered for TD 6, fumble lost −2.
 - Decimal scoring for yards.
-- No reception points are listed here, but App. III #5 passed half PPR for 2024.
+- **Half PPR (0.5 per reception) is in effect.** Nic confirmed Nov 18, 2026; this overrides the table above, which leaves receptions out.
 
 ## Art. X Trades
 - From end of the draft to the Wednesday before Thanksgiving. No limit on number or type.
