@@ -24,7 +24,7 @@ A prep tool for the auction. Before the draft it shows fair and expected prices 
 | Nomination | Suggest who to nominate. |
 | History used | 2022–2026 for prices; all years for the backtest. |
 | Age, injuries | Left out (no data). |
-| Access | Draft prep pages behind a password. |
+| Access | Draft prep pages behind a password; Nic's inputs and plans stored encrypted (see Access). |
 | QB prices | Raised for 6-pt pass TDs, not left at history. |
 
 ## Inputs
@@ -102,6 +102,16 @@ Data gaps:
 - 2024–25 Sleeper projections were pulled after the season (they know the outcome) and points count only while on a league roster.
 - ESPN average auction values for 2021–23 look off-scale (drafted players went for about 3× AAV).
 
+## Access
+
+The site and repo are public, so private data is encrypted, not just hidden.
+
+- Nic's projections, prices, keeper switches, persona sliders and saved plans live in one encrypted file in the repo (AES-GCM, key derived from the password). Never committed in plain text.
+- The prep pages ask for the password, decrypt in the browser, and compute everything there.
+- To update: Nic enters or uploads inputs on the page, which encrypts them and gives back the file to commit (or Claude commits the file he hands over).
+- The password is never stored in the repo, the site or a chat. Lost password = start the file over.
+- History-based analysis uses public data; it sits behind the same screen but is not secret.
+
 ## Phases
 
 1. Market analysis report.
@@ -113,5 +123,4 @@ Data gaps:
 
 ## Open questions
 
-1. Password: the site and repo are public, so a password screen alone hides nothing. Encrypt Nic's inputs and the prep results with the password, or keep Nic's inputs out of the repo (loaded from his own file in the browser)?
-2. 2026 weekly scores in data/history/matchups.csv average 76, against about 113 in 2024–25. Check before using them for win chances.
+1. 2026 weekly scores in data/history/matchups.csv average 76, against about 113 in 2024–25. Check before using them for win chances.
