@@ -164,7 +164,9 @@ One full auction at a time with all 12 teams on the live board, after keepers (`
 
 Nic: "we can't hardcode this logic". Too little data for a learned model (5 drafts under today's rules), so the mock keeps its readable steps and `npm run data -- fitmock` (`scripts/fitMock.ts`) picks its five dials (bid randomness, interest past starters, past a usual roster, money pressure, wild-card nominations) from 432 combinations by replaying the 2025 auction (Nic's full 2025 FantasyPros board, real keepers, owners as personas) and checking on 2026. Money pressure builds through the draft (none at the opening bid). Draft > Settings shows the fit.
 
-Result on 2026 (held out): money left per team off by $1.46 (was $14.87 with the starting dials); price miss $5.88 (was $5.69); roster shape 0.43 players per position (0.46); only 43% of real prices inside the mock's middle-80% range. Two dials sit at the edge of their range: the mock's structure, not its dials, is now the limit. Known symptom: an owner whose persona loves a star (lean x overpay x stars) bids him to the slot ceiling nearly every time, so Get % at expected cost can read 0% (Chase, Nov 18).
+Result on 2026 (held out): money left per team off by $1.72 (was $28.38 with the starting dials); price miss $5.60 (was $6.69); roster shape 0.43 players per position (0.46); only 42% of real prices inside the mock's middle-80% range. Money pressure sits at the edge of its range: the mock's structure, not its dials, is now the limit.
+
+Stars fix (Nov 18): the persona habits (lean x overpay, x stars) used to stack, so the second-highest bid for a star sat at the slot ceiling every time (Chase $89 in all 200 mocks; he went for $70 in 2026) and Get % at expected cost read 0%. Calibration now divides those habits out per position, star or not, so a player sells for about his expected cost on average; the habits still decide who buys him. Chase on the 2027 board: Get % at his $65 cost 14% (was 0%). It stays under 50% on purpose: to win him you have to beat the one owner who wants him most, not the average price.
 
 ## Phases
 
