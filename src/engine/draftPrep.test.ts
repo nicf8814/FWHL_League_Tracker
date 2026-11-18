@@ -245,6 +245,19 @@ test('a strategy around my plan keeps back the money my planned players still ne
   }
 });
 
+test('my plan + market: my team spends its money on the rest like a real team', async () => {
+  const { runAuction, rng, poolOf } = await import('./mockAuction.ts');
+  const rows = priceBoard(tiny()).rows;
+  const keyOf = (r: { name: string; pos: string }) => `${r.name}|${r.pos}`;
+  const persona = (key: string) => ({ key, name: key, teamId: 0, lean: { QB: 1, RB: 1, WR: 1, TE: 1 }, overpay: 1, stars: 1, fav: [], drafts: 5 });
+  const myBids: Record<string, number> = { 'RB 1|RB': 5 }; // a plan he'll lose: the money has to go somewhere
+  const me = (market: boolean) => ({ name: 'Me', budget: 200, filled: {}, persona: null, bid: (r: { name: string; pos: string }) => myBids[keyOf(r)] ?? 1, planned: new Set(Object.keys(myBids)), market });
+  const others = Array.from({ length: 11 }, (_, i) => ({ name: `T${i}`, budget: 200, filled: {}, persona: persona(`T${i}`) }));
+  const leftOf = (market: boolean) => runAuction(poolOf(rows), [me(market), ...others], keyOf, rng(4)).left.get('Me')!;
+  assert.ok(leftOf(false) > 100, '$1 fill leaves most of the money');
+  assert.ok(leftOf(true) < 30, `market fill spends it (left ${leftOf(true)})`);
+});
+
 test('a mock auction keeps going until every roster is full', async () => {
   const { runAuction, rng, poolOf } = await import('./mockAuction.ts');
   const rows = priceBoard(tiny()).rows;

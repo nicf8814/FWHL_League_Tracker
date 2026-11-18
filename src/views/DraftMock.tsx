@@ -43,9 +43,10 @@ function Mock({ prep, file }: { prep: Prep; file: DraftPrepFile }) {
     const f: SimTeam['filled'] = {};
     for (const k of ks) f[k[1]] = (f[k[1]] ?? 0) + 1;
     const mine = label(p) === me;
-    // His planned players at his planned bids in every mode; the rest $1 (My plan) or the strategy's bids.
+    // His planned players at his planned bids in every mode; the rest bid like a plain owner (My plan +
+    // market: expected cost, spending his money) or by the strategy.
     const bid = mine ? (r: PrepRow) => plan.bids[rowKey(r)] ?? (mode === 'plan' ? 1 : strategyBid(mode, r)) : undefined;
-    return { name: label(p), budget: prep.budget - ks.reduce((s, k) => s + k[2], 0), filled: f, persona: mine ? null : p, bid, planned: mine ? new Set(Object.keys(plan.bids)) : undefined };
+    return { name: label(p), budget: prep.budget - ks.reduce((s, k) => s + k[2], 0), filled: f, persona: mine ? null : p, bid, planned: mine ? new Set(Object.keys(plan.bids)) : undefined, market: mine && mode === 'plan' };
   }), [JSON.stringify(P.list), keepers, me, mode, plan.bids, prep.budget, idx]);
 
   const pool = useMemo(() => poolOf(board.rows), [board]);
@@ -82,17 +83,17 @@ function Mock({ prep, file }: { prep: Prep; file: DraftPrepFile }) {
     <div className="grid gap-6">
       <Section title={`${prep.year} mock draft`} aside={<span className="flex items-center gap-2 text-ink-3">How the mock works <Help label="How the mock draft works"><ul className="grid gap-1.5 text-sm text-ink-2">
         <li>One full auction on the live board, after keepers. Each team nominates in turn the way this league does: early on mostly top players, then middle, then cheap ones (measured from the 2022-26 auctions), usually the priciest one at a position the nominator doesn't need, about 30% of the time a wild card.</li>
-        <li>The other 11 bid by persona (Draft &gt; Settings). Your team bids your planned prices on your planned players, and fills the rest with $1 bids (My plan only) or an auto-fill strategy, keeping back the money the planned players still need.</li>
+        <li>The other 11 bid by persona (Draft &gt; Settings). Your team bids your planned prices on your planned players, and fills the rest like a plain owner (My plan + market: about expected cost, pushed up by money left to spend) or by an auto-fill strategy, keeping back the money the planned players still need.</li>
         <li>Price = second-highest bid + $1. Everyone keeps to his money, the max-bid rule and position limits.</li>
         <li>Run again for a different auction from the same setup. Run {MANY} plays {MANY} auctions and shows the most typical one: a single real draft, with how often each team landed each player.</li>
       </ul></Help></span>}>
         <div className="flex flex-wrap items-center gap-3">
-          <Seg label="Rest of my team" value={mode} options={[['plan', 'My plan only'], ...STRATEGIES.map((s) => [s.id, s.label] as const)] as const} onChange={(v) => setMode(v as Mode)} />
+          <Seg label="Rest of my team" value={mode} options={[['plan', 'My plan + market'], ...STRATEGIES.map((s) => [s.id, s.label] as const)] as const} onChange={(v) => setMode(v as Mode)} />
           <button type="button" className="rowbtn h-9 rounded bg-accent px-4 font-semibold text-white" onClick={run}>{seed ? 'Run again' : 'Run mock'}</button>
           {seed > 0 && <button type="button" className={`rowbtn h-9 rounded border border-line px-4 ${many ? 'font-semibold' : ''}`} onClick={() => setMany((m) => !m)}>{many ? 'Back to one mock' : `Most typical of ${MANY}`}</button>}
           {seed > 0 && <button type="button" className="rowbtn h-9 rounded border border-line px-4" onClick={() => { setSeed(0); setMany(false); }}>Clear</button>}
         </div>
-        <p className="max-w-[75ch] text-sm text-ink-2">Your team bids your planned prices on your planned players in every mode; the buttons pick how it fills the rest ({mode === 'plan' ? '$1 bids on anyone left' : STRATEGIES.find((s) => s.id === mode)!.help.toLowerCase()}), keeping back the money your planned players still need. A planned price is your top bid: someone who wants him more takes him, so raise it on the Board to win him.</p>
+        <p className="max-w-[75ch] text-sm text-ink-2">Your team bids your planned prices on your planned players in every mode; the buttons pick how it fills the rest ({mode === 'plan' ? 'bids like a plain owner: about expected cost, more when you have money to spend' : STRATEGIES.find((s) => s.id === mode)!.help.toLowerCase()}), keeping back the money your planned players still need. A planned price is your top bid: someone who wants him more takes him, so raise it on the Board to win him.</p>
         {!me && <p className="text-sm text-ink-2">Pick your team in Data &amp; settings so your team bids your plan.</p>}
         {me && mode === 'plan' && !Object.keys(plan.bids).length && <p className="text-sm text-ink-2">Your plan is empty, so your team only keeps its keepers. Add players on the Board, or bid a strategy.</p>}
         {me && shown && (
