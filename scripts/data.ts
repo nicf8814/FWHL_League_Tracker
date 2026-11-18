@@ -175,13 +175,11 @@ try {
       break;
     }
     case 'draftprep': {
-      const year = Number(rest[0]);
-      if (!Number.isInteger(year)) fail('give the draft year: draftprep <year>');
-      const { prep, report } = buildDraftPrep(year);
+      const { file: prep, report } = buildDraftPrep();
       const v = validateDraftPrep(JSON.parse(formatDraftPrep(prep)));
       if (!v.ok) fail(`the draft prep file would be invalid:\n- ${v.errors.join('\n- ')}`);
       if (!dry) writeFileSync(DRAFT_PREP, formatDraftPrep(prep));
-      console.log(JSON.stringify({ written: !dry, file: DRAFT_PREP, year, ...report, fit: { marketYears: prep.fit.marketYears, shrink: prep.fit.shrink, miss: prep.fit.miss, flex: prep.fit.flex } }, null, 2));
+      console.log(JSON.stringify({ written: !dry, file: DRAFT_PREP, ...report }, null, 2));
       break;
     }
     case 'results': { const ds = load(); finish(ds, applyResults(ds, readJson(rest[0]) as never, today)); break; }
@@ -195,7 +193,7 @@ try {
     }
     case 'drop-fantasypros': { const ds = load(); finish(ds, dropFantasyPros(ds)); break; }
     default:
-      fail(`unknown command "${cmd ?? ''}". Use: check | results <json> | projections <json> | rosters <json> | chart <peaked|menton> <week> <csv> | history | lineups | drafts | trades | careers | draftprep <year>`);
+      fail(`unknown command "${cmd ?? ''}". Use: check | results <json> | projections <json> | rosters <json> | chart <peaked|menton> <week> <csv> | history | lineups | drafts | trades | careers | draftprep`);
   }
 } catch (e) {
   fail(e instanceof Error ? e.message : String(e));

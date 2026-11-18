@@ -25,7 +25,7 @@ A prep tool for the auction. Before the draft it shows fair and expected prices 
 | History used | 2022–2026 for prices; all years for the backtest. |
 | Age, injuries | Left out (no data). |
 | Access | Simple password screen on the draft prep pages (see Access). |
-| QB prices | Raised for 6-pt pass TDs, not left at history. |
+| QB prices | No 6-pt TD bump (Nic, Nov 18, after the check below). Worth already uses 6-pt projections. |
 | Pricing | Cost and worth shown side by side; edge is the gap. |
 
 ## Inputs
@@ -128,6 +128,18 @@ A simple password screen on the draft prep pages, to keep leaguemates out while 
 - Worth through Week 10 of 2026: buys more than $10 over worth gave back about $26 each (n=6); otherwise the edge barely predicted results (correlation 0.15). One season, injuries (Lamar, Daniels): recheck after the season.
 - Bid window (Nic, Nov 18: nobody pays $133; the record is $100, Saquon 2018): the least and most the league paid for his slot (RB1, RB2, ...) in the last 5 drafts (Nic chose the strict 5-year cap over the all-time high or a cushion). Cost is capped at the ceiling. 2026 check: 81% of $15-40 buys and 46% of $40+ buys landed inside; the misses at the top were 2026 stars going above anything in 2021-25 (RB1 $89 vs. $82).
 - Dropped: bands from the model's own price misses on 2025 alone. Too few buys, so floors ran far too low (Chase $39) and ceilings far too high (Gibbs $133).
+
+## 2027 live stand-in (Nov 18)
+
+Nic: "Gibbs is RB1 today, so he should be worth RB1 in 2027; if he gets hurt he drops, based on history." Until 2027 projections and prices exist:
+
+- Today's rank by position: 70% points-per-game rank (4+ games), 30% latest Peaked/Menton value rank (Nic's weights). Under 4 games: trade value only.
+- Games share = games played + healthy games left (injury return week) over 17.
+- History (2019-2025 seasons, 1,243 player-seasons): how far players moved from their season rank to next August's price rank, by position group (RB/WR pooled, QB, TE), rank tier (top/mid/deep) and games share (full 75%+, part 40-75%, lost under 40%). Thin groups widen to the next tier first. Examples: RB1 full season -> RB2 (1-3); RB1 lost season -> RB3 (2-3); RB3 lost -> RB8 (6-10).
+- The middle of that range sets his price and projection: the 2026 board's price and projection at that rank. Then the normal cost (tiers fit on 2025+2026 boards, slot windows 2022-2026), worth and edge.
+- Keepers: each team's best calls from the Keepers page (locked contracts first), switchable per player; switches are saved in the viewer's browser.
+- QB prices, 6-pt passing TDs: no bump. QB share of points over replacement was 9.6%, 10.9%, 7.8% in 2023-25 (4 pts) and 7.4% in 2026 (6 pts): the extra points lift QB12 too, so the gap that sets value barely moves. The 2026 auction (already 6 pts) gave QBs 6.6% of open money. Worth already counts 6 pts.
+- Replaced by Nic's FantasyPros file next summer (`data/draft-prep/2027/`).
 
 ## Phases
 

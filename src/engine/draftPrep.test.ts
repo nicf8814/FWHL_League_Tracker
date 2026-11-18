@@ -2,9 +2,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { validateDraftPrep, type DraftPrep, type PrepPos } from '../data/draftPrep.ts';
+import { NEXT_UNPRICED, validateDraftPrep, type DraftPrep, type NextSample, type PrepPos, type StandIn } from '../data/draftPrep.ts';
 import { buildDraftPrep, formatDraftPrep } from '../../scripts/draftPrep.ts';
-import { fitFlex, priceBoard, ranks, replacementRanks, tierIndex } from './draftPrep.ts';
+import { fitFlex, nextRank, priceBoard, ranks, replacementRanks, standInBoard, tierIndex } from './draftPrep.ts';
 
 const tiers = (factor = 1) => ({ upTo: 999, label: 'All', factor, n: 10 });
 function tiny(keepers: DraftPrep['keepers'] = []): DraftPrep {
@@ -13,7 +13,7 @@ function tiny(keepers: DraftPrep['keepers'] = []): DraftPrep {
     for (let i = 0; i < n; i++) board.push([`${pos} ${i + 1}`, pos, 'XX', top - i * 4, Math.max(0, 40 - i * 2)]);
   }
   return {
-    version: 1, year: 2027, teams: 12, budget: 200, roster: 13, source: 'test', board, keepers,
+    year: 2027, kind: 'board', teams: 12, budget: 200, roster: 13, source: 'test', board, keepers,
     fit: {
       marketYears: [[2026, 4]], tiers: { QB: [tiers()], RB: [tiers()], WR: [tiers()], TE: [tiers()] },
       projYears: [2018], shrink: { QB: 1, RB: 1, WR: 1, TE: 1 }, miss: { QB: 0.3, RB: 0.3, WR: 0.3, TE: 0.3 },
@@ -66,15 +66,51 @@ test('no cost or ceiling above what the league has paid for that slot', () => {
   for (const r of b.rows) assert.ok(r.floor <= Math.max(1, r.cost) + 0.5 && r.cost <= r.ceiling + 0.5, `${r.name} ${r.floor} ${r.cost} ${r.ceiling}`);
 });
 
-test('the 2026 board builds, validates and prices the studs on top', () => {
-  const { prep, report } = buildDraftPrep(2026);
-  const v = validateDraftPrep(JSON.parse(formatDraftPrep(prep)));
+test('a season lost to injury drops a player further than a full one', () => {
+  const samples: NextSample[] = [];
+  for (let i = 0; i < 12; i++) for (const r of [1, 2, 3, 4, 5, 6]) {
+    samples.push(['RB', r, 0.95, r + 1]); // full seasons: priced about one spot lower
+    samples.push(['RB', r, 0.3, r * 3]); // lost seasons: priced about three times lower
+  }
+  const full = nextRank(samples, 'RB', 2, 0.9), lost = nextRank(samples, 'RB', 2, 0.25);
+  assert.ok(full.mid <= 3 && lost.mid >= 5, `full ${full.mid}, lost ${lost.mid}`);
+  assert.ok(lost.lo <= lost.mid && lost.mid <= lost.hi);
+  assert.equal(nextRank([], 'TE', 4, 1).mid, 4);
+});
+
+test('the stand-in ranks 70% on production, 30% on trade value, and prices that rank', () => {
+  const si: StandIn = {
+    fromYear: 2026, curveYear: 2026, sampleYears: [[2025, 2026]],
+    curve: { QB: { price: [30, 20], proj: [400, 380] }, RB: { price: [80, 60, 40, 20], proj: [400, 350, 300, 250] }, WR: { price: [70], proj: [300] }, TE: { price: [10], proj: [200] } },
+    samples: Array.from({ length: 40 }, (_, i) => ['RB', 1 + (i % 4), 1, 1 + (i % 4)] as NextSample),
+  };
+  const line = (name: string, ppg: number | null, value: number | null, games = 10) => ({ name, pos: 'RB' as PrepPos, team: 'X', ppg, games, share: 1, value });
+  // A leads on production, B on value; C has only a trade value (too few games).
+  const { board, rows } = standInBoard(si, [line('A', 30, 50), line('B', 20, 90), line('C', 25, 70, 2), line('D', 10, 10)]);
+  const at = (n: string) => rows.get(`${n.toLowerCase()}|RB`)!;
+  assert.equal(at('A').today, 1);
+  assert.equal(at('C').ppgRank, null);
+  assert.deepEqual(board.find((b) => b[0] === 'A')!.slice(3), [400, 80]);
+  assert.ok(NEXT_UNPRICED > 60);
+});
+
+test('the board file builds, validates and matches the seed', () => {
+  const { file, report } = buildDraftPrep();
+  const v = validateDraftPrep(JSON.parse(formatDraftPrep(file)));
   assert.ok(v.ok, v.ok ? '' : v.errors.join('; '));
-  assert.equal(report.keepers, 19);
   assert.deepEqual(report.keepersNotOnBoard, []);
+  assert.deepEqual(file.editions.map((e) => `${e.year} ${e.kind}`), ['2026 board', '2027 standin']);
+  const seed = JSON.parse(readFileSync('public/seed/draft-prep.json', 'utf8'));
+  assert.equal(formatDraftPrep(seed), formatDraftPrep(file), 'public/seed/draft-prep.json is out of date: npm run data -- draftprep');
+  const live = file.editions[1]!;
+  assert.deepEqual(live.fit.marketYears.map(([y]) => y), [2025, 2026]);
+  assert.ok(live.standIn!.samples.length > 1000);
+});
+
+test('the 2026 board builds, validates and prices the studs on top', () => {
+  const prep = buildDraftPrep().file.editions.find((e) => e.year === 2026)!;
+  assert.equal(prep.keepers.length, 19);
   assert.deepEqual(prep.fit.marketYears, [[2025, 4]]);
-  const seed = JSON.parse(readFileSync('public/seed/draft-prep.json', 'utf8')) as DraftPrep;
-  assert.equal(formatDraftPrep(seed), formatDraftPrep(prep), 'public/seed/draft-prep.json is out of date: npm run data -- draftprep 2026');
   const b = priceBoard(prep);
   const cost = (n: string) => b.rows.find((r) => r.name === n)!.cost;
   assert.ok(cost('Jahmyr Gibbs') > cost('Christian McCaffrey') && cost('Christian McCaffrey') > cost('Josh Allen'));
