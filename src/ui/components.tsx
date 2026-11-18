@@ -2,6 +2,7 @@ import { Component, useEffect, useId, useRef, type ReactNode } from 'react';
 import type { PlayerId, Pos, TeamId } from '../data/schema.ts';
 import { useLeague } from '../data/store.tsx';
 import { teamName } from '../engine/league.ts';
+import { isChunkError } from '../app/staleBuild.ts';
 
 // The whole component kit. Kept in one file on purpose: it is small, and every view reads it.
 
@@ -185,7 +186,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode; label: strin
       <div role="alert" className="grid gap-3 border border-loss bg-loss-soft p-5">
         <h2 className="text-lg">{this.props.label} hit an error</h2>
         <p className="text-sm text-ink-2">{this.state.error.message}</p>
-        <div><button className="btn" onClick={() => this.setState({ error: null })}>Try again</button></div>
+        <div><button className="btn" onClick={() => (isChunkError(this.state.error) ? location.reload() : this.setState({ error: null }))}>Try again</button></div>
       </div>
     );
   }

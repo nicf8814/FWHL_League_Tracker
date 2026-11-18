@@ -29,7 +29,10 @@ async function cacheFirst(req) {
 
 async function networkFirst(req) {
   try {
-    const res = await fetch(req);
+    // no-cache: check with the server, so a page opened after a deploy never gets the old index.html
+    // (GitHub Pages lets browsers keep it for 10 minutes), which points at asset files that are gone.
+    // A navigate-mode Request can't take options, so build a plain GET from its URL.
+    const res = await fetch(new Request(req.url, { cache: 'no-cache' }));
     if (res.ok) (await caches.open(CACHE)).put(req, res.clone());
     return res;
   } catch (err) {

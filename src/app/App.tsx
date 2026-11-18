@@ -1,4 +1,5 @@
-import { lazy, Suspense, useState } from 'react';
+import { Suspense, useState } from 'react';
+import { lazyPage } from './staleBuild.ts';
 import { useDeadline, useLeague } from '../data/store.tsx';
 import { freshness } from '../engine/league.ts';
 import { ErrorBoundary, Mono, Sheet } from '../ui/components.tsx';
@@ -9,20 +10,20 @@ import { getTheme, nextTheme, setTheme } from '../ui/theme.ts';
 import { getDetail, setDetail, useDetail } from '../ui/detail.ts';
 import { useViewTeam } from './viewTeam.ts';
 
-const Finder = lazy(() => import('../views/Finder.tsx'));
-const Analyzer = lazy(() => import('../views/Analyzer.tsx'));
-const Standings = lazy(() => import('../views/Standings.tsx'));
-const Players = lazy(() => import('../views/Players.tsx'));
-const Teams = lazy(() => import('../views/Teams.tsx'));
-const Tracker = lazy(() => import('../views/Tracker.tsx'));
-const Method = lazy(() => import('../views/Method.tsx'));
-const DataSettings = lazy(() => import('../views/DataSettings.tsx'));
-const Keepers = lazy(() => import('../views/Keepers.tsx'));
-const Market = lazy(() => import('../views/Market.tsx'));
-const Waivers = lazy(() => import('../views/Waivers.tsx'));
-const Home = lazy(() => import('../views/Home.tsx'));
-const History = lazy(() => import('../views/History.tsx'));
-const ExportData = lazy(() => import('../views/ExportData.tsx'));
+const Finder = lazyPage(() => import('../views/Finder.tsx'));
+const Analyzer = lazyPage(() => import('../views/Analyzer.tsx'));
+const Standings = lazyPage(() => import('../views/Standings.tsx'));
+const Players = lazyPage(() => import('../views/Players.tsx'));
+const Teams = lazyPage(() => import('../views/Teams.tsx'));
+const Tracker = lazyPage(() => import('../views/Tracker.tsx'));
+const Method = lazyPage(() => import('../views/Method.tsx'));
+const DataSettings = lazyPage(() => import('../views/DataSettings.tsx'));
+const Keepers = lazyPage(() => import('../views/Keepers.tsx'));
+const Market = lazyPage(() => import('../views/Market.tsx'));
+const Waivers = lazyPage(() => import('../views/Waivers.tsx'));
+const Home = lazyPage(() => import('../views/Home.tsx'));
+const History = lazyPage(() => import('../views/History.tsx'));
+const ExportData = lazyPage(() => import('../views/ExportData.tsx'));
 
 // Four sections, each a few pages shown as tabs. Phones get the sections in the bottom bar;
 // desktops list them in the rail. Nov 12, item 4: the live season sits in My Team (with a dropdown
