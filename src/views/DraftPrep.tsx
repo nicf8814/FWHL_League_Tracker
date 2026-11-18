@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { playerKey } from '../data/drafts.ts';
 import type { DraftPrep as Prep, DraftPrepFile, KeeperRow, Persona } from '../data/draftPrep.ts';
-import { simulate, type Nomination, type SimOut, type SimTeam } from '../engine/mockAuction.ts';
+import { simulate, type MockDials, type Nomination, type SimOut, type SimTeam } from '../engine/mockAuction.ts';
 import { useLeague } from '../data/store.tsx';
 import { gamesBand, priceBoard, type PrepRow, type StandInRow } from '../engine/draftPrep.ts';
 import { teamName } from '../engine/league.ts';
@@ -31,24 +31,24 @@ function Editions({ prepFile }: { prepFile: DraftPrepFile }) {
   return (
     <div className="grid gap-4">
       {eds.length > 1 && <Seg label="Board" value={String(ed.year)} options={eds.map((e) => [String(e.year), label(e)] as const)} onChange={(v) => setYear(Number(v))} />}
-      {ed.kind === 'standin' ? <LiveBoard prep={ed} personas={prepFile.personas ?? []} nomination={prepFile.nomination} /> : <Board prep={ed} defaultKeepers={ed.keepers} personas={prepFile.personas ?? []} nomination={prepFile.nomination} ownerOf={(p) => p.key} />}
+      {ed.kind === 'standin' ? <LiveBoard prep={ed} personas={prepFile.personas ?? []} nomination={prepFile.nomination} dials={prepFile.mockDials?.dials} /> : <Board prep={ed} defaultKeepers={ed.keepers} personas={prepFile.personas ?? []} nomination={prepFile.nomination} dials={prepFile.mockDials?.dials} ownerOf={(p) => p.key} />}
     </div>
   );
 }
 
 // Next year's board, filled from this season: points per game and games played (every week with
 // points), the latest trade values, and injuries (games he can still play this season).
-function LiveBoard({ prep, personas, nomination }: { prep: Prep; personas: Persona[]; nomination?: Nomination }) {
+function LiveBoard({ prep, personas, nomination, dials }: { prep: Prep; personas: Persona[]; nomination?: Nomination; dials?: MockDials }) {
   const { idx, settings } = useLeague();
   const filled = useLiveEdition(prep);
   const me = settings.myTeamId !== null && idx.teams.has(settings.myTeamId) ? teamName(idx, settings.myTeamId) : null;
-  return <Board prep={filled.prep} defaultKeepers={filled.keepers} candidates={filled.candidates} live={filled.rows} weeks={idx.scoresThrough} me={me} personas={personas} nomination={nomination} ownerOf={(p) => (idx.teams.has(p.teamId) ? teamName(idx, p.teamId) : p.name)} />;
+  return <Board prep={filled.prep} defaultKeepers={filled.keepers} candidates={filled.candidates} live={filled.rows} weeks={idx.scoresThrough} me={me} personas={personas} nomination={nomination} dials={dials} ownerOf={(p) => (idx.teams.has(p.teamId) ? teamName(idx, p.teamId) : p.name)} />;
 }
 
 // ownerOf: a persona's owner as the keeper rows name him (team name on the live board, owner key in a test run).
-interface BoardProps { prep: Prep; defaultKeepers: KeeperRow[]; candidates?: KeeperRow[]; live?: Map<string, StandInRow>; weeks?: number; me?: string | null; personas: Persona[]; nomination?: Nomination; ownerOf: (p: Persona) => string }
+interface BoardProps { prep: Prep; defaultKeepers: KeeperRow[]; candidates?: KeeperRow[]; live?: Map<string, StandInRow>; weeks?: number; me?: string | null; personas: Persona[]; nomination?: Nomination; dials?: MockDials; ownerOf: (p: Persona) => string }
 
-function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks, me = null, personas, nomination, ownerOf }: BoardProps) {
+function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks, me = null, personas, nomination, dials, ownerOf }: BoardProps) {
   const P = usePersonas(personas);
   const plan = usePlan(prep.year);
   const { keepers, candidateKeys, toggle, reset, changed, mine } = useKeepers(prep.year, defaultKeepers, candidates);
@@ -67,9 +67,9 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
     return { name: p.name.split(' ')[0]!, budget: prep.budget - ks.reduce((s, k) => s + k[2], 0), filled, persona: p };
   }), [JSON.stringify(P.list), keepers, me, prep.budget]);
   useEffect(() => {
-    const id = setTimeout(() => setSim(simulate(board.rows, others, (r) => plan.bids[rowKey(r)] ?? Math.round(r.cost), rowKey, Object.keys(plan.bids), P.runs, 7, nomination)), 250);
+    const id = setTimeout(() => setSim(simulate(board.rows, others, (r) => plan.bids[rowKey(r)] ?? Math.round(r.cost), rowKey, Object.keys(plan.bids), P.runs, 7, nomination, dials)), 250);
     return () => clearTimeout(id);
-  }, [board, others, plan.bids, P.runs]);
+  }, [board, others, plan.bids, P.runs, nomination, dials]);
   const simOf = (r: PrepRow) => sim?.players.get(rowKey(r));
   const rows = useMemo(() => board.rows.filter((r) => r.price > 0 || (r.vorp ?? 0) > 0 || r.keeper || candidateKeys.has(keyOf(r.name, r.pos))), [board, candidateKeys]);
   const liveOf = (r: PrepRow) => live?.get(keyOf(r.name, r.pos));

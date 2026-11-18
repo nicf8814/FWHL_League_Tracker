@@ -160,6 +160,12 @@ One full auction at a time with all 12 teams on the live board, after keepers (`
 - Run 100 shows each team's average roster and spend by position (keepers included) above its most-bought players.
 - One mock: every roster with prices and keepers, Nic's lost targets (who paid what against his bid), and the nomination log with the runner-up bid. Run 100: what each team most often ends up with and its usual price.
 
+## Mock dials fitted to real auctions (Nov 18)
+
+Nic: "we can't hardcode this logic". Too little data for a learned model (5 drafts under today's rules), so the mock keeps its readable steps and `npm run data -- fitmock` (`scripts/fitMock.ts`) picks its five dials (bid randomness, interest past starters, past a usual roster, money pressure, wild-card nominations) from 432 combinations by replaying the 2025 auction (Nic's full 2025 FantasyPros board, real keepers, owners as personas) and checking on 2026. Money pressure builds through the draft (none at the opening bid). Draft > Settings shows the fit.
+
+Result on 2026 (held out): money left per team off by $1.46 (was $14.87 with the starting dials); price miss $5.88 (was $5.69); roster shape 0.43 players per position (0.46); only 43% of real prices inside the mock's middle-80% range. Two dials sit at the edge of their range: the mock's structure, not its dials, is now the limit. Known symptom: an owner whose persona loves a star (lean x overpay x stars) bids him to the slot ceiling nearly every time, so Get % at expected cost can read 0% (Chase, Nov 18).
+
 ## Phases
 
 1. Market analysis report.

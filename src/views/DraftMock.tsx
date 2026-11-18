@@ -7,7 +7,7 @@ import { useLeague } from '../data/store.tsx';
 import { STRATEGIES, type Strategy } from '../engine/autoFill.ts';
 import { priceBoard, type PrepRow } from '../engine/draftPrep.ts';
 import { teamName } from '../engine/league.ts';
-import { calibrate, poolOf, rng, runAuction, strategyBid, type Auction, type SimTeam } from '../engine/mockAuction.ts';
+import { DEFAULT_DIALS, calibrate, poolOf, rng, runAuction, strategyBid, type Auction, type SimTeam } from '../engine/mockAuction.ts';
 import { Empty, PosMark, Section, Seg } from '../ui/components.tsx';
 import { DraftGate, Help, usePersonas } from './draftCommon.tsx';
 import { rowKey, usePlan } from './DraftPlan.tsx';
@@ -46,22 +46,23 @@ function Mock({ prep, file }: { prep: Prep; file: DraftPrepFile }) {
   }), [JSON.stringify(P.list), keepers, me, mode, plan.bids, prep.budget, idx]);
 
   const pool = useMemo(() => poolOf(board.rows), [board]);
-  const calib = useMemo(() => calibrate(teams.filter((t) => !t.bid).length), [teams]);
-  const one = useMemo<Auction>(() => runAuction(pool, teams, rowKey, rng(seed * 7919), file.nomination, calib), [pool, teams, seed, file.nomination, calib]);
+  const dials = file.mockDials?.dials ?? DEFAULT_DIALS; // fitted to real auctions (Draft > Settings)
+  const calib = useMemo(() => calibrate(teams.filter((t) => !t.bid).length, 8, dials.noise), [teams, dials.noise]);
+  const one = useMemo<Auction>(() => runAuction(pool, teams, rowKey, rng(seed * 7919), file.nomination, calib, dials), [pool, teams, seed, file.nomination, calib, dials]);
   // Run 100: plays 100 auctions and shows the most typical one, a real single draft (nobody on two
   // teams, every budget and roster rule kept): the run where the most players went where they usually go.
   // freq: how often each player landed with that team over the 100.
   const typical = useMemo(() => {
     if (!many) return null;
     const rand = rng(seed * 104729);
-    const runs = Array.from({ length: MANY }, () => runAuction(pool, teams, rowKey, rand, file.nomination, calib));
+    const runs = Array.from({ length: MANY }, () => runAuction(pool, teams, rowKey, rand, file.nomination, calib, dials));
     const freq = new Map<string, number>();
     const pair = (key: string, team: string | null) => `${key}\u0000${team}`;
     for (const a of runs) for (const x of a.log) if (x.winner) freq.set(pair(x.key, x.winner), (freq.get(pair(x.key, x.winner)) ?? 0) + 1 / MANY);
     const score = (a: Auction) => a.log.reduce((t, x) => t + (x.winner ? freq.get(pair(x.key, x.winner))! : 0), 0);
     const best = runs.reduce((m, a) => (score(a) > score(m) ? a : m));
     return { auction: best, odds: (key: string, team: string | null) => freq.get(pair(key, team)) ?? 0 };
-  }, [many, pool, teams, seed, file.nomination, calib]);
+  }, [many, pool, teams, seed, file.nomination, calib, dials]);
   const shown = typical?.auction ?? one;
 
   const keptBy = (team: string) => keepers.filter((k) => k[3] === team);

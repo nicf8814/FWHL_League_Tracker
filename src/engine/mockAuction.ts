@@ -19,15 +19,23 @@ export interface Sale { n: number; by: string; key: string; name: string; pos: P
 export interface Auction { log: Sale[]; rosters: Map<string, Sale[]>; left: Map<string, number> }
 export type Nomination = [number, number, number][]; // per fifth of the draft: share top / middle / cheap
 
-const NOISE = 0.18; // spread of one owner's bid around his persona price (lognormal sigma)
 const STAR_PRICE = 35; // a "star" buy, where the stars habit applies
 const FAV_BOOST = 1.12; // favorite NFL team
-const DEEP = 0.6; // bid factor once his starters at the position are covered
 // Roster shapes like the real ones (2022-26 auctions: QB 1-2, RB 4-5, WR 5-7, TE 0-2 per team): past
 // USUAL a team bids a fraction (EXTRA_BID); at SHAPE_MAX it stops, well inside the league's limits.
 const USUAL: Record<PrepPos, number> = { QB: 1, RB: 5, WR: 7, TE: 1 };
 const SHAPE_MAX: Record<PrepPos, number> = { QB: 3, RB: 6, WR: 8, TE: 3 };
-const EXTRA_BID: Record<PrepPos, number> = { QB: 0.5, RB: 0.2, WR: 0.2, TE: 0.2 }; // a backup QB is common (45% of teams carry 2)
+// The mock's dials. Fitted to real auctions by scripts/fitMock.ts (draft-prep.json mockDials); these are
+// the starting values.
+export interface MockDials {
+  noise: number; // spread of one owner's bid around his persona price (lognormal sigma)
+  deep: number; // bid factor once his starters at the position are covered
+  extra: number; // bid factor past his usual roster (a backup QB gets 2.5x this, up to 1)
+  pressure: number; // how hard money per open spot pushes bids (exponent)
+  wild: number; // share of nominations that are a random player from the chosen group
+}
+export const DEFAULT_DIALS: MockDials = { noise: 0.18, deep: 0.6, extra: 0.2, pressure: 0.5, wild: 0.3 };
+const extraBid = (d: MockDials, pos: PrepPos) => (pos === 'QB' ? Math.min(1, d.extra * 2.5) : d.extra); // 45% of teams carry 2 QBs
 // A team's usual count and hard cap at a position: his own history (persona shape) when there is one,
 // else the league's usual roster. His usual is his average rounded down when the fraction is under .5
 // (a 1.4-QB owner usually carries 1); the cap is the most he has ever had, never past the league limit.
@@ -49,8 +57,7 @@ function stillNeeds(f: Record<PrepPos, number>): Partial<Record<PrepPos, number>
   if (f.WR < 3 && f.TE < 1) n.WR = (n.WR ?? 0) + 1; // the WR/TE spot, met by a WR or a TE
   return n;
 }
-const PRESSURE = 0.5, MAX_PRESSURE = 2; // money-per-spot pressure on bids (exponent, cap)
-const WILD = 0.3; // share of nominations that are a random player from the chosen group
+const MAX_PRESSURE = 2; // cap on money-per-spot pressure
 const STARTERS: Record<PrepPos, number> = { QB: 1, RB: 3, WR: 4, TE: 1 }; // a lineup's worth incl. flex spots
 // Used when the file has no measured order: 2022-26 auctions.
 export const DEFAULT_NOMINATION: Nomination = [[0.65, 0.31, 0.04], [0.21, 0.65, 0.14], [0.01, 0.64, 0.36], [0.01, 0.15, 0.85], [0, 0.01, 0.99]];
@@ -63,11 +70,11 @@ const gaussOf = (rand: () => number) => () => Math.sqrt(-2 * Math.log(rand() || 
 
 // With many bidders the price (second-highest bid) runs above a typical bid. Divide it back out so a
 // player sells for about his expected cost on average: the mean second-highest of n noisy bids.
-function secondHighest(n: number, rand: () => number): number {
+function secondHighest(n: number, rand: () => number, noise: number): number {
   const gauss = gaussOf(rand);
   let sum = 0;
   for (let d = 0; d < 2000; d++) {
-    const xs = Array.from({ length: n }, () => Math.exp(NOISE * gauss())).sort((a, b) => b - a);
+    const xs = Array.from({ length: n }, () => Math.exp(noise * gauss())).sort((a, b) => b - a);
     sum += xs[1] ?? xs[0] ?? 1;
   }
   return sum / 2000;
@@ -99,7 +106,7 @@ function canTake(t: { filled: Record<PrepPos, number>; bid?: unknown; persona?: 
 }
 
 // One full auction. pool: players up for auction (keepers removed). order: team names in nomination order.
-export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow) => string, rand: () => number, nomination: Nomination = DEFAULT_NOMINATION, calib = 1): Auction {
+export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow) => string, rand: () => number, nomination: Nomination = DEFAULT_NOMINATION, calib = 1, dials: MockDials = DEFAULT_DIALS): Auction {
   const gauss = gaussOf(rand);
   const state = teams.map((t) => ({ ...t, left: t.budget, filled: { QB: 0, RB: 0, WR: 0, TE: 0, ...t.filled } as Record<PrepPos, number> }));
   const order = state.map((t) => ({ t, k: rand() })).sort((a, b) => a.k - b.k).map((x) => x.t);
@@ -128,15 +135,16 @@ export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow
     const want = (r: PrepRow) => (by.filled[r.pos] < usualOf(by, r.pos) ? 1 : 0) + (by.filled[r.pos] < STARTERS[r.pos] ? 1 : 0) + (by.persona ? by.persona.lean[r.pos] - 1 : 0);
     const need = (r: PrepRow) => (g === 2 ? -want(r) : want(r));
     let r = cands[0]!;
-    if (rand() < WILD) r = cands[Math.floor(rand() * cands.length)]!;
+    if (rand() < dials.wild) r = cands[Math.floor(rand() * cands.length)]!;
     else for (const c of cands) if (need(c) < need(r) || (need(c) === need(r) && c.cost > r.cost)) r = c;
     left.delete(r);
     // Bids.
     const spotsLeft = state.reduce((x, t) => x + Math.max(0, open(t)), 0);
     // Money pressure: an owner with more money per open spot than the league bids up, one with less
-    // bids down (real teams spend nearly all $200). PRESSURE sets how hard.
+    // bids down (real teams spend nearly all $200). dials.pressure sets how hard.
     const moneyLeft = state.reduce((x, t) => x + (open(t) > 0 ? t.left : 0), 0);
     const perSpot = spotsLeft ? moneyLeft / spotsLeft : 1;
+    const phase = filledSoFar / Math.max(1, total); // pressure builds as the draft goes: none at the opening bid
     let best = 0, second = 0, win = -1, run = -1;
     state.forEach((t, i) => {
       const o = open(t), take = canTake(t, r);
@@ -149,7 +157,7 @@ export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow
       const usual = usualOf(t, r.pos), cap = capOf(t, r.pos);
       const shaped = (x: number) => {
         if (t.filled[r.pos] >= cap) return 0;
-        if (t.filled[r.pos] >= usual) x *= EXTRA_BID[r.pos]; else if (t.filled[r.pos] >= Math.min(usual, STARTERS[r.pos])) x *= DEEP;
+        if (t.filled[r.pos] >= usual) x *= extraBid(dials, r.pos); else if (t.filled[r.pos] >= Math.min(usual, STARTERS[r.pos])) x *= dials.deep;
         // Under $1 of interest: he bids the $1 minimum only that share of the time (so a lukewarm owner
         // doesn't win every $1 coin flip).
         if (x < 1) { if (!must && rand() >= x) return 0; x = 1; }
@@ -159,7 +167,7 @@ export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow
         w = t.planned?.has(keyOf(r)) ? t.bid(r) : shaped(t.bid(r));
         if (t === by) w = Math.max(1, w); // the nominator opens at $1
       } else {
-        w = (r.cost / calib) * Math.exp(NOISE * gauss()) * Math.min(MAX_PRESSURE, Math.max(1 / MAX_PRESSURE, (t.left / o / perSpot) ** PRESSURE));
+        w = (r.cost / calib) * Math.exp(dials.noise * gauss()) * Math.min(MAX_PRESSURE, Math.max(1 / MAX_PRESSURE, (t.left / o / perSpot) ** (dials.pressure * phase)));
         const p = t.persona;
         if (p) {
           w *= p.lean[r.pos] * p.overpay;
@@ -192,22 +200,22 @@ export function poolOf(rows: PrepRow[], spots = 156): PrepRow[] {
   const fodder = open.filter((r) => r.cost <= 0 && r.proj !== null).sort((a, b) => (b.vorp ?? -1e9) - (a.vorp ?? -1e9) || b.proj! - a.proj!);
   return [...priced, ...fodder.slice(0, Math.max(0, spots + EXTRA - priced.length))];
 }
-export const calibrate = (teams: number, seed = 8) => secondHighest(Math.max(2, teams), rng(seed));
+export const calibrate = (teams: number, seed = 8, noise = DEFAULT_DIALS.noise) => secondHighest(Math.max(2, teams), rng(seed), noise);
 
 // rows: the priced board (keepers and Nic's planned buys already taken). myMax: what Nic would pay per
 // player (his planned bid, else the expected cost; the ceiling is only a reference, Nic Nov 18).
 // plan: Nic's planned (non-keeper) players, for plan odds. Nic is not in these auctions: they measure
 // what everyone else would pay.
-export function simulate(rows: PrepRow[], teams: SimTeam[], myMax: (r: PrepRow) => number, keyOf: (r: PrepRow) => string, plan: string[] = [], runs = 200, seed = 7, nomination: Nomination = DEFAULT_NOMINATION): SimOut {
+export function simulate(rows: PrepRow[], teams: SimTeam[], myMax: (r: PrepRow) => number, keyOf: (r: PrepRow) => string, plan: string[] = [], runs = 200, seed = 7, nomination: Nomination = DEFAULT_NOMINATION, dials: MockDials = DEFAULT_DIALS): SimOut {
   const pool = poolOf(rows);
   const stats = new Map<string, { get: number; price: number; buyers: Map<string, number> }>();
   for (const r of rows) if (!r.keeper) stats.set(keyOf(r), { get: 0, price: 0, buyers: new Map() });
   const byKey = new Map(rows.map((r) => [keyOf(r), r]));
-  const rand = rng(seed), calib = calibrate(teams.length);
+  const rand = rng(seed), calib = calibrate(teams.length, 8, dials.noise);
   // Gettable: Nic gets him if his bid beats the most anyone else would pay (the winner's bid).
   let planHits = 0;
   for (let run = 0; run < runs; run++) {
-    const sales = new Map(runAuction(pool, teams, keyOf, rand, nomination, calib).log.map((x) => [x.key, x]));
+    const sales = new Map(runAuction(pool, teams, keyOf, rand, nomination, calib, dials).log.map((x) => [x.key, x]));
     let ok = true;
     for (const [key, st] of stats) {
       const sale = sales.get(key), mine = myMax(byKey.get(key)!);

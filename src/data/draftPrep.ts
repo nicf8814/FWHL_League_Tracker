@@ -88,6 +88,21 @@ export interface DraftPrepFile {
   // Nomination order in real auctions (personaYears): for each fifth of the draft, the share of
   // nominations that were [top 24, 25-72, the rest] by price among that draft's auctioned players.
   nomination?: [number, number, number][];
+  // The mock auction's dials, fitted by `npm run data -- fitmock` to real auctions (scripts/fitMock.ts).
+  mockDials?: MockFit;
+}
+
+export interface MockFit {
+  dials: { noise: number; deep: number; extra: number; pressure: number; wild: number };
+  fitOn: number[]; // auctions the dials were chosen on
+  checkOn: number[]; // auctions held out to check them
+  // How the mock compared with the real auction (check years), fitted dials vs. the starting ones:
+  // price miss ($, auctioned players at $5+), money left miss ($ per team), roster shape miss (players per position per team).
+  // cover: share of real prices inside the mock's 10th-90th percentile range (target 80%).
+  score: { price: number; left: number; shape: number; cover: number };
+  before: { price: number; left: number; shape: number; cover: number };
+  combos: number;
+  runs: number;
 }
 
 export const draftPrepUrl = (base: string) => `${base}seed/draft-prep.json`;

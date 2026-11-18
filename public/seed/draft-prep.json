@@ -1,4 +1,5 @@
-{"version":2,"personaYears":[2022,2023,2024,2025,2026],"nomination":[[0.65,0.31,0.04],[0.21,0.65,0.14],[0.01,0.64,0.36],[0.01,0.15,0.85],[0,0.01,0.99]],"personas":[
+{"version":2,"personaYears":[2022,2023,2024,2025,2026],"nomination":[[0.65,0.31,0.04],[0.21,0.65,0.14],[0.01,0.64,0.36],[0.01,0.15,0.85],[0,0.01,0.99]],
+"mockDials":{"dials":{"noise":0.09,"deep":1,"extra":0.1,"pressure":9,"wild":0.3},"fitOn":[2025],"checkOn":[2026],"score":{"price":5.88,"left":1.46,"shape":0.43,"cover":0.43},"before":{"price":5.69,"left":14.87,"shape":0.46,"cover":0.5},"combos":432,"runs":30},"personas":[
 {"key":"david-morris","name":"David Morris","teamId":2,"shape":{"QB":1.4,"RB":3.8,"WR":7.6,"TE":0.4},"shapeMax":{"QB":2,"RB":5,"WR":8,"TE":1},"lean":{"QB":1.18,"RB":1.16,"WR":0.85,"TE":0.97},"overpay":1.08,"stars":1.13,"fav":["KC","CIN"],"drafts":5},
 {"key":"clint-h","name":"Clint H","teamId":1,"shape":{"QB":1.4,"RB":5,"WR":5,"TE":1.8},"shapeMax":{"QB":2,"RB":5,"WR":6,"TE":3},"lean":{"QB":0.9,"RB":0.82,"WR":1.16,"TE":1.87},"overpay":0.95,"stars":0.79,"fav":["LAC"],"drafts":5},
 {"key":"ryan-cooper","name":"Ryan Cooper","teamId":8,"shape":{"QB":1,"RB":5,"WR":6.4,"TE":0.8},"shapeMax":{"QB":1,"RB":5,"WR":7,"TE":1},"lean":{"QB":0.88,"RB":1.4,"WR":0.77,"TE":0.97},"overpay":1.01,"stars":1.03,"fav":[],"drafts":5},

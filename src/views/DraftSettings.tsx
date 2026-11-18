@@ -1,6 +1,6 @@
 // Draft settings: how each owner bids in the mock auctions (personas from his recent drafts, adjustable
 // here) and how many mock auctions the board runs. Saved in this browser; the board reruns on change.
-import type { Persona, PrepPos } from '../data/draftPrep.ts';
+import type { MockFit, Persona, PrepPos } from '../data/draftPrep.ts';
 import { PREP_POS } from '../data/draftPrep.ts';
 import { Section, Seg } from '../ui/components.tsx';
 import { href } from '../app/router.ts';
@@ -8,7 +8,7 @@ import { DraftGate, Help, usePersonas } from './draftCommon.tsx';
 import { useLeague } from '../data/store.tsx';
 
 export default function DraftSettings() {
-  return <DraftGate title="Draft settings">{(f) => <Settings personas={f.personas ?? []} years={f.personaYears ?? []} />}</DraftGate>;
+  return <DraftGate title="Draft settings">{(f) => <Settings personas={f.personas ?? []} years={f.personaYears ?? []} fit={f.mockDials} />}</DraftGate>;
 }
 
 function Slider({ label, value, min, max, onChange }: { label: string; value: number; min: number; max: number; onChange: (v: number) => void }) {
@@ -20,7 +20,7 @@ function Slider({ label, value, min, max, onChange }: { label: string; value: nu
   );
 }
 
-function Settings({ personas, years }: { personas: Persona[]; years: number[] }) {
+function Settings({ personas, years, fit }: { personas: Persona[]; years: number[]; fit?: MockFit }) {
   const P = usePersonas(personas);
   const me = useLeague().settings.myTeamId;
   const lean = (p: Persona, pos: PrepPos) => <Slider label={`${p.name} ${pos} lean`} value={p.lean[pos]} min={0.3} max={2} onChange={(v) => P.set(p.key, { lean: { [pos]: v } as Persona['lean'] })} />;
@@ -37,6 +37,22 @@ function Settings({ personas, years }: { personas: Persona[]; years: number[] })
           </ul></Help></span>
         </div>
       </Section>
+      {fit && (
+        <Section title="Fitted to real auctions" aside={`Fit on ${fit.fitOn.join(', ')}, checked on ${fit.checkOn.join(', ')}`}>
+          <p className="max-w-[75ch] text-sm text-ink-2">The mock's dials aren't hand-set: they were picked from {fit.combos} combinations by replaying the {fit.fitOn.join(', ')} auction (real board, keepers and owners) and keeping the closest match. Then checked on {fit.checkOn.join(', ')}, which the fit never saw. Rerun with <code>npm run data -- fitmock</code> after a draft is added.</p>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[34rem] text-sm">
+              <thead><tr className="text-left text-ink-3"><th className="py-1">On the {fit.checkOn.join(', ')} auction</th><th className="text-right">Starting dials</th><th className="text-right">Fitted dials</th></tr></thead>
+              <tbody>
+                {([['Price miss (auctioned players at $5+)', 'price', (v: number) => `$${v.toFixed(2)}`], ['Money left miss per team', 'left', (v: number) => `$${v.toFixed(2)}`], ['Roster shape miss (players per position per team)', 'shape', (v: number) => v.toFixed(2)], ['Real prices inside the mock\'s middle 80% (target 80%)', 'cover', (v: number) => `${Math.round(v * 100)}%`]] as const).map(([label, k, f]) => (
+                  <tr key={k} className="border-t border-line"><td className="py-1">{label}</td><td className="num text-right text-ink-2">{f(fit.before[k])}</td><td className="num text-right font-semibold">{f(fit.score[k])}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-ink-3">Dials: bid randomness {fit.dials.noise}, interest past starters {fit.dials.deep}, past a usual roster {fit.dials.extra}, money pressure {fit.dials.pressure}, wild-card nominations {Math.round(fit.dials.wild * 100)}%. Real prices land inside the mock's range less often than they should: real auctions are more surprising than the mock, so read Get % as a guide, not a promise.</p>
+        </Section>
+      )}
       <Section title="Owner personas" aside={<span className="flex items-center gap-3">{years.length ? `From the ${years[0]}-${years.at(-1)} drafts` : ''}<button type="button" className="link" onClick={() => P.reset()}>Reset all</button></span>}>
         <p className="max-w-[75ch] text-sm text-ink-2">1.00 is the league average. Lean: his share of spend at the position against the league's. Overpay: what he paid over expected price. Stars: his priciest buy each draft. Favorite teams get about 12% more. Your changes are saved in this browser and rerun the board's mock auctions.</p>
         <div className="overflow-x-auto">

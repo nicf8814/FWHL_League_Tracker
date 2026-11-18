@@ -161,7 +161,9 @@ function nominationFrom(drafts: Drafts, years: number[]): [number, number, numbe
 
 export interface DraftPrepReport { editions: string[]; keepersNotOnBoard: string[]; samples: number }
 
-export function buildDraftPrep(dir = 'data/draft-prep', seed = 'public/seed', historyDir = 'data/history'): { file: DraftPrepFile; report: DraftPrepReport } {
+// replay: past drafts to rebuild as board editions with their real keepers (owner keys), for fitting the
+// mock auction (scripts/fitMock.ts). They are returned beside the file, not written into it.
+export function buildDraftPrep(dir = 'data/draft-prep', seed = 'public/seed', historyDir = 'data/history', replay: number[] = []): { file: DraftPrepFile; report: DraftPrepReport; replays: DraftPrep[] } {
   const errors: string[] = [];
   const boardYears = existsSync(dir) ? readdirSync(dir).filter((d) => /^\d{4}$/.test(d) && existsSync(join(dir, d, 'board.csv'))).map(Number).sort((a, b) => a - b) : [];
   if (!boardYears.length) throw new Error(`no ${dir}/<year>/board.csv found`);
@@ -217,11 +219,19 @@ export function buildDraftPrep(dir = 'data/draft-prep', seed = 'public/seed', hi
   editions.push({ year: next, kind: 'standin', ...base, source: `${last} season production and trade values, live`, fit: fitFor(next), board: [], keepers: [], standIn: { fromYear: last, curveYear: last, curve, sampleYears: years, samples } });
   const history = JSON.parse(readFileSync(join(seed, 'history.json'), 'utf8')) as History;
   const { years: personaYears, personas } = personasFrom(drafts, history, historyDir);
-  return { file: { version: 2, editions, personaYears, personas, nomination: nominationFrom(drafts, personaYears) }, report: { editions: editions.map((e) => `${e.year} ${e.kind}${e.kind === 'board' ? `: ${e.board.length} players, ${e.keepers.length} keepers, tiers from ${e.fit.marketYears.map(([y]) => y).join('+')}` : `: tiers from ${e.fit.marketYears.map(([y]) => y).join('+')}, slots ${e.fit.slotYears[0]}-${e.fit.slotYears.at(-1)}`}`), keepersNotOnBoard: notOnBoard, samples: samples.length } };
+  const replays: DraftPrep[] = replay.filter((y) => boards.has(y)).map((y) => ({
+    year: y, kind: 'board', ...base, source: `${dir}/${y}/board.csv`, fit: fitFor(y),
+    board: boards.get(y)!.map((r) => [r[0], r[1], r[2], r[3], r[4]] as BoardRow),
+    keepers: drafts.picks.filter((p) => p[0] === y && p[4] && isPos(drafts.players[p[1]]![1])).map((p) => [drafts.players[p[1]]![0], drafts.players[p[1]]![1] as PrepPos, p[3], p[2]] as KeeperRow),
+  }));
+  // Fitted mock dials are kept from the current file (they change only with `npm run data -- fitmock`).
+  const seedFile = join(seed, 'draft-prep.json');
+  const mockDials = existsSync(seedFile) ? (JSON.parse(readFileSync(seedFile, 'utf8')) as DraftPrepFile).mockDials : undefined;
+  return { replays, file: { version: 2, editions, personaYears, personas, nomination: nominationFrom(drafts, personaYears), ...(mockDials ? { mockDials } : {}) }, report: { editions: editions.map((e) => `${e.year} ${e.kind}${e.kind === 'board' ? `: ${e.board.length} players, ${e.keepers.length} keepers, tiers from ${e.fit.marketYears.map(([y]) => y).join('+')}` : `: tiers from ${e.fit.marketYears.map(([y]) => y).join('+')}, slots ${e.fit.slotYears[0]}-${e.fit.slotYears.at(-1)}`}`), keepersNotOnBoard: notOnBoard, samples: samples.length } };
 }
 
 export const formatDraftPrep = (f: DraftPrepFile) =>
-  `{"version":2,"personaYears":${JSON.stringify(f.personaYears ?? [])},"nomination":${JSON.stringify(f.nomination ?? [])},"personas":[\n${(f.personas ?? []).map((p) => JSON.stringify(p)).join(',\n')}\n],\n"editions":[\n${f.editions.map((e) => {
+  `{"version":2,"personaYears":${JSON.stringify(f.personaYears ?? [])},"nomination":${JSON.stringify(f.nomination ?? [])},${f.mockDials ? `\n"mockDials":${JSON.stringify(f.mockDials)},` : ''}"personas":[\n${(f.personas ?? []).map((p) => JSON.stringify(p)).join(',\n')}\n],\n"editions":[\n${f.editions.map((e) => {
     const { board, keepers, standIn, ...head } = e;
     const { samples, ...rest } = standIn ?? { samples: [] };
     const si = standIn ? `,\n"standIn":{${JSON.stringify(rest).slice(1, -1)},"samples":[\n${samples.map((s) => JSON.stringify(s)).join(',\n')}\n]}` : '';

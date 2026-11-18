@@ -17,6 +17,7 @@ import { validateCareers } from '../src/data/careers.ts';
 import { buildCareers, formatCareers } from './careers.ts';
 import { validateDraftPrep } from '../src/data/draftPrep.ts';
 import { buildDraftPrep, formatDraftPrep } from './draftPrep.ts';
+import { fitMock } from './fitMock.ts';
 import { existsSync, mkdirSync, readdirSync } from 'node:fs';
 import {
   applyChart, applyProjections, applyResults, applyRosters, arizonaToday, dropFantasyPros, formatDataset, chartRowsFromCsv,
@@ -182,6 +183,16 @@ try {
       console.log(JSON.stringify({ written: !dry, file: DRAFT_PREP, ...report }, null, 2));
       break;
     }
+    case 'fitmock': {
+      const fit = fitMock((m) => console.error(m));
+      const { file: prep } = buildDraftPrep();
+      prep.mockDials = fit;
+      const v = validateDraftPrep(JSON.parse(formatDraftPrep(prep)));
+      if (!v.ok) fail(`the draft prep file would be invalid:\n- ${v.errors.join('\n- ')}`);
+      if (!dry) writeFileSync(DRAFT_PREP, formatDraftPrep(prep));
+      console.log(JSON.stringify({ written: !dry, file: DRAFT_PREP, ...fit }, null, 2));
+      break;
+    }
     case 'results': { const ds = load(); finish(ds, applyResults(ds, readJson(rest[0]) as never, today)); break; }
     case 'projections': { const ds = load(); finish(ds, applyProjections(ds, readJson(rest[0]) as never, today, force)); break; }
     case 'rosters': { const ds = load(); finish(ds, applyRosters(ds, readJson(rest[0]) as never, today, force)); break; }
@@ -193,7 +204,7 @@ try {
     }
     case 'drop-fantasypros': { const ds = load(); finish(ds, dropFantasyPros(ds)); break; }
     default:
-      fail(`unknown command "${cmd ?? ''}". Use: check | results <json> | projections <json> | rosters <json> | chart <peaked|menton> <week> <csv> | history | lineups | drafts | trades | careers | draftprep`);
+      fail(`unknown command "${cmd ?? ''}". Use: check | results <json> | projections <json> | rosters <json> | chart <peaked|menton> <week> <csv> | history | lineups | drafts | trades | careers | draftprep | fitmock`);
   }
 } catch (e) {
   fail(e instanceof Error ? e.message : String(e));
