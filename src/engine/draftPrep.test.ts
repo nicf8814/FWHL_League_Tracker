@@ -158,3 +158,24 @@ test('no bid can break the max-bid rule', async () => {
   const twelve = Array.from({ length: 12 }, (_, i) => ({ ...p(`W${i}`, 1), pos: (i < 5 ? 'RB' : i < 10 ? 'WR' : 'TE') as PrepPos }));
   assert.ok(posFull(twelve, 'WR') && !posFull(twelve, 'QB'), 'the last spot is the QB\'s');
 });
+
+test('auto-fill builds a full, legal roster for every button', async () => {
+  const { autoFill, STRATEGIES } = await import('./autoFill.ts');
+  const { placePlan } = await import('./rosterPlan.ts');
+  const board = priceBoard(tiny(), [['RB 3', 'RB', 20, 'me']]).rows;
+  const keyOf = (r: { name: string; pos: string }) => `${r.name}|${r.pos}`;
+  const kept = { key: 'RB 3|RB', name: 'RB 3', pos: 'RB' as PrepPos, bid: 20, keeper: true };
+  const locked = { key: 'WR 5|WR', name: 'WR 5', pos: 'WR' as PrepPos, bid: 15, keeper: false };
+  const avoid = new Set(['WR 1|WR', 'QB 1|QB']);
+  for (const st of STRATEGIES) {
+    const out = autoFill(board, [kept, locked], st.id, avoid, keyOf);
+    const s = placePlan(out);
+    assert.equal(out.length, 13, st.id);
+    assert.deepEqual(s.problems, [], st.id);
+    assert.ok(s.spent <= 200, `${st.id} spent ${s.spent}`);
+    assert.ok(out.some((p) => p.key === 'RB 3|RB') && out.some((p) => p.key === 'WR 5|WR'), `${st.id} kept the keeper and the lock`);
+    assert.ok(!out.some((p) => avoid.has(p.key)), `${st.id} skipped the avoided`);
+    const bought = out.filter((p) => !p.keeper && p.key !== 'WR 5|WR');
+    if (st.id === 'balanced') assert.ok(bought.every((p) => p.bid <= 50));
+  }
+});

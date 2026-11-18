@@ -14,6 +14,7 @@ import { Empty, fmt, PosMark, Section, Seg, signed, tone } from '../ui/component
 import { DataTable, TableBar, useTable, type Col, type FilterDef } from '../ui/table.tsx';
 import { PlanButton, PlanPanel, planPicks, rowKey, usePlan } from './DraftPlan.tsx';
 import { maxBidFor, posFull } from '../engine/rosterPlan.ts';
+import { autoFill, type Strategy } from '../engine/autoFill.ts';
 
 const PASS_HASH = '55174404f557a8209cd5aacf3c54e1a4e2b7bc5b9eaa8254dd570c67d9733685'; // SHA-256 of the password (docs/draft-prep/design.md, Access)
 const UNLOCK_KEY = 'fwhl-draft-prep-unlocked';
@@ -164,6 +165,14 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
   const liveOf = (r: PrepRow) => live?.get(keyOf(r.name, r.pos));
   const planned = useMemo(() => planPicks(board.rows, me, plan.bids).picks, [board, me, plan.bids]);
   const nextMax = maxBidFor(planned, null, prep.budget);
+  // Auto-fill: price the board with only the locked buys taken, keep keepers and locks, rebuild the rest.
+  const fill = (strategy: Strategy) => {
+    const lockedBids = Object.fromEntries(Object.entries(plan.bids).filter(([k]) => plan.locks.has(k)));
+    const rowsNow = priceBoard(prep, keepers, lockedBids).rows;
+    const start = planPicks(rowsNow, me, lockedBids).picks;
+    const out = autoFill(rowsNow, start, strategy, plan.avoid, rowKey, prep.budget);
+    plan.replace(Object.fromEntries(out.filter((p) => !p.keeper).map((p) => [p.key, p.bid])));
+  };
 
   const filters = useMemo<FilterDef<PrepRow>[]>(() => [
     { id: 'pos', label: 'Position', options: [['ANY', 'Any position'], ['QB', 'QB'], ['RB', 'RB'], ['WR', 'WR'], ['TE', 'TE']], test: (r, v) => r.pos === v },
@@ -213,7 +222,7 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
         <li><span className="text-ink">Edge</span>: worth − cost. Overpaying is what hurts: 2026 buys more than $10 over worth gave back about $26 each by Week 10.</li>
         <li><span className="text-ink">Kept</span>: {live ? "each team's best keeper calls from the Keepers page, locked contracts first" : `the real ${prep.year} keepers`}. Switch anyone on or off; the board reprices.{changed ? <> <button type="button" className="link" onClick={reset}>Undo my {changed} switch{changed === 1 ? '' : 'es'}</button></> : null}</li>
       </ul>
-      {live && <PlanPanel rows={board.rows} me={me} plan={plan} budget={prep.budget} />}
+      {live && <PlanPanel rows={board.rows} me={me} plan={plan} budget={prep.budget} onFill={fill} />}
       <TableBar t={t} noun="players" file={`fwhl-draft-board-${prep.year}`} />
       <DataTable t={t} rowKey={(r) => String(r.i)} minWidth={live ? 'min-w-[68rem]' : 'min-w-[56rem]'} empty="No player matches these filters." />
     </Section>
