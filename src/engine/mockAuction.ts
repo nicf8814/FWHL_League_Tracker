@@ -68,17 +68,23 @@ export function rng(seed: number) {
 }
 const gaussOf = (rand: () => number) => () => Math.sqrt(-2 * Math.log(rand() || 1e-9)) * Math.cos(2 * Math.PI * rand());
 
-// With many bidders the price (second-highest bid) runs above a typical bid. Divide it back out so a
-// player sells for about his expected cost on average: the mean second-highest of n noisy bids.
-function secondHighest(n: number, rand: () => number, noise: number): number {
-  const gauss = gaussOf(rand);
+// With many bidders the price (second-highest bid) runs above a typical bid, and the persona habits
+// (position lean x overpay, x stars for a star) push it higher still: several owners love a star, so the
+// second-highest of their bids sat at the slot ceiling every time (Chase $89 in all 200 mocks, Nov 18;
+// he really went for $70 in 2026, top WRs $64-77). Divide it back out per position, star or not, with
+// this league's personas, so a player sells for about his expected cost on average. A persona's habits
+// still decide WHO buys him; this keeps them from also deciding that everyone overpays.
+export type Calib = number | Record<PrepPos, [number, number]>; // per position: [not a star, star]
+function secondHighest(mults: number[], rand: () => number, noise: number): number {
+  const gauss = gaussOf(rand), n = Math.max(2, mults.length);
   let sum = 0;
   for (let d = 0; d < 2000; d++) {
-    const xs = Array.from({ length: n }, () => Math.exp(noise * gauss())).sort((a, b) => b - a);
-    sum += xs[1] ?? xs[0] ?? 1;
+    const xs = Array.from({ length: n }, (_, i) => (mults[i] ?? 1) * Math.exp(noise * gauss())).sort((a, b) => b - a);
+    sum += xs[1]!;
   }
   return sum / 2000;
 }
+const calibOf = (c: Calib, r: PrepRow) => (typeof c === 'number' ? c : c[r.pos][r.cost >= STAR_PRICE ? 1 : 0]);
 
 // How Nic bids when a strategy drives his team (the auto-fill buttons' rules, as bids).
 export function strategyBid(s: Strategy, r: PrepRow): number {
@@ -106,7 +112,7 @@ function canTake(t: { filled: Record<PrepPos, number>; bid?: unknown; persona?: 
 }
 
 // One full auction. pool: players up for auction (keepers removed). order: team names in nomination order.
-export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow) => string, rand: () => number, nomination: Nomination = DEFAULT_NOMINATION, calib = 1, dials: MockDials = DEFAULT_DIALS): Auction {
+export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow) => string, rand: () => number, nomination: Nomination = DEFAULT_NOMINATION, calib: Calib = 1, dials: MockDials = DEFAULT_DIALS): Auction {
   const gauss = gaussOf(rand);
   const state = teams.map((t) => ({ ...t, left: t.budget, filled: { QB: 0, RB: 0, WR: 0, TE: 0, ...t.filled } as Record<PrepPos, number> }));
   const order = state.map((t) => ({ t, k: rand() })).sort((a, b) => a.k - b.k).map((x) => x.t);
@@ -167,7 +173,7 @@ export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow
         w = t.planned?.has(keyOf(r)) ? t.bid(r) : shaped(t.bid(r));
         if (t === by) w = Math.max(1, w); // the nominator opens at $1
       } else {
-        w = (r.cost / calib) * Math.exp(dials.noise * gauss()) * Math.min(MAX_PRESSURE, Math.max(1 / MAX_PRESSURE, (t.left / o / perSpot) ** (dials.pressure * phase)));
+        w = (r.cost / calibOf(calib, r)) * Math.exp(dials.noise * gauss()) * Math.min(MAX_PRESSURE, Math.max(1 / MAX_PRESSURE, (t.left / o / perSpot) ** (dials.pressure * phase)));
         const p = t.persona;
         if (p) {
           w *= p.lean[r.pos] * p.overpay;
@@ -200,7 +206,15 @@ export function poolOf(rows: PrepRow[], spots = 156): PrepRow[] {
   const fodder = open.filter((r) => r.cost <= 0 && r.proj !== null).sort((a, b) => (b.vorp ?? -1e9) - (a.vorp ?? -1e9) || b.proj! - a.proj!);
   return [...priced, ...fodder.slice(0, Math.max(0, spots + EXTRA - priced.length))];
 }
-export const calibrate = (teams: number, seed = 8, noise = DEFAULT_DIALS.noise) => secondHighest(Math.max(2, teams), rng(seed), noise);
+// teams: the persona-driven teams (Nic's own bids are left out, as before).
+export function calibrate(teams: { persona: Persona | null }[], seed = 8, noise = DEFAULT_DIALS.noise): Calib {
+  const out = {} as Record<PrepPos, [number, number]>;
+  for (const pos of ['QB', 'RB', 'WR', 'TE'] as PrepPos[]) {
+    const m = (star: boolean) => teams.map((t) => (t.persona ? t.persona.lean[pos] * t.persona.overpay * (star ? t.persona.stars : 1) : 1));
+    out[pos] = [secondHighest(m(false), rng(seed), noise), secondHighest(m(true), rng(seed), noise)];
+  }
+  return out;
+}
 
 // rows: the priced board (keepers and Nic's planned buys already taken). myMax: what Nic would pay per
 // player (his planned bid, else the expected cost; the ceiling is only a reference, Nic Nov 18).
@@ -211,7 +225,7 @@ export function simulate(rows: PrepRow[], teams: SimTeam[], myMax: (r: PrepRow) 
   const stats = new Map<string, { get: number; price: number; buyers: Map<string, number> }>();
   for (const r of rows) if (!r.keeper) stats.set(keyOf(r), { get: 0, price: 0, buyers: new Map() });
   const byKey = new Map(rows.map((r) => [keyOf(r), r]));
-  const rand = rng(seed), calib = calibrate(teams.length, 8, dials.noise);
+  const rand = rng(seed), calib = calibrate(teams, 8, dials.noise);
   // Gettable: Nic gets him if his bid beats the most anyone else would pay (the winner's bid).
   let planHits = 0;
   for (let run = 0; run < runs; run++) {

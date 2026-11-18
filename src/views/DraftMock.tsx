@@ -47,7 +47,7 @@ function Mock({ prep, file }: { prep: Prep; file: DraftPrepFile }) {
 
   const pool = useMemo(() => poolOf(board.rows), [board]);
   const dials = file.mockDials?.dials ?? DEFAULT_DIALS; // fitted to real auctions (Draft > Settings)
-  const calib = useMemo(() => calibrate(teams.filter((t) => !t.bid).length, 8, dials.noise), [teams, dials.noise]);
+  const calib = useMemo(() => calibrate(teams.filter((t) => !t.bid), 8, dials.noise), [teams, dials.noise]);
   const one = useMemo<Auction>(() => runAuction(pool, teams, rowKey, rng(seed * 7919), file.nomination, calib, dials), [pool, teams, seed, file.nomination, calib, dials]);
   // Run 100: plays 100 auctions and shows the most typical one, a real single draft (nobody on two
   // teams, every budget and roster rule kept): the run where the most players went where they usually go.

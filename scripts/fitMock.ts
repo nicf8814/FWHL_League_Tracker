@@ -58,7 +58,7 @@ function replayOf(prep: DraftPrep, personas: Persona[], drafts: { picks: [number
 
 function score(r: Replay, d: MockDials, nomination: [number, number, number][] | undefined, runs = RUNS): Score {
   const pool = poolOf(r.rows), keyOf = (x: { name: string; pos: string }) => playerKey(x.name, x.pos);
-  const rand = rng(r.year), calib = calibrate(r.teams.length, 8, d.noise);
+  const rand = rng(r.year), calib = calibrate(r.teams, 8, d.noise);
   const paid = new Map<string, number>(), left = new Map<string, number>(), shape = new Map<string, Record<PrepPos, number>>();
   const prices = new Map<string, number[]>();
   for (let i = 0; i < runs; i++) {
