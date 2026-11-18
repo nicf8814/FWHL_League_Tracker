@@ -4,6 +4,8 @@ Static React + TypeScript app for the Favre's Waffle House fantasy league (ESPN 
 
 ## Rules
 
+- League rules (roster, auction, keepers/GLC, scoring, rule-change history) are in docs/rules/league-rules.md, transcribed from the manifesto PDF beside it. Use them as the reference for any draft, keeper or scoring logic.
+
 - Never edit `public/seed/fwhl-2026.json` by hand. Use `npm run data -- <command>` (docs/data-updates.md). Never change the format of the file.
 - `test/fixtures/fwhl-2026-11-10.json` is a frozen copy for the tests. Never update it with new data.
 - Before any push: `npm run data:check && npm test && npm run build`.
