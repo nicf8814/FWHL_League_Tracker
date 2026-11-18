@@ -5,7 +5,7 @@
 // players. Every pick is priced at his expected cost and the max-bid rule holds throughout.
 import type { PrepPos } from '../data/draftPrep.ts';
 import type { PrepRow } from './draftPrep.ts';
-import { placePlan, type PlanPick } from './rosterPlan.ts';
+import { SLOTS, placePlan, type PlanPick } from './rosterPlan.ts';
 
 export type Strategy = 'points' | 'stars' | 'balanced' | 'title' | 'bargain';
 export const STRATEGIES: { id: Strategy; label: string; help: string }[] = [
@@ -15,7 +15,7 @@ export const STRATEGIES: { id: Strategy; label: string; help: string }[] = [
   { id: 'title', label: 'Title shot', help: 'Leans hard to the top of each position: a bigger weekly ceiling over a deeper roster' },
   { id: 'bargain', label: 'Best value', help: 'Only players at least $5 under their worth, the most points among them' },
 ];
-export const REACH_RESERVE = 15; // shortcut: $ kept back for the 3 reach bench spots, a guess; make it a setting with part C
+export const REACH_RESERVE = 15; // default $ held back for the 3 reach bench spots; Nic sets it on the plan
 
 const price = (r: PrepRow) => Math.max(1, Math.round(r.cost));
 const allowed: Record<Strategy, (r: PrepRow) => boolean> = {
@@ -36,13 +36,13 @@ const score: Record<Strategy, (r: PrepRow) => number> = {
 const POOL = 40;
 const BENCH_CAP = { QB: 2, TE: 2 }; // bench depth goes to RB/WR once there are two QBs or two TEs // best candidates per position the search considers
 
-export function autoFill(rows: PrepRow[], picks: PlanPick[], strategy: Strategy, avoid: Set<string>, keyOf: (r: PrepRow) => string, budget = 200): PlanPick[] {
+export function autoFill(rows: PrepRow[], picks: PlanPick[], strategy: Strategy, avoid: Set<string>, keyOf: (r: PrepRow) => string, budget = 200, reach = REACH_RESERVE): PlanPick[] {
   const have = new Set(picks.map((p) => p.key));
   const state = placePlan(picks, budget);
   const emptyStarters = state.placed.filter((x) => !x.pick && !x.slot.bench).map((x) => x.slot.id);
   const benchOpen = state.placed.filter((x) => !x.pick && x.slot.bench).length;
   const cand = rows.filter((r) => !r.keeper && r.bought === null && !have.has(keyOf(r)) && !avoid.has(keyOf(r)) && (r.vorp ?? 0) > 0 && allowed[strategy](r));
-  const reserve = Math.min(REACH_RESERVE, Math.max(0, state.left - state.open)) * Math.min(1, benchOpen / 3);
+  const reserve = Math.min(Math.max(0, reach), Math.max(0, state.left - state.open)) * Math.min(1, benchOpen / 3);
   const starterMoney = Math.max(0, Math.floor(state.left - benchOpen - reserve));
   const chosen = bestLineup(cand, emptyStarters, starterMoney, score[strategy]);
   const out = [...picks, ...chosen.map((r) => ({ key: keyOf(r), name: r.name, pos: r.pos, bid: price(r), keeper: false }))];
@@ -118,3 +118,25 @@ export function bestLineup(cand: PrepRow[], empty: string[], money: number, valu
   return out;
 }
 
+
+export interface Swap { row: PrepRow; bid: number; dVorp: number; dCost: number }
+
+// Up to `n` players who could take a planned player's spot for about his money: same position, not
+// taken, kept or avoided, affordable under the max-bid rule with his bid put back, priced at expected
+// cost. Best gain in points over replacement first; anything costing more than SWAP_RANGE over his bid
+// is left out.
+export const SWAP_RANGE = 10;
+export function swapOptions(rows: PrepRow[], picks: PlanPick[], key: string, avoid: Set<string>, keyOf: (r: PrepRow) => string, budget = 200, n = 3): Swap[] {
+  const me = picks.find((p) => p.key === key);
+  if (!me || me.keeper) return [];
+  const mine = rows.find((r) => keyOf(r) === key);
+  const taken = new Set(picks.map((p) => p.key));
+  const others = picks.filter((p) => p.key !== key);
+  const room = budget - others.reduce((s, p) => s + p.bid, 0) - (SLOTS.length - others.length - 1); // max bid in his spot
+  return rows
+    .filter((r) => r.pos === me.pos && !r.keeper && !taken.has(keyOf(r)) && !avoid.has(keyOf(r)) && r.proj !== null)
+    .map((r) => ({ row: r, bid: price(r), dVorp: Math.round((r.vorp ?? 0) - (mine?.vorp ?? 0)), dCost: price(r) - me.bid }))
+    .filter((x) => x.bid <= room && x.dCost <= SWAP_RANGE && x.dCost >= -Math.max(SWAP_RANGE, me.bid / 2))
+    .sort((a, b) => b.dVorp - a.dVorp || a.dCost - b.dCost)
+    .slice(0, n);
+}
