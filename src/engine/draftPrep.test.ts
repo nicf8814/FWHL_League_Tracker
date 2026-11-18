@@ -159,6 +159,18 @@ test('no bid can break the max-bid rule', async () => {
   assert.ok(posFull(twelve, 'WR') && !posFull(twelve, 'QB'), 'the last spot is the QB\'s');
 });
 
+test('swaps offer same-position players near his price, best gain first', async () => {
+  const { swapOptions } = await import('./autoFill.ts');
+  const board = priceBoard(tiny()).rows;
+  const keyOf = (r: { name: string; pos: string }) => `${r.name}|${r.pos}`;
+  const wr = board.find((r) => r.name === 'WR 10')!;
+  const picks = [{ key: 'WR 10|WR', name: 'WR 10', pos: 'WR' as PrepPos, bid: Math.round(wr.cost), keeper: false }];
+  const opts = swapOptions(board, picks, 'WR 10|WR', new Set(['WR 9|WR']), keyOf);
+  assert.ok(opts.length > 0 && opts.length <= 3);
+  assert.ok(opts.every((o) => o.row.pos === 'WR' && o.row.name !== 'WR 10' && o.row.name !== 'WR 9' && o.dCost <= 10));
+  assert.ok(opts.every((o, i) => i === 0 || opts[i - 1]!.dVorp >= o.dVorp));
+});
+
 test('auto-fill builds a full, legal roster for every button', async () => {
   const { autoFill, STRATEGIES } = await import('./autoFill.ts');
   const { placePlan } = await import('./rosterPlan.ts');

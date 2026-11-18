@@ -171,7 +171,7 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
     const own = Object.fromEntries(Object.entries(plan.bids).filter(([k]) => !plan.auto.has(k)));
     const rowsNow = priceBoard(prep, keepers, own).rows;
     const start = planPicks(rowsNow, me, own).picks;
-    const out = autoFill(rowsNow, start, strategy, plan.avoid, rowKey, prep.budget);
+    const out = autoFill(rowsNow, start, strategy, plan.avoid, rowKey, prep.budget, plan.reach);
     plan.fillWith(Object.fromEntries(out.filter((p) => !p.keeper && !(p.key in own)).map((p) => [p.key, p.bid])));
   };
 
