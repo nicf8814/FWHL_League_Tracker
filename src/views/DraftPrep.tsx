@@ -157,7 +157,9 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
   const reset = () => { const next = { ...switches }; delete next[prep.year]; setSwitches(next); saveSwitches(next); };
   const changed = Object.keys(mine).length;
 
-  const board = useMemo(() => priceBoard(prep, keepers), [prep, keepers]);
+  // Planned buys count as sold at my bid, so an overbid reprices everyone left (live board only).
+  const bought = useMemo(() => (live ? plan.bids : {}), [live, plan.bids]);
+  const board = useMemo(() => priceBoard(prep, keepers, bought), [prep, keepers, bought]);
   const rows = useMemo(() => board.rows.filter((r) => r.price > 0 || (r.vorp ?? 0) > 0 || r.keeper || candidateKeys.has(keyOf(r.name, r.pos))), [board, candidateKeys]);
   const liveOf = (r: PrepRow) => live?.get(keyOf(r.name, r.pos));
   const planned = useMemo(() => planPicks(board.rows, me, plan.bids).picks, [board, me, plan.bids]);
@@ -199,6 +201,7 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
   return (
     <Section title={live ? `${prep.year} draft board, live` : `${prep.year} draft board, test run`} aside={`${keepers.length} keepers, $${board.keeperSpend} kept`}>
       <p className="headline-sm">${board.moneyLeft.toLocaleString()} left for {board.openSlots} open spots</p>
+      {board.boughtSpend > 0 && <p className="text-sm text-ink-2">After your plan's ${board.boughtSpend} in bids: every price below counts them as sold, so overbidding makes the rest cheaper and bargains make it dearer.</p>}
       <ul className="grid max-w-[75ch] gap-1 text-sm text-ink-2">
         {live && si ? (
           <li><span className="text-ink">Live stand-in</span> until the {prep.year} projections are loaded. Today = his rank this season through Week {weeks}: 70% points per game (4+ games), 30% trade value. {prep.year} range = where players at that rank, with that much of a season played, were priced the next August ({si.sampleYears[0]![0]}-{si.sampleYears.at(-1)![0]} seasons): the middle sets his price and projection ({si.curveYear} board at that rank), the range is the middle half. Injuries count through the games he can still play.</li>
