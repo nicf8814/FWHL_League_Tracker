@@ -1,8 +1,9 @@
 // Draft plan panel on the Draft prep page: Nic's 13-man target roster. His flagged keepers drop in at
 // their keeper cost; "+" on a board row adds a player at his expected cost, and every bid can be typed.
 // No bid can break the max-bid rule (Art. IV): typed bids stop at the max, and + is off at $0.
-// Auto-fill (engine/autoFill.ts) rebuilds everything but keepers and locked players; avoided players
-// are never picked. The plan lives in this browser (localStorage), one per draft year.
+// Auto-fill (engine/autoFill.ts) fills only the empty spots (Nic, Nov 18): keepers and every player Nic
+// added himself stay, and the next auto-fill replaces only its own picks (marked auto). "Keep" turns an
+// auto pick into one of Nic's; so does typing his bid. Avoided players are never picked. The plan lives in this browser (localStorage), one per draft year.
 import { useState } from 'react';
 import { playerKey } from '../data/drafts.ts';
 import { STRATEGIES, type Strategy } from '../engine/autoFill.ts';
@@ -10,15 +11,15 @@ import type { PrepRow } from '../engine/draftPrep.ts';
 import { maxBidFor, placePlan, type PlanPick } from '../engine/rosterPlan.ts';
 import { fmt, PosMark } from '../ui/components.tsx';
 
-const PLAN_KEY = 'fwhl-draft-plan'; // { year: { bids: { playerKey: bid }, locks: [], avoid: [] } }
-interface YearPlan { bids: Record<string, number>; locks: string[]; avoid: string[] }
+const PLAN_KEY = 'fwhl-draft-plan'; // { year: { bids: { playerKey: bid }, auto: [], avoid: [] } }
+interface YearPlan { bids: Record<string, number>; auto: string[]; avoid: string[] }
 type Plans = Record<string, YearPlan>;
-const blank: YearPlan = { bids: {}, locks: [], avoid: [] };
+const blank: YearPlan = { bids: {}, auto: [], avoid: [] };
 const read = (): Plans => {
   try {
     const raw = JSON.parse(localStorage.getItem(PLAN_KEY) ?? '{}') as Record<string, unknown>;
     // part A saved just the bids
-    return Object.fromEntries(Object.entries(raw).map(([y, v]) => [y, v && typeof v === 'object' && 'bids' in v ? { ...blank, ...(v as YearPlan) } : { ...blank, bids: v as Record<string, number> }]));
+    return Object.fromEntries(Object.entries(raw).map(([y, v]) => [y, v && typeof v === 'object' && 'bids' in v ? { bids: (v as YearPlan).bids, auto: (v as YearPlan).auto ?? [], avoid: (v as YearPlan).avoid ?? [] } : { ...blank, bids: v as Record<string, number> }]));
   } catch { return {}; }
 };
 const save = (p: Plans) => { try { localStorage.setItem(PLAN_KEY, JSON.stringify(p)); } catch { /* lasts for this visit */ } };
@@ -38,16 +39,21 @@ export function usePlan(year: number) {
   const without = (y: YearPlan, k: string) => { const { [k]: _, ...rest } = y.bids; return rest; };
   return {
     bids: mine.bids,
-    locks: new Set(mine.locks),
+    auto: new Set(mine.auto),
     avoid: new Set(mine.avoid),
     has: (k: string) => k in mine.bids,
-    add: (k: string, bid: number) => put((y) => ({ bids: { ...y.bids, [k]: Math.max(1, Math.round(bid)) }, avoid: y.avoid.filter((x) => x !== k) })),
-    setBid: (k: string, bid: number) => put((y) => ({ bids: { ...y.bids, [k]: Math.max(1, Math.round(bid) || 1) } })),
-    remove: (k: string) => put((y) => ({ bids: without(y, k), locks: y.locks.filter((x) => x !== k) })),
-    lock: (k: string, on: boolean) => put((y) => ({ locks: on ? [...new Set([...y.locks, k])] : y.locks.filter((x) => x !== k) })),
-    setAvoid: (k: string, on: boolean) => put((y) => (on ? { avoid: [...new Set([...y.avoid, k])], bids: without(y, k), locks: y.locks.filter((x) => x !== k) } : { avoid: y.avoid.filter((x) => x !== k) })),
-    replace: (bids: Record<string, number>) => put(() => ({ bids })),
-    clear: () => put(() => ({ bids: {}, locks: [] })),
+    add: (k: string, bid: number) => put((y) => ({ bids: { ...y.bids, [k]: Math.max(1, Math.round(bid)) }, avoid: y.avoid.filter((x) => x !== k), auto: y.auto.filter((x) => x !== k) })),
+    setBid: (k: string, bid: number) => put((y) => ({ bids: { ...y.bids, [k]: Math.max(1, Math.round(bid) || 1) }, auto: y.auto.filter((x) => x !== k) })),
+    remove: (k: string) => put((y) => ({ bids: without(y, k), auto: y.auto.filter((x) => x !== k) })),
+    keep: (k: string) => put((y) => ({ auto: y.auto.filter((x) => x !== k) })),
+    setAvoid: (k: string, on: boolean) => put((y) => (on ? { avoid: [...new Set([...y.avoid, k])], bids: without(y, k), auto: y.auto.filter((x) => x !== k) } : { avoid: y.avoid.filter((x) => x !== k) })),
+    // Auto-fill result: Nic's own picks stay, the auto picks are swapped for these.
+    fillWith: (autoBids: Record<string, number>) => put((y) => {
+      const own = Object.fromEntries(Object.entries(y.bids).filter(([k]) => !y.auto.includes(k)));
+      return { bids: { ...own, ...autoBids }, auto: Object.keys(autoBids).filter((k) => !(k in own)) };
+    }),
+    clearAuto: () => put((y) => ({ bids: Object.fromEntries(Object.entries(y.bids).filter(([k]) => !y.auto.includes(k))), auto: [] })),
+    clear: () => put(() => ({ bids: {}, auto: [] })),
   };
 }
 export type Plan = ReturnType<typeof usePlan>;
@@ -96,7 +102,8 @@ export function PlanPanel({ rows, me, plan, budget, onFill }: { rows: PrepRow[];
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-ink-2">Auto-fill:</span>
         {STRATEGIES.map((x) => <button key={x.id} type="button" className="rowbtn h-8 rounded border border-line px-3" title={x.help} onClick={() => onFill(x.id)}>{x.label}</button>)}
-        <span className="text-xs text-ink-3">Keepers and locked players stay; the rest is rebuilt at expected cost.{plan.avoid.size ? ` Avoiding ${plan.avoid.size}.` : ''}</span>
+        <span className="text-xs text-ink-3">Fills the empty spots at expected cost. Your keepers and the players you added stay; a new fill replaces only the auto picks.{plan.avoid.size ? ` Avoiding ${plan.avoid.size}.` : ''}</span>
+        {plan.auto.size > 0 && <button type="button" className="link text-xs" onClick={() => plan.clearAuto()}>Clear auto picks</button>}
       </div>
       {!me && <p className="text-sm text-ink-2">Pick your team in Data &amp; settings so your keepers drop in.</p>}
       {(s.problems.length > 0 || gone.length > 0) && (
@@ -108,16 +115,16 @@ export function PlanPanel({ rows, me, plan, budget, onFill }: { rows: PrepRow[];
           <tbody>
             {[...s.placed.map((x) => [x.slot.label, x.pick] as const), ...s.extra.map((p) => ['Extra', p] as const)].map(([label, p], i) => {
               const r = p ? byKey.get(p.key) : undefined;
-              const locked = !!p && plan.locks.has(p.key);
+              const auto = !!p && plan.auto.has(p.key);
               return (
                 <tr key={i} className="border-t border-line">
                   <td className="py-1 pr-2 text-ink-2">{label}</td>
-                  <td className="pr-2">{p ? <span className="flex items-center gap-2"><PosMark pos={p.pos} />{p.name}{p.keeper && <span className="text-xs text-ink-3">keeper</span>}</span> : <span className="text-ink-3">–</span>}</td>
+                  <td className="pr-2">{p ? <span className="flex items-center gap-2"><PosMark pos={p.pos} />{p.name}{p.keeper && <span className="text-xs text-ink-3">keeper</span>}{auto && <span className="text-xs text-ink-3">auto</span>}</span> : <span className="text-ink-3">–</span>}</td>
                   <td className="text-right">{p && !p.keeper ? <input type="number" min={1} max={maxBidFor(picks, p.key, budget)} value={p.bid} onChange={(e) => plan.setBid(p.key, Math.min(Number(e.target.value), maxBidFor(picks, p.key, budget)))} className="h-8 w-16 rounded border border-line bg-panel px-2 text-right" aria-label={`Bid for ${p.name}`} title={`Max $${maxBidFor(picks, p.key, budget)}`} /> : p ? `$${p.bid}` : ''}</td>
                   <td className="num text-right text-ink-2">{r ? `$${fmt(r.cost, 0)} ($${r.floor}–${r.ceiling})` : ''}</td>
                   <td className="num text-right text-ink-2">{r ? `$${fmt(r.worth, 0)}` : ''}</td>
                   <td className="whitespace-nowrap text-right">{p && !p.keeper && <>
-                    <button type="button" className={`rowbtn h-7 px-2 text-xs ${locked ? 'font-semibold' : 'text-ink-3'}`} aria-pressed={locked} onClick={() => plan.lock(p.key, !locked)} aria-label={`${locked ? 'Unlock' : 'Lock'} ${p.name}`} title={locked ? 'Locked: auto-fill keeps him' : 'Lock him through auto-fill'}>{locked ? 'locked' : 'lock'}</button>
+                    {auto && <button type="button" className="rowbtn h-7 px-2 text-xs" onClick={() => plan.keep(p.key)} aria-label={`Keep ${p.name} in the plan`} title="Make him yours: auto-fill won't replace him">keep</button>}
                     <button type="button" className="rowbtn h-7 px-2 text-xs text-ink-3" onClick={() => plan.remove(p.key)} aria-label={`Remove ${p.name}`}>✕</button>
                   </>}</td>
                 </tr>

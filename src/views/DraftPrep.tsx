@@ -165,13 +165,14 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
   const liveOf = (r: PrepRow) => live?.get(keyOf(r.name, r.pos));
   const planned = useMemo(() => planPicks(board.rows, me, plan.bids).picks, [board, me, plan.bids]);
   const nextMax = maxBidFor(planned, null, prep.budget);
-  // Auto-fill: price the board with only the locked buys taken, keep keepers and locks, rebuild the rest.
+  // Auto-fill: price the board with only my own buys taken (the old auto picks go back in the pool),
+  // keep keepers and my picks, and fill the empty spots.
   const fill = (strategy: Strategy) => {
-    const lockedBids = Object.fromEntries(Object.entries(plan.bids).filter(([k]) => plan.locks.has(k)));
-    const rowsNow = priceBoard(prep, keepers, lockedBids).rows;
-    const start = planPicks(rowsNow, me, lockedBids).picks;
+    const own = Object.fromEntries(Object.entries(plan.bids).filter(([k]) => !plan.auto.has(k)));
+    const rowsNow = priceBoard(prep, keepers, own).rows;
+    const start = planPicks(rowsNow, me, own).picks;
     const out = autoFill(rowsNow, start, strategy, plan.avoid, rowKey, prep.budget);
-    plan.replace(Object.fromEntries(out.filter((p) => !p.keeper).map((p) => [p.key, p.bid])));
+    plan.fillWith(Object.fromEntries(out.filter((p) => !p.keeper && !(p.key in own)).map((p) => [p.key, p.bid])));
   };
 
   const filters = useMemo<FilterDef<PrepRow>[]>(() => [
