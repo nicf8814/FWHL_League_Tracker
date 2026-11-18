@@ -79,14 +79,14 @@ test('traders: one line per side, and a career averages its grades', () => {
   assert.ok(best.trades >= 3 && worst.trades >= 3, 'a one-trade owner is not the league best');
 });
 
-test('keeper picks: value is worth minus price, and points over replacement never goes negative', () => {
+test('keeper picks: value is realized worth minus price, and points over replacement never goes negative', () => {
   const { drafts } = buildDrafts(h, dir, L);
-  const db = buildDraftBook(drafts);
+  const db = buildDraftBook(drafts, undefined, buildTrades(h, dir, L).trades);
   const bets = keeperBets(db);
   assert.ok(bets.length > 300);
   assert.ok(bets.every((b) => b.pick.keeper));
   for (const b of bets) {
-    if (b.value !== null) assert.equal(b.value, b.worth! - b.price);
+    if (b.value !== null) assert.equal(b.value, b.realized! - b.price);
     if (b.par !== null) assert.ok(b.par >= 0);
     assert.equal(b.hit, (b.value ?? 0) > 0);
   }

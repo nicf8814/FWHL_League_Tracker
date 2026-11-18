@@ -13,7 +13,7 @@ import { Stamp } from '../ui/stamp.tsx';
 import { PosTag } from './HistoryDrafts.tsx';
 
 let file: Promise<Trades | string> | null = null;
-function loadTrades(): Promise<Trades | string> {
+export function loadTrades(): Promise<Trades | string> {
   file ??= fetch(tradesUrl(import.meta.env.BASE_URL), { cache: 'no-cache' })
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`status ${r.status}`))))
     .then((raw) => { const v = validateTrades(raw); return v.ok ? v.value : `The trade history file is invalid: ${v.errors[0]}`; })

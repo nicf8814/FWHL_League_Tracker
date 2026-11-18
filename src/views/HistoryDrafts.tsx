@@ -5,11 +5,13 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'rea
 import { useLeague } from '../data/store.tsx';
 import { draftsUrl, validateDrafts, type DraftSeason, type Drafts } from '../data/drafts.ts';
 import type { OwnerKey } from '../data/history.ts';
+import type { Trades } from '../data/trades.ts';
 import { buildDraftBook, ordinal, posRank, type DraftBook, type DraftPick } from '../engine/drafts.ts';
 import { crewName, ownerName, teamOwners, type Hist, type Season } from '../engine/history.ts';
 import { Empty, fmt, Seg, Sheet, signed, tone } from '../ui/components.tsx';
 import { Filters } from '../ui/filters.tsx';
 import { DataTable, TableBar, useTable, type Col } from '../ui/table.tsx';
+import { loadTrades } from './HistoryTrades.tsx';
 
 // ---------- loading ----------
 let file: Promise<Drafts | string> | null = null;
@@ -24,13 +26,22 @@ function loadDrafts(): Promise<Drafts | string> {
 export function useDraftBook(H: Hist): DraftBook | string | null {
   const { idx } = useLeague();
   const [d, setD] = useState<Drafts | string | null>(null);
-  useEffect(() => { let live = true; loadDrafts().then((v) => live && setD(v)); return () => { live = false; }; }, []);
+  const [t, setT] = useState<Trades | string | null>(null);
+  useEffect(() => {
+    let live = true;
+    loadDrafts().then((v) => live && setD(v));
+    loadTrades().then((v) => live && setT(v));
+    return () => { live = false; };
+  }, []);
   return useMemo(() => {
     if (d === null || typeof d === 'string') return d;
+    if (t === null) return null; // realized worth needs the trades: a traded player still counts for his drafter
     const byTeam = teamOwners(H);
     const year = H.seasons.find((s) => s.live)?.year;
-    return buildDraftBook(d, year ? { year, idx, teamOwner: (t) => byTeam.get(t) } : undefined);
-  }, [d, H, idx]);
+    // shortcut: if the trade history fails to load, traded players count as dropped rather than the
+    // draft pages failing too. Revisit if that ever happens in practice.
+    return buildDraftBook(d, year ? { year, idx, teamOwner: (o) => byTeam.get(o) } : undefined, typeof t === 'string' ? undefined : t);
+  }, [d, t, H, idx]);
 }
 
 // ---------- small pieces ----------
@@ -44,6 +55,7 @@ const ptsMark = (s?: DraftSeason) => (s?.pts === 'rostered' ? '*' : s?.pts === '
 const POS_BG: Record<string, string> = { QB: 'bg-pos-qb', RB: 'bg-pos-rb', WR: 'bg-pos-wr', TE: 'bg-pos-te' };
 export const PosTag = ({ pos }: { pos: string }) => <span className={`inline-block min-w-[2.1rem] shrink-0 rounded-sm text-center font-mono text-xs leading-[1.1rem] font-semibold text-on-pos ${POS_BG[pos] ?? 'bg-ink-3'}`}>{pos}</span>;
 const KeeperTag = () => <span className="tag text-accent-ink" title="Keeper: the price is the keeper cost, not a market price">K</span>;
+const firstNames = (H: Hist, o: OwnerKey, y: number) => crewName(H, o, y).split(' & ').map((x) => x.split(' ')[0]).join(' & ');
 const shortCrew = (H: Hist, o: OwnerKey, y: number) => { const n = crewName(H, o, y); return n.includes(' & ') ? n.split(' & ').map((x) => x.split(' ')[0]).join(' & ') : n; };
 
 // The "how is value worked out" popup: tap the (i), tap anywhere else to close (native popover).
@@ -57,11 +69,13 @@ export function ValueHelp({ label = 'How value is worked out' }: { label?: strin
         <ol className="grid list-decimal gap-1.5 pl-5 text-sm text-ink-2">
           <li><span className="text-ink">The price of each finish.</span> Every draft's prices by position, most expensive first: what the 1st RB went for, the 2nd, and so on. Kept players are slotted in at what they'd have cost at auction (their market price times how much the league overpaid that year).</li>
           <li><span className="text-ink">Smoothed.</span> Each slot is averaged over that draft and the ones either side, so one bidding war doesn't swing it.</li>
-          <li><span className="text-ink">Worth</span> = the price of his finish at his position: an RB2 season is worth what the 2nd RB costs. <span className="text-ink">Value</span> = worth − price paid.</li>
+          <li><span className="text-ink">Drafted worth</span> = the price of his finish at his position: an RB2 season is worth what the 2nd RB costs. <span className="text-ink">Pick value</span> = drafted worth − price paid: how the pick turned out, whoever ended up with him.</li>
+          <li><span className="text-ink">Realized worth</span> = drafted worth × the share of his season he spent on the drafter's roster (bench weeks count; weeks after a trade still count, the Trading tab grades the deal). <span className="text-ink">Value</span> = realized worth − price paid. Team and manager draft grades use Value.</li>
           <li><span className="text-ink">Points for his price:</span> what players bought near his price at his position usually scored, in the drafts around his.</li>
         </ol>
-        <p className="mt-3 text-sm text-ink-2">Example: in 2016 David Johnson, kept at $11, finished RB1. The 1st RB slot cost $83 across 2015-2017, so he was worth $83: value +$72. An $11 RB usually scored about 95; he scored 326.</p>
-        <p className="mt-2 text-xs text-ink-3">Real league prices, keeper inflation included: what you'd have paid for that season. QBs, TEs and kickers have their own, cheaper curves. Hindsight: it shows how a pick turned out, not whether it was a good bet. Keepers are judged against their keeper price. Tap anywhere to close.</p>
+        <p className="mt-3 text-sm text-ink-2">Example: in 2016 David Johnson, kept at $11, finished RB1. The 1st RB slot cost $83 across 2015-2017, so his drafted worth was $83 and his pick value +$72. He stayed all season, so the same for realized worth and value. An $11 RB usually scored about 95; he scored 326.</p>
+        <p className="mt-2 text-sm text-ink-2">Raheem Mostert in 2023 went for $4 and was worth $84: pick value +$80. He was let go before Week 1, so his drafter realized $0: value −$4.</p>
+        <p className="mt-2 text-xs text-ink-3">Real league prices, keeper inflation included: what you'd have paid for that season. QBs, TEs and kickers have their own, cheaper curves. Hindsight: it shows how a pick turned out, not whether it was a good bet. Keepers are judged against their keeper price. Before 2018 bench weeks weren't recorded, so the drafter is taken to hold a player until another team first starts him. Tap anywhere to close.</p>
       </div>
     </>
   );
@@ -85,11 +99,12 @@ function PickTable({ H, book, rows, onPlayer }: { H: Hist; book: DraftBook; rows
     { id: 'price', label: 'Paid', value: (x) => x.price, cell: (x) => <b className="font-semibold">${x.price}</b> },
     { id: 'proj', label: 'Proj', className: 'hidden text-ink-3 md:table-cell', value: (x) => x.proj, cell: (x) => (x.proj === null ? '–' : `${fmt(x.proj, 0)}${book.seasons.get(x.year)?.proj === 'sleeper' ? '‡' : ''}`) },
     { id: 'pts', label: 'Pts', value: (x) => x.pts, cell: (x) => (x.pts === null ? <span className="text-ink-3">–</span> : <>{fmt(x.pts, 0)}<span className="text-ink-3">{ptsMark(book.seasons.get(x.year))}</span></>) },
-    { id: 'value', label: 'Value', value: (x) => x.value, cell: (x) => <Value v={x.value} /> },
+    { id: 'pickValue', label: 'Pick value', value: (x) => x.pickValue, cell: (x) => <Value v={x.pickValue} /> },
+    { id: 'value', label: 'Value', className: 'hidden md:table-cell', value: (x) => x.value, cell: (x) => <Value v={x.value} /> },
     { id: 'round', label: 'Round', hidden: true, value: (x) => x.round },
     { id: 'overall', label: 'Pick', hidden: true, value: (x) => x.overall },
   ], [H, book, onPlayer]);
-  const t = useTable('draft-search', cols, rows, { id: 'value', dir: -1 }, { phone: ['year', 'owner', 'value'] });
+  const t = useTable('draft-search', cols, rows, { id: 'pickValue', dir: -1 }, { phone: ['year', 'owner', 'pickValue'] });
   return (
     <>
       <TableBar t={t} noun="picks" file="fwhl-draft-picks" />
@@ -125,23 +140,23 @@ export function PlayerHistory({ H, book, player, year }: { H: Hist; book: DraftB
   const years = book.years.filter((y) => y >= ps[0]!.year && y <= ps.at(-1)!.year);
   const byYear = new Map(ps.map((x) => [x.year, x]));
   const owners = new Set(ps.map((x) => x.owner));
-  const paid = ps.reduce((a, x) => a + x.price, 0), value = ps.reduce((a, x) => a + (x.value ?? 0), 0);
-  const val = (x: DraftPick) => (metric === 'value' ? x.value : metric === 'paid' ? x.price : x.pts);
+  const paid = ps.reduce((a, x) => a + x.price, 0), value = ps.reduce((a, x) => a + (x.pickValue ?? 0), 0);
+  const val = (x: DraftPick) => (metric === 'value' ? x.pickValue : metric === 'paid' ? x.price : x.pts);
   const max = Math.max(1, ...ps.map((x) => Math.abs(val(x) ?? 0)), ...(metric === 'points' ? ps.map((x) => x.proj ?? 0) : []));
   const H_ = 8; // rem of bar area
   const runs: { o: OwnerKey | null; y: number; start: number; n: number }[] = [];
   years.forEach((y, i) => { const o = byYear.get(y)?.owner ?? null; const r = runs.at(-1); if (r && r.o === o) r.n++; else runs.push({ o, y, start: i, n: 1 }); });
-  const legend = metric === 'value' ? 'Value: what his season was worth minus what was paid. Above the line is a bargain.' : metric === 'paid' ? 'Auction price paid. Keepers (K) show their keeper price.' : 'Season points. The gold tick is the projection where one exists: solid for ESPN preseason, dashed for Sleeper (pulled after the season).';
+  const legend = metric === 'value' ? 'Pick value: what his season was worth minus what was paid, whoever had him. Above the line is a bargain.' : metric === 'paid' ? 'Auction price paid. Keepers (K) show their keeper price.' : 'Season points. The gold tick is the projection where one exists: solid for ESPN preseason, dashed for Sleeper (pulled after the season).';
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-5">
       <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
         <Fact label="Drafted" value={`${ps.length}×`} sub={`${ps[0]!.year} to ${ps.at(-1)!.year}, by ${owners.size} owner${owners.size > 1 ? 's' : ''}`} pre={<PosTag pos={pos} />} />
         <Fact label="Kept" value={`${ps.filter((x) => x.keeper).length}×`} sub="as a keeper" />
         <Fact label="Total paid" value={`$${paid}`} sub={`avg ${pct(paid / ps.length / 200)} of a budget`} />
-        <Fact label={<span className="inline-flex items-center gap-1.5">Total value <ValueHelp /></span>} value={<Value v={value} />} sub="hindsight, every season" />
+        <Fact label={<span className="inline-flex items-center gap-1.5">Total pick value <ValueHelp /></span>} value={<Value v={value} />} sub="hindsight, every season" />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Seg label="Chart shows" value={metric} options={[['value', 'Value'], ['paid', 'Paid'], ['points', 'Points']]} onChange={setMetric} />
+        <Seg label="Chart shows" value={metric} options={[['value', 'Pick value'], ['paid', 'Paid'], ['points', 'Points']]} onChange={setMetric} />
         <span className="text-xs text-ink-3">Tap a season for the details</span>
       </div>
       <div ref={chart} className="-mx-5 overflow-x-auto px-5">
@@ -165,7 +180,7 @@ export function PlayerHistory({ H, book, player, year }: { H: Hist; book: DraftB
               }
               return (
                 <button key={y} type="button" aria-pressed={on} onClick={() => setSelYear(y)} className={`grid rounded-sm pt-1 transition-colors hover:bg-sunk ${on ? 'bg-sunk shadow-[inset_0_-2px_0_var(--ink)]' : ''}`}
-                  aria-label={`${y}: drafted by ${crewName(H, x.owner, y)}, paid $${x.price}, ${x.pts === null ? 'points not recorded' : `${fmt(x.pts, 0)} points`}, value ${x.value === null ? 'not known' : signed(x.value, 0)}`}>
+                  aria-label={`${y}: drafted by ${crewName(H, x.owner, y)}, paid $${x.price}, ${x.pts === null ? 'points not recorded' : `${fmt(x.pts, 0)} points`}, pick value ${x.pickValue === null ? 'not known' : signed(x.pickValue, 0)}`}>
                   <span className="relative block" style={{ height: `${H_}rem` }}>{bars}</span>
                   <span className="py-1 text-center font-mono text-xs text-ink-2">'{String(y).slice(2)}{x.keeper && <span className="text-accent-ink"> K</span>}</span>
                 </button>
@@ -202,6 +217,15 @@ function Row({ label, note, children }: { label: string; note?: ReactNode; child
   );
 }
 
+// What realized worth covered: the share of his roster weeks with the drafter.
+function realizedNote(H: Hist, x: DraftPick) {
+  if (x.heldShare === null) return 'no weekly lineups: taken as the whole season';
+  const via = x.traded.length ? `, counting ${x.traded.map((o) => shortCrew(H, o, x.year)).join(' and ')} after the trade` : '';
+  if (x.heldShare === 1) return `on the drafter's roster all season${via}`;
+  if (x.heldShare === 0) return 'never on the drafter\'s roster in season';
+  return `${pct(x.heldShare)} of his roster weeks with the drafter${via}`;
+}
+
 function SeasonDetail({ H, book, x, ps, onYear }: { H: Hist; book: DraftBook; x: DraftPick; ps: DraftPick[]; onYear: (y: number) => void }) {
   const s = book.seasons.get(x.year);
   const season = H.byYear.get(x.year);
@@ -229,8 +253,10 @@ function SeasonDetail({ H, book, x, ps, onYear }: { H: Hist; book: DraftBook; x:
         <Row label="Price reference" note={x.ref === null ? 'Not recorded this year' : s?.ref === 'est' ? "Export estimate, not a Sleeper number" : 'ESPN average auction value'}>{x.ref === null ? '–' : `$${Math.round(x.ref)}`}</Row>
         <Row label="Projected points" note={x.proj === null ? (x.year < 2018 ? 'ESPN projections start in 2018' : 'Not recorded for this player') : projSource(s)}>{x.proj === null ? '–' : fmt(x.proj, 0)}</Row>
         <Row label="Season points" note={[rank && `${x.pos}${rank} among drafted ${x.pos}s`, s?.pts === 'rostered' && 'weeks on a league roster only', s?.pts === 'to-date' && 'season to date'].filter(Boolean).join(', ')}>{x.pts === null ? '–' : fmt(x.pts, 0)}</Row>
-        <Row label="Worth" note="what his finish costs at auction">{money(x.worth)}</Row>
-        <Row label="Value" note="worth minus paid"><Value v={x.value} /></Row>
+        <Row label="Drafted worth" note="what his finish costs at auction">{money(x.worth)}</Row>
+        <Row label="Pick value" note="drafted worth minus paid"><Value v={x.pickValue} /></Row>
+        <Row label="Realized worth" note={realizedNote(H, x)}>{money(x.realized)}</Row>
+        <Row label="Value" note="realized worth minus paid"><Value v={x.value} /></Row>
         <Row label="Points for his price" note={x.xPts === null ? (s?.pts === 'to-date' ? 'once the season is over' : 'too few players near his price') : `what a $${x.price} ${x.pos} usually scored`}>{x.xPts === null ? '–' : fmt(x.xPts, 0)}</Row>
         <Row label="Over his price" note="season points minus that">{x.xPts === null || x.pts === null ? '–' : signed(x.pts - x.xPts, 0)}</Row>
       </dl>
@@ -240,7 +266,8 @@ function SeasonDetail({ H, book, x, ps, onYear }: { H: Hist; book: DraftBook; x:
           <ol className="mb-3 grid max-w-[70ch] list-decimal gap-1 pl-5 text-sm text-ink-2">
             <li>{x.name} scored <span className="num">{fmt(x.pts, 0)}</span>: {x.pos}{rank} among drafted {x.pos}s{s?.pts === 'to-date' ? ' so far' : ''}.</li>
             <li>The {ordinal(rank)} {x.pos} price slot averaged <span className="num">${fmt(b.curve[x.pos]?.[rank - 1] ?? 1, 0)}</span> across the {x.year - 1}-{x.year + 1} drafts{b.inflation ? ` (in ${x.year} the league paid ${Math.round((b.inflation - 1) * 100)}% over market for auctioned players)` : ''}.</li>
-            <li>Worth = <span className="num font-semibold">${x.worth}</span>. Value = worth − paid = <Value v={x.value} />.</li>
+            <li>Drafted worth = <span className="num font-semibold">${x.worth}</span>. Pick value = drafted worth − paid = <Value v={x.pickValue} />.</li>
+            {x.heldShare !== null && <li>{crewName(H, x.owner, x.year)} had him for {pct(x.heldShare)} of his weeks on a league roster{x.traded.length ? ' (weeks after a trade count)' : ''}: realized worth = <span className="num font-semibold">${x.realized}</span>. Value = realized worth − paid = <Value v={x.value} />.</li>}
           </ol>
         </details>
       )}
@@ -277,7 +304,7 @@ export function DraftSearch({ H }: { H: Hist }) {
     const out = book.picks.filter((x) => inSeasons(x.year) && (f.pos === 'any' || x.pos === f.pos) && (!f.owner || x.owner === f.owner)
       && (f.keepers === 'in' || (f.keepers === 'only' ? x.keeper : !x.keeper)) && (!needle || x.name.toLowerCase().includes(needle)));
     const by: Record<Sort, (a: DraftPick, b: DraftPick) => number> = {
-      best: (a, b) => (b.value ?? -1e9) - (a.value ?? -1e9), worst: (a, b) => (a.value ?? 1e9) - (b.value ?? 1e9),
+      best: (a, b) => (b.pickValue ?? -1e9) - (a.pickValue ?? -1e9), worst: (a, b) => (a.pickValue ?? 1e9) - (b.pickValue ?? 1e9),
       price: (a, b) => b.share - a.share || b.year - a.year, points: (a, b) => (b.pts ?? -1) - (a.pts ?? -1), newest: (a, b) => b.year - a.year || b.price - a.price,
     };
     return out.sort(by[f.sort]);
@@ -343,12 +370,13 @@ export function SeasonDraft({ H, s }: { H: Hist; s: Season }) {
   const open = ps.filter((x) => x.value !== null && !x.keeper);
   const best = [...open].sort((a, b) => b.value! - a.value!)[0], worst = [...open].sort((a, b) => a.value! - b.value!)[0];
   const spent = ps.reduce((a, x) => a + x.price, 0), total = ps.reduce((a, x) => a + (x.value ?? 0), 0);
+  const left = ps.reduce((a, x) => a + ((x.worth ?? 0) - (x.realized ?? 0)), 0); // drafted worth that went to other teams
   const hasProj = ps.some((x) => x.proj !== null);
   const starts = (x: DraftPick) => {
     if (!x.held) return <span className="text-ink-3">–</span>;
     const me = x.held.find((h) => h.owner === owner);
     const next = x.held.find((h) => h.owner !== owner && h.from > (me?.from ?? 0));
-    return <>{me?.started ?? 0}{next ? <span className="block text-xs text-ink-3">→ {shortCrew(H, next.owner, s.year)} wk {next.from}</span> : !me ? <span className="block text-xs text-ink-3">never in a lineup</span> : null}</>;
+    return <>{me?.started ?? 0}{next ? <span className="block whitespace-nowrap text-xs text-ink-3" title={crewName(H, next.owner, s.year)}>→ {firstNames(H, next.owner, s.year)} wk {next.from}{x.traded.includes(next.owner) ? ' · trade' : ''}</span> : !me ? <span className="block text-xs text-ink-3">never in a lineup</span> : null}</>;
   };
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-5">
@@ -363,14 +391,14 @@ export function SeasonDraft({ H, s }: { H: Hist; s: Season }) {
       <div className="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-4">
         <Fact label="Finish" value={s.live ? 'In progress' : ordinal(row.finish ?? 0)} sub={`${row.w}-${row.l}${row.t ? `-${row.t}` : ''} · luck ${signed(row.luck, 1)}`} />
         <Fact label="Draft" value={`$${spent}`} sub={`${ps.length} players · ${ps.filter((x) => x.keeper).length} keepers`} />
-        <Fact label="Draft value" value={<Value v={total} />} sub={ds.pts === 'to-date' ? 'season to date' : 'hindsight'} />
+        <Fact label="Draft value" value={<Value v={total} />} sub={<>{ds.pts === 'to-date' ? 'season to date' : 'realized, hindsight'}{left > 0 && <span className="block">${left} more on players let go</span>}</>} />
         <Fact label="Best · worst buy" value={<span className="text-base">{best ? <>{best.name} <Value v={best.value} /></> : '–'}</span>} sub={worst ? <>{worst.name} <Value v={worst.value} /></> : undefined} />
       </div>
       {ds.notes.map((n) => <p key={n} className="max-w-[70ch] border-l-[3px] border-accent py-1 pl-3 text-sm text-ink-2"><span className="font-semibold">Partial data for {s.year}.</span> {n}</p>)}
       <div className="-mx-4 overflow-x-auto md:mx-0">
         <table className="tbl md:min-w-[42rem]">
           <caption className="sr-only">{crewName(H, owner, s.year)} {s.year} draft</caption>
-          <thead><tr><th className="l stick">Player</th><th>Paid</th><th className="hidden md:table-cell" title={refTitle(ds)}>{refLabel(ds)}</th>{hasProj && <th className="hidden md:table-cell" title={projSource(ds)}>Proj</th>}<th>Pts</th><th title="Worth minus price paid">Value</th><th title="Weeks this team started him; an arrow shows where he went">Starts</th></tr></thead>
+          <thead><tr><th className="l stick">Player</th><th>Paid</th><th className="hidden md:table-cell" title={refTitle(ds)}>{refLabel(ds)}</th>{hasProj && <th className="hidden md:table-cell" title={projSource(ds)}>Proj</th>}<th>Pts</th><th className="hidden md:table-cell" title="Drafted worth: what his finish costs at auction">Drafted worth</th><th title="Realized worth: drafted worth for the share of the season he was on this roster"><span className="md:hidden">Realized</span><span className="hidden md:inline">Realized worth</span></th><th title="Realized worth minus price paid">Value</th><th title="Weeks this team started him; an arrow shows where he went">Starts</th></tr></thead>
           <tbody>
             {ps.map((x) => (
               <tr key={x.i}>
@@ -379,6 +407,8 @@ export function SeasonDraft({ H, s }: { H: Hist; s: Season }) {
                 <td className="n hidden text-ink-3 md:table-cell">{x.ref === null ? '–' : `$${Math.round(x.ref)}`}</td>
                 {hasProj && <td className="n hidden text-ink-3 md:table-cell">{x.proj === null ? '–' : fmt(x.proj, 0)}</td>}
                 <td className="n">{x.pts === null ? <span className="text-ink-3">–</span> : <>{fmt(x.pts, 0)}<span className="text-ink-3">{ptsMark(ds)}</span></>}</td>
+                <td className="n hidden text-ink-3 md:table-cell">{money(x.worth)}</td>
+                <td className="n">{money(x.realized)}</td>
                 <td className="n"><Value v={x.value} /></td>
                 <td className="n">{starts(x)}</td>
               </tr>
@@ -386,7 +416,7 @@ export function SeasonDraft({ H, s }: { H: Hist; s: Season }) {
           </tbody>
         </table>
       </div>
-      <p className="max-w-[70ch] text-xs text-ink-3">Drafted roster only; in-season pickups are in the week-by-week box scores. {hasProj ? `Proj: ${projSource(ds)}.` : `No projections recorded for ${s.year}.`} {ds.pts === 'rostered' ? '* Points while on a league roster.' : ds.pts === 'to-date' ? '† Season to date.' : ''} Tap a player for every season he was drafted.</p>
+      <p className="max-w-[70ch] text-xs text-ink-3">Drafted roster only; in-season pickups are in the week-by-week box scores. Realized worth counts only the weeks a player was on this roster, bench included; weeks after a trade still count. {hasProj ? `Proj: ${projSource(ds)}.` : `No projections recorded for ${s.year}.`} {ds.pts === 'rostered' ? '* Points while on a league roster.' : ds.pts === 'to-date' ? '† Season to date.' : ''} Tap a player for every season he was drafted.</p>
       <PlayerSheet H={H} book={book} player={player} year={s.year} onClose={() => setPlayer(null)} />
     </div>
   );

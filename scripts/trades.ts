@@ -69,7 +69,7 @@ export function buildTrades(h: History, dir = 'data/history', lineups?: Lineups[
   };
   // What happened after each trade season: later drafts and seasons.
   const picks = new Map<string, DraftFacts>();
-  for (const q of book.picks) picks.set(`${q.year}|${playerKey(q.name, q.pos)}`, { owner: q.owner, price: q.price, keeper: q.keeper, value: q.value, worth: q.worth });
+  for (const q of book.picks) picks.set(`${q.year}|${playerKey(q.name, q.pos)}`, { owner: q.owner, price: q.price, keeper: q.keeper, value: q.pickValue, worth: q.worth });
   const future: Future = {
     current: h.current.year,
     pick: (y, k) => picks.get(`${y}|${k}`) ?? null,

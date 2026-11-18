@@ -386,7 +386,7 @@ export function KeeperSkill({ H, onOwner }: { H: Hist; onOwner: (o: OwnerKey) =>
         <p className="max-w-[75ch] text-sm text-ink-2">
           Every player a manager kept is a bet: his keeper price against what he turned out to be worth that season.
           <b className="font-medium text-ink"> Points gained</b> is the points a keeper scored above a startable player at his position.
-          <b className="font-medium text-ink"> Value</b> is that season's hindsight worth minus the price paid, in auction dollars. <ValueHelp />
+          <b className="font-medium text-ink"> Value</b> is that season's realized worth (his hindsight worth for the weeks he stayed with that team; weeks after a trade still count) minus the price paid, in auction dollars. <ValueHelp />
         </p>
         <div className="flex flex-wrap items-end gap-3">
           <label className="grid gap-1 text-xs font-semibold uppercase tracking-wider text-ink-3">Best and worst by
@@ -454,7 +454,8 @@ function KeeperBetTable({ H, rows }: { H: Hist; rows: ReturnType<typeof keeperBe
     { id: 'year', label: 'Season', value: (b) => b.year },
     { id: 'owner', label: 'Kept by', left: true, className: 'min-w-[8rem]', value: (b) => who(H, b.owner) },
     { id: 'price', label: 'Price', value: (b) => b.price, cell: (b) => `$${b.price}` },
-    { id: 'worth', label: 'Worth', value: (b) => b.worth, cell: (b) => (b.worth === null ? '–' : `$${b.worth}`) },
+    { id: 'worth', label: 'Drafted worth', hidden: true, value: (b) => b.worth, cell: (b) => (b.worth === null ? '–' : `$${b.worth}`) },
+    { id: 'realized', label: 'Realized worth', value: (b) => b.realized, cell: (b) => (b.realized === null ? '–' : `$${b.realized}`) },
     { id: 'value', label: 'Value', value: (b) => b.value, cell: (b) => (b.value === null ? '–' : <b className={`font-semibold ${tone(b.value, 1.5)}`}>{signed(b.value, 0).replace(/^([+−])/, '$1$')}</b>) },
     { id: 'par', label: 'Points over repl.', value: (b) => b.par, cell: (b) => fmt(b.par, 0) },
     { id: 'pts', label: 'Season pts', hidden: true, value: (b) => b.pick.pts, cell: (b) => fmt(b.pick.pts, 0) },

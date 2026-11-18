@@ -1,8 +1,8 @@
 // Who picks the right keepers (Nov 12, item 3). Every kept player in every auction since 2011 is a
 // bet: the price he was kept at against what he went on to be worth that season.
 //
-// Value uses the Drafts page's hindsight worth (engine/drafts.ts): the season's going rate in
-// dollars per point over replacement, so $1 + points over replacement x rate, minus the price paid.
+// Value uses the Drafts page's realized worth (engine/drafts.ts): what his finish costs at auction,
+// for the share of the season he spent with the team that kept him, minus the price paid.
 // Points gained is the same points over replacement, in points: what the keeper produced above a
 // startable player at his position that season. A keeper who finished below replacement counts 0
 // there, and his price is the whole loss on the value side.
@@ -16,8 +16,9 @@ export interface KeeperBet {
   name: string;
   pos: string;
   price: number;
-  worth: number | null;
-  value: number | null; // worth - price
+  worth: number | null; // drafted worth
+  realized: number | null; // realized worth: drafted worth for the weeks he stayed with this team
+  value: number | null; // realized worth - price
   par: number | null; // season points over replacement
   hit: boolean; // worth more than he cost
 }
@@ -27,7 +28,7 @@ export interface KeeperCareer {
   keepers: number;
   scored: number; // keepers with a season to judge
   spend: number; // dollars committed to keepers
-  value: number | null; // dollars gained, worth minus price
+  value: number | null; // dollars gained, realized worth minus price
   valuePer: number | null; // per keeper
   par: number | null; // points over replacement gained
   parPer: number | null;
@@ -48,7 +49,7 @@ export function keeperBets(book: DraftBook): KeeperBet[] {
     if (!p.keeper) continue;
     const b = book.basis.get(p.year);
     const par = p.pts === null || !b ? null : Math.max(0, p.pts - (b.repl[p.pos] ?? 0));
-    out.push({ pick: p, year: p.year, owner: p.owner, name: p.name, pos: p.pos, price: p.price, worth: p.worth, value: p.value, par: par === null ? null : round(par), hit: (p.value ?? 0) > 0 });
+    out.push({ pick: p, year: p.year, owner: p.owner, name: p.name, pos: p.pos, price: p.price, worth: p.worth, realized: p.realized, value: p.value, par: par === null ? null : round(par), hit: (p.value ?? 0) > 0 });
   }
   return out;
 }

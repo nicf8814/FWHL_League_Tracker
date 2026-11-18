@@ -46,6 +46,7 @@ export default function ExportData() {
     const now = 'This season';
     const past = 'League history';
     const hist = () => grab<HistoryFile>(`${import.meta.env.BASE_URL}seed/history.json`, validateHistory, 'league history');
+    const tradesFile = () => grab<Trades>(tradesUrl(import.meta.env.BASE_URL), validateTrades, 'trade history');
     const ownerOf = async () => {
       const h = await hist();
       const byTeam = new Map(h.owners.filter((o) => o.teamId !== null && !o.filler).map((o) => [o.teamId!, o.key]));
@@ -168,14 +169,14 @@ export default function ExportData() {
         },
       },
       {
-        id: 'picks', label: 'Draft picks', note: 'Every auction pick since 2010 with hindsight worth and value', group: past,
+        id: 'picks', label: 'Draft picks', note: 'Every auction pick since 2010 with hindsight worth and value, drafted and realized', group: past,
         build: async () => {
           const [d, { H, owner }] = await Promise.all([grab<Drafts>(draftsUrl(import.meta.env.BASE_URL), validateDrafts, 'draft history'), ownerOf()]);
           const live = H.seasons.find((s) => s.live)?.year;
-          const book = buildDraftBook(d, live ? { year: live, idx, teamOwner: owner } : undefined);
+          const book = buildDraftBook(d, live ? { year: live, idx, teamOwner: owner } : undefined, await tradesFile());
           return {
-            head: ['Season', 'Manager', 'Player', 'Pos', 'Price', 'Keeper', 'Round', 'Overall', 'Projected pts', 'Season pts', 'Pos rank', 'Worth', 'Value'],
-            rows: book.picks.map((p) => [p.year, ownerName(H, p.owner), p.name, p.pos, p.price, p.keeper ? 'yes' : 'no', p.round, p.overall, p.proj, p.pts, posRank(book, p), p.worth, p.value]),
+            head: ['Season', 'Manager', 'Player', 'Pos', 'Price', 'Keeper', 'Round', 'Overall', 'Projected pts', 'Season pts', 'Pos rank', 'Drafted worth', 'Pick value', 'Share with drafter', 'Realized worth', 'Value'],
+            rows: book.picks.map((p) => [p.year, ownerName(H, p.owner), p.name, p.pos, p.price, p.keeper ? 'yes' : 'no', p.round, p.overall, p.proj, p.pts, posRank(book, p), p.worth, p.pickValue, p.heldShare === null ? null : Math.round(p.heldShare * 100) / 100, p.realized, p.value]),
           };
         },
       },
@@ -206,7 +207,7 @@ export default function ExportData() {
         build: async () => {
           const [d, { H, owner }] = await Promise.all([grab<Drafts>(draftsUrl(import.meta.env.BASE_URL), validateDrafts, 'draft history'), ownerOf()]);
           const live = H.seasons.find((s) => s.live)?.year;
-          const book = buildDraftBook(d, live ? { year: live, idx, teamOwner: owner } : undefined);
+          const book = buildDraftBook(d, live ? { year: live, idx, teamOwner: owner } : undefined, await tradesFile());
           const cs = keeperCareers(keeperBets(book));
           return {
             head: ['Manager', 'Keepers', 'Judged', 'Spent', 'Points gained', 'Points/keeper', 'Value gained', 'Value/keeper', 'Hits', 'Misses', 'Hit rate', 'Seasons'],
@@ -219,10 +220,10 @@ export default function ExportData() {
         build: async () => {
           const [d, { H, owner }] = await Promise.all([grab<Drafts>(draftsUrl(import.meta.env.BASE_URL), validateDrafts, 'draft history'), ownerOf()]);
           const live = H.seasons.find((s) => s.live)?.year;
-          const book = buildDraftBook(d, live ? { year: live, idx, teamOwner: owner } : undefined);
+          const book = buildDraftBook(d, live ? { year: live, idx, teamOwner: owner } : undefined, await tradesFile());
           return {
-            head: ['Season', 'Manager', 'Player', 'Pos', 'Price', 'Worth', 'Value', 'Points over repl.', 'Season pts', 'Worth the price'],
-            rows: keeperBets(book).map((b) => [b.year, ownerName(H, b.owner), b.name, b.pos, b.price, b.worth, b.value, b.par, b.pick.pts, b.hit ? 'yes' : 'no']),
+            head: ['Season', 'Manager', 'Player', 'Pos', 'Price', 'Drafted worth', 'Realized worth', 'Value', 'Points over repl.', 'Season pts', 'Worth the price'],
+            rows: keeperBets(book).map((b) => [b.year, ownerName(H, b.owner), b.name, b.pos, b.price, b.worth, b.realized, b.value, b.par, b.pick.pts, b.hit ? 'yes' : 'no']),
           };
         },
       },
