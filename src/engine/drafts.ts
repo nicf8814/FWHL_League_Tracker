@@ -7,14 +7,21 @@
 //      league paid for auctioned players over their market price). Keepers take players off the
 //      board, so the league pays more for the rest; real prices keep that in.
 //   2. The price curve: each slot averaged over that draft and the ones either side (CURVE_WINDOW).
-//   3. Worth = the curve's price at his finish (RB2 is worth the 2nd RB slot). Value = worth - price.
-//   4. Points for his price (xPts): what players bought near his price at his position scored, in
+//   3. Drafted worth = the curve's price at his finish (RB2 is worth the 2nd RB slot).
+//      Pick value = drafted worth - price: how the pick turned out, whoever ended up with him.
+//   4. Realized worth = drafted worth x the share of his season he spent on the drafter's roster
+//      (bench weeks count, IR does not). Weeks after the drafter traded him still count as his: the
+//      Trading tab grades what came back. Value = realized worth - price: what the drafter got out
+//      of it. A player let go before Week 1 who became a star is a great pick (pick value) but
+//      realizes nothing for the team that drafted him (Nic, Nov 18: Mostert 2023). Owner grades use Value.
+//   5. Points for his price (xPts): what players bought near his price at his position scored, in
 //      the drafts around his. Points over that show how much of a surprise he was.
 // It measures how a pick turned out, not whether it was a good bet at the time.
 // The older points-over-replacement rate (Basis.dollarsPerPoint, repl) stays for the trade grade and
 // the keeper skill numbers.
 import type { OwnerKey } from '../data/history.ts';
 import { playerKey, type Drafts, type DraftSeason } from '../data/drafts.ts';
+import type { Trades } from '../data/trades.ts';
 import type { PlayerId } from '../data/schema.ts';
 import type { Index } from './league.ts';
 
@@ -40,8 +47,12 @@ export interface DraftPick {
   round: number;
   overall: number;
   held: HeldBy[] | null; // every team that rostered him that season, in order; null = no weekly lineups
-  worth: number | null; // the price curve at his finish
-  value: number | null; // worth - price
+  traded: OwnerKey[]; // teams that got him from the drafter by trade that season (their weeks count as the drafter's)
+  worth: number | null; // drafted worth: the price curve at his finish
+  heldShare: number | null; // share of his season on the drafter's roster (null: no weekly lineups)
+  realized: number | null; // realized worth: drafted worth x heldShare (drafted worth when no lineups)
+  value: number | null; // realized worth - price (what owner grades use)
+  pickValue: number | null; // drafted worth - price (how the pick turned out, whoever had him)
   xPts: number | null; // what his price usually bought in points (null: season in progress or too few near his price)
 }
 export interface Basis {
@@ -57,6 +68,25 @@ export interface DraftBook {
   byYear: Map<number, DraftPick[]>;
   byPlayer: Map<number, DraftPick[]>;
   basis: Map<number, Basis>;
+}
+
+// A player changing teams by trade: from and to are team keys, key is playerKey(name, pos).
+export interface TradeMove { year: number; from: OwnerKey; to: OwnerKey; key: string }
+export function tradeMoves(t: Trades): TradeMove[] {
+  const out: TradeMove[] = [];
+  for (const tr of t.trades) for (const [k, s] of tr.sides.entries()) for (const g of s.gets) {
+    const [name, pos] = t.players[g.p]!;
+    out.push({ year: tr.year, from: tr.sides[1 - k]!.owner, to: s.owner, key: playerKey(name, pos) });
+  }
+  return out;
+}
+function liveMoves(year: number, idx: Index, teamOwner: (teamId: number) => OwnerKey | undefined): TradeMove[] {
+  const out: TradeMove[] = [];
+  for (const t of idx.ds.transactions) if (t.type === 'trade') for (const l of t.legs) {
+    const p = idx.players.get(l.playerId), from = teamOwner(l.fromTeamId), to = teamOwner(l.toTeamId);
+    if (p && from && to) out.push({ year, from, to, key: playerKey(p.name, p.pos) });
+  }
+  return out;
 }
 
 // Live season (season.pts 'to-date'): points and weekly use follow the league seed, so they move
@@ -101,13 +131,27 @@ export function valueBasis(picks: DraftPick[]): Pick<Basis, 'dollarsPerPoint' | 
   return over > 0 ? { dollarsPerPoint: dollars / over, repl } : null;
 }
 
-export function buildDraftBook(d: Drafts, live?: { year: number; idx: Index; teamOwner: (teamId: number) => OwnerKey | undefined }): DraftBook {
+// trades: the trade history (public/seed/trades.json); without it, a traded player counts as dropped.
+export function buildDraftBook(d: Drafts, live?: { year: number; idx: Index; teamOwner: (teamId: number) => OwnerKey | undefined }, trades?: Trades): DraftBook {
   const seasons = new Map(d.seasons.map((s) => [s.year, s]));
   const picks: DraftPick[] = d.picks.map(([year, player, owner, price, keeper, ref, proj, pts, round, overall, held], i) => ({
     i, year, player, name: d.players[player]![0], pos: d.players[player]![1], owner, price, share: price / (seasons.get(year)?.budget ?? 200), keeper: keeper === 1,
-    ref, proj, pts, round, overall, held: held && held.map(([o, started, benched, startPts, from]) => ({ owner: o, started, benched, startPts, from })), worth: null, value: null, xPts: null,
+    ref, proj, pts, round, overall, held: held && held.map(([o, started, benched, startPts, from]) => ({ owner: o, started, benched, startPts, from })), traded: [], worth: null, heldShare: null, realized: null, value: null, pickValue: null, xPts: null,
   }));
-  if (live && seasons.get(live.year)?.pts === 'to-date') applyLive(picks, live.year, live.idx, live.teamOwner);
+  const isLive = live && seasons.get(live.year)?.pts === 'to-date';
+  if (isLive) applyLive(picks, live.year, live.idx, live.teamOwner);
+  // Teams that got each pick from his drafter by trade, following trade chains (A to B, then B to C).
+  const moves = new Map<string, TradeMove[]>();
+  for (const m of [...(trades ? tradeMoves(trades) : []), ...(isLive ? liveMoves(live.year, live.idx, live.teamOwner) : [])]) {
+    const k = `${m.year}|${m.key}`; moves.set(k, [...(moves.get(k) ?? []), m]);
+  }
+  for (const x of picks) {
+    const ms = moves.get(`${x.year}|${playerKey(x.name, x.pos)}`);
+    if (!ms) continue;
+    const via = new Set([x.owner]);
+    for (let grew = true; grew;) { grew = false; for (const m of ms) if (via.has(m.from) && !via.has(m.to)) { via.add(m.to); grew = true; } }
+    x.traded = [...via].filter((o) => o !== x.owner);
+  }
   const byYear = new Map<number, DraftPick[]>();
   const byPlayer = new Map<number, DraftPick[]>();
   for (const x of picks) {
@@ -136,15 +180,43 @@ export function buildDraftBook(d: Drafts, live?: { year: number; idx: Index; tea
     }
     basis.set(y, { dollarsPerPoint: b?.dollarsPerPoint ?? 0, repl: b?.repl ?? {}, inflation: infl.get(y) ?? null, curve });
     const live = seasons.get(y)?.pts === 'to-date';
+    const bench = ps.some((x) => x.held?.some((h) => h.benched > 0));
+    const weeks = Math.max(1, ...ps.flatMap((x) => (x.held ?? []).map((h) => h.from + h.started + h.benched - 1)));
     for (const x of ps) {
       if (x.pts === null) continue;
       const rank = 1 + ps.filter((q) => q.pos === x.pos && q.pts !== null && q.pts > x.pts!).length;
       x.worth = Math.max(1, Math.round(curve[x.pos]?.[rank - 1] ?? 1));
-      x.value = x.worth - x.price;
+      x.pickValue = x.worth - x.price;
+      x.heldShare = heldShare(x, bench, weeks);
+      x.realized = x.heldShare === null ? x.worth : Math.round(x.worth * x.heldShare);
+      x.value = x.realized - x.price;
       if (!live) x.xPts = pointsForPrice(byYear, seasons, y, x.pos, x.price);
     }
   }
   return { seasons, years: [...seasons.keys()].sort((a, b) => a - b), players: d.players, picks, byYear, byPlayer, basis };
+}
+
+// Share of his season on the drafter's roster: his weeks there (started or benched, not IR) over
+// his weeks on any league roster. Weeks with a team he was traded to count as the drafter's.
+// Nobody rostered him (or only on IR): 0.
+function heldShare(x: DraftPick, bench: boolean, weeks: number): number | null {
+  if (!x.held) return null;
+  const ours = (o: OwnerKey) => o === x.owner || x.traded.includes(o);
+  if (bench) {
+    const wk = (hs: HeldBy[]) => hs.reduce((a, h) => a + h.started + h.benched, 0);
+    const all = wk(x.held);
+    return all ? wk(x.held.filter((h) => ours(h.owner))) / all : 0;
+  }
+  // shortcut: before 2018 only starts were recorded, so the drafter is taken to hold him from Week 1
+  // until another team first starts him, and each team after that until the next one does. Revisit
+  // if bench weeks for those seasons turn up.
+  const others = x.held.filter((h) => !ours(h.owner));
+  if (!others.length) return 1;
+  const first = Math.min(...others.map((o) => o.from));
+  const runs = [{ owner: x.owner, from: 1 }, ...x.held.filter((h) => !ours(h.owner) || h.from > first)].sort((a, b) => a.from - b.from);
+  let held = 0;
+  runs.forEach((r, k) => { if (ours(r.owner)) held += Math.max(0, (runs[k + 1]?.from ?? weeks + 1) - r.from); });
+  return Math.min(1, held / weeks);
 }
 
 // Auctioned players' price over their market price that draft (null: no market prices recorded).

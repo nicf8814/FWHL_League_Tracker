@@ -3,7 +3,8 @@
 // disagreement is the point. Each is a rate, not a total, so a 17-season lifer and a 6-season one
 // compare honestly.
 //
-//   draft    dollars of hindsight value per draft, open-auction picks only (engine/drafts.ts)
+//   draft    dollars of realized value per draft, open-auction picks only (engine/drafts.ts): only
+//            the weeks a pick spent with his drafter, or a team he was traded to, count
 //   keeper   the same dollars on kept players, but against what every OTHER keeper returned that
 //            season. The keeper price is set by a rule, not an auction, so the whole field swings
 //            with the year: a keeper was $6 underwater on average in 2022 and $12 up in 2018. The
@@ -91,7 +92,7 @@ export type BuilderMetric = 'draft' | 'keeper' | 'index';
 export const MIN_DRAFTS = 3;
 export const MIN_KEEPERS = 3;
 export const BUILDER_METRICS: { id: BuilderMetric; label: string; note: string }[] = [
-  { id: 'draft', label: 'Draft', note: 'dollars his auction picks returned above what he paid, per season' },
+  { id: 'draft', label: 'Draft', note: 'dollars his auction picks returned for him above what he paid, per season (realized: players he let go stop counting)' },
   { id: 'keeper', label: 'Keepers', note: 'the same, per keeper, against the average keeper that season' },
   { id: 'index', label: 'Scoring', note: 'points per game against that season’s league average' },
 ];

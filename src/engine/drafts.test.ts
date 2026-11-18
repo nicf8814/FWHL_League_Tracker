@@ -6,13 +6,15 @@ import type { Dataset } from '../data/schema.ts';
 import { validateDrafts } from '../data/drafts.ts';
 import { buildHistory } from '../../scripts/history.ts';
 import { buildDrafts, formatDrafts } from '../../scripts/drafts.ts';
+import { buildTrades } from '../../scripts/trades.ts';
 import { buildDraftBook, posRank } from './drafts.ts';
 import { buildIndex } from './league.ts';
 
 const dir = new URL('../../data/history', import.meta.url).pathname;
 const h = buildHistory(dir);
 const { drafts, report } = buildDrafts(h, dir);
-const book = buildDraftBook(drafts);
+const { trades } = buildTrades(h, dir);
+const book = buildDraftBook(drafts, undefined, trades);
 const pick = (name: string, y: number) => book.picks.find((x) => x.name === name && x.year === y)!;
 
 test('every draft since 2010, every owner and Sleeper account matched', () => {
@@ -41,7 +43,7 @@ test('value: Kelce 2020 worked through by hand', () => {
   assert.equal(Math.round(b.repl.TE!), 84);
   assert.equal(b.dollarsPerPoint.toFixed(2), '0.45');
   assert.equal(k.worth, 56);
-  assert.equal(k.value, 7);
+  assert.equal(k.pickValue, 7);
   assert.equal(posRank(book, k), 1);
   assert.deepEqual(k.held!.map((x) => [x.owner, x.from]), [['david-morris', 1], ['ty-carlson', 8]], 'traded to Ty in week 8');
 });
@@ -51,16 +53,41 @@ test('value: worth is what his finish costs at auction, by position', () => {
   const dj = pick('David Johnson', 2016), b = book.basis.get(2016)!;
   assert.equal(posRank(book, dj), 1);
   assert.equal(dj.worth, Math.round(b.curve.RB![0]!));
-  assert.deepEqual([dj.keeper, dj.price, dj.worth, dj.value], [true, 11, 83, 72], 'the best keeper of the ESPN years');
-  assert.equal(pick('Arian Foster', 2010).value, 66);
-  assert.ok(pick("Le'Veon Bell", 2018).value! < -90);
+  assert.deepEqual([dj.keeper, dj.price, dj.worth, dj.pickValue], [true, 11, 83, 72], 'the best keeper of the ESPN years');
+  assert.equal(pick('Arian Foster', 2010).pickValue, 66);
+  assert.ok(pick("Le'Veon Bell", 2018).pickValue! < -90);
   // QBs and kickers are priced off their own, cheaper curves: a $2 QB season is no longer a +$75 steal.
-  assert.ok(pick('Dak Prescott', 2023).value! < 30);
-  assert.ok(pick('Bears D/ST', 2012).value! < 10);
+  assert.ok(pick('Dak Prescott', 2023).pickValue! < 30);
+  assert.ok(pick('Bears D/ST', 2012).pickValue! < 10);
   // Keepers sit in the curve at what they would have cost at auction, so kept stars don't push
   // auctioned players up a slot; the curve falls as the slots go down.
   for (const pos of ['QB', 'RB', 'WR', 'TE']) { const c = b.curve[pos]!; assert.ok(c.every((v, i) => i === 0 || v <= c[i - 1]!), `${pos} curve falls`); }
   assert.ok(b.inflation! > 1.3, '2016 paid 44% over market for auctioned players');
+});
+
+test('value: realized worth is only what the drafter got (Nic, Nov 18)', () => {
+  // Drafted, dropped before Week 1, then 240 points for Travis and Ryan: a great pick that realized nothing.
+  const m = pick('Raheem Mostert', 2023);
+  assert.equal(m.owner, 'nicholas-ferrara');
+  assert.deepEqual([m.price, m.worth, m.pickValue, m.heldShare, m.realized, m.value], [4, 84, 80, 0, 0, -4]);
+  // Kept all season, starting or on the bench: realized worth is the whole drafted worth.
+  const m22 = pick('Raheem Mostert', 2022);
+  assert.equal(m22.held![0]!.benched, 10);
+  assert.deepEqual([m22.heldShare, m22.realized, m22.value], [1, m22.worth, m22.pickValue]);
+  // Traded to Ty in Week 8: Ty's weeks still count for David (the Trading tab grades the deal).
+  const k = pick('Travis Kelce', 2020);
+  assert.deepEqual([k.traded, k.heldShare, k.realized], [['ty-carlson'], 1, 56]);
+  // Without the trade history the same move reads as a drop: 7 of his 16 roster weeks.
+  const bare = buildDraftBook(drafts).picks.find((x) => x.i === k.i)!;
+  assert.deepEqual([bare.traded, bare.heldShare], [[], 7 / 16]);
+  // Before 2018 (no bench weeks): the drafter holds him until another team first starts him.
+  const a = pick('Jay Ajayi', 2016);
+  assert.deepEqual(a.held!.map((h) => [h.owner, h.from]), [['david-morris', 7]]);
+  assert.equal(a.heldShare, 6 / 16);
+  for (const x of book.picks) if (x.value !== null) {
+    assert.ok(x.realized! <= x.worth! && x.value <= x.pickValue!, `${x.year} ${x.name}`);
+    assert.equal(x.value, x.realized! - x.price);
+  }
 });
 
 test('value: points for his price', () => {
