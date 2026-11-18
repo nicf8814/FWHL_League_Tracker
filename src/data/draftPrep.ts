@@ -75,6 +75,8 @@ export interface Persona {
   overpay: number; // what he paid over expected price, against the league's average
   stars: number; // his priciest buy each draft / the league's average priciest buy
   fav: string[]; // NFL teams he buys well above the league's rate (ESPN drafts, team at the draft)
+  shape?: Record<PrepPos, number>; // his usual roster: players per position after the draft, keepers included (average)
+  shapeMax?: Record<PrepPos, number>; // the most he has had at the position after a draft
   drafts: number; // drafts behind the numbers
 }
 

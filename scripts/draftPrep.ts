@@ -124,8 +124,14 @@ function personasFrom(drafts: Drafts, history: History, dir: string): { years: n
     const counts = new Map<string, number>();
     for (const b of myBuys) counts.set(b.t, (counts.get(b.t) ?? 0) + 1);
     const fav = [...counts].filter(([t, n]) => n >= FAV_MIN && n / myBuys.length >= FAV_LIFT * rate(t)).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([t]) => t);
+    // His roster shape after each draft (keepers included).
+    const drafted = drafts.picks.filter((p) => years.includes(p[0]) && p[2] === o.key && (PREP_POS as readonly string[]).includes(drafts.players[p[1]]![1]));
+    const seasons = [...new Set(drafted.map((p) => p[0]))];
+    const per = (q: PrepPos) => seasons.map((y) => drafted.filter((p) => p[0] === y && pos(p) === q).length);
+    const shape = Object.fromEntries(PREP_POS.map((q) => [q, Math.round((per(q).reduce((a, b) => a + b, 0) / seasons.length) * 10) / 10])) as Record<PrepPos, number>;
+    const shapeMax = Object.fromEntries(PREP_POS.map((q) => [q, Math.max(...per(q))])) as Record<PrepPos, number>;
     personas.push({
-      key: o.key, name: o.name, teamId: o.teamId,
+      key: o.key, name: o.name, teamId: o.teamId, shape, shapeMax,
       // Lean shrinks toward 1 by what he actually spent there: a $3 TE buy says little (LEAN_PRIOR).
       lean: Object.fromEntries(PREP_POS.map((q) => {
         const at = spend(mine.filter((p) => pos(p) === q)), raw = at / spend(mine) / leagueShare[q], w = at / (at + LEAN_PRIOR);

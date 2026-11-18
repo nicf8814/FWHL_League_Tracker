@@ -28,6 +28,18 @@ const DEEP = 0.6; // bid factor once his starters at the position are covered
 const USUAL: Record<PrepPos, number> = { QB: 1, RB: 5, WR: 7, TE: 1 };
 const SHAPE_MAX: Record<PrepPos, number> = { QB: 3, RB: 6, WR: 8, TE: 3 };
 const EXTRA_BID: Record<PrepPos, number> = { QB: 0.5, RB: 0.2, WR: 0.2, TE: 0.2 }; // a backup QB is common (45% of teams carry 2)
+// A team's usual count and hard cap at a position: his own history (persona shape) when there is one,
+// else the league's usual roster. His usual is his average rounded down when the fraction is under .5
+// (a 1.4-QB owner usually carries 1); the cap is the most he has ever had, never past the league limit.
+function usualOf(t: { persona: Persona | null }, pos: PrepPos): number {
+  const s = t.persona?.shape?.[pos];
+  return s === undefined ? USUAL[pos] : Math.round(s);
+}
+function capOf(t: { persona: Persona | null }, pos: PrepPos): number {
+  const m = t.persona?.shapeMax?.[pos];
+  return Math.min(POS_MAX[pos] ?? 99, m === undefined ? SHAPE_MAX[pos] : Math.max(m, usualOf(t, pos)));
+}
+
 // Spots a team still has to fill to field a lineup (QB, 2 RB, 2 WR, a WR or TE for WR/TE; FLEX takes any).
 function stillNeeds(f: Record<PrepPos, number>): Partial<Record<PrepPos, number>> {
   const n: Partial<Record<PrepPos, number>> = {};
@@ -37,6 +49,7 @@ function stillNeeds(f: Record<PrepPos, number>): Partial<Record<PrepPos, number>
   if (f.WR < 3 && f.TE < 1) n.WR = (n.WR ?? 0) + 1; // the WR/TE spot, met by a WR or a TE
   return n;
 }
+const PRESSURE = 0.5, MAX_PRESSURE = 2; // money-per-spot pressure on bids (exponent, cap)
 const WILD = 0.3; // share of nominations that are a random player from the chosen group
 const STARTERS: Record<PrepPos, number> = { QB: 1, RB: 3, WR: 4, TE: 1 }; // a lineup's worth incl. flex spots
 // Used when the file has no measured order: 2022-26 auctions.
@@ -75,10 +88,10 @@ export function strategyBid(s: Strategy, r: PrepRow): number {
 const open = (t: { filled: Record<PrepPos, number> }) => SLOTS.length - Object.values(t.filled).reduce((a, b) => a + b, 0);
 // Could this team take him? A spot open, under the position limit (and the usual roster shape for a
 // persona team), and, when his open spots are only enough for what his lineup still needs, one of those.
-function canTake(t: { filled: Record<PrepPos, number>; bid?: unknown }, r: PrepRow): { ok: boolean; need: boolean } {
+function canTake(t: { filled: Record<PrepPos, number>; bid?: unknown; persona?: Persona | null }, r: PrepRow): { ok: boolean; need: boolean } {
   const o = open(t);
   if (o <= 0 || (POS_MAX[r.pos] !== undefined && t.filled[r.pos] >= POS_MAX[r.pos]!)) return { ok: false, need: false };
-  if (!t.bid && t.filled[r.pos] >= SHAPE_MAX[r.pos]) return { ok: false, need: false };
+  if (!t.bid && t.filled[r.pos] >= capOf(t as { persona: Persona | null }, r.pos)) return { ok: false, need: false };
   const needs = stillNeeds(t.filled), short = Object.values(needs).reduce((x, y) => x + (y ?? 0), 0);
   const fills = (needs[r.pos] ?? 0) > 0 || (r.pos === 'TE' && t.filled.WR < 3 && t.filled.TE < 1);
   if (o <= short && !fills) return { ok: false, need: false };
@@ -112,7 +125,7 @@ export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow
     if (!cands.length) cands = mine.length ? mine : [...left];
     // Usually the priciest at a position he doesn't need (drain the others); sometimes a wild card.
     // Early and middle: a position he doesn't need, to drain the others. Late (cheap players): one he wants.
-    const want = (r: PrepRow) => (by.filled[r.pos] < USUAL[r.pos] ? 1 : 0) + (by.filled[r.pos] < STARTERS[r.pos] ? 1 : 0) + (by.persona ? by.persona.lean[r.pos] - 1 : 0);
+    const want = (r: PrepRow) => (by.filled[r.pos] < usualOf(by, r.pos) ? 1 : 0) + (by.filled[r.pos] < STARTERS[r.pos] ? 1 : 0) + (by.persona ? by.persona.lean[r.pos] - 1 : 0);
     const need = (r: PrepRow) => (g === 2 ? -want(r) : want(r));
     let r = cands[0]!;
     if (rand() < WILD) r = cands[Math.floor(rand() * cands.length)]!;
@@ -120,6 +133,10 @@ export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow
     left.delete(r);
     // Bids.
     const spotsLeft = state.reduce((x, t) => x + Math.max(0, open(t)), 0);
+    // Money pressure: an owner with more money per open spot than the league bids up, one with less
+    // bids down (real teams spend nearly all $200). PRESSURE sets how hard.
+    const moneyLeft = state.reduce((x, t) => x + (open(t) > 0 ? t.left : 0), 0);
+    const perSpot = spotsLeft ? moneyLeft / spotsLeft : 1;
     let best = 0, second = 0, win = -1, run = -1;
     state.forEach((t, i) => {
       const o = open(t), take = canTake(t, r);
@@ -129,9 +146,10 @@ export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow
       let w: number;
       const must = take.need || t === by || left.size < 2 * spotsLeft; // a lineup need, his own nomination, or the pool running out
       // Roster shape: less interest past his starters, much less past a usual roster, none past the shape cap.
+      const usual = usualOf(t, r.pos), cap = capOf(t, r.pos);
       const shaped = (x: number) => {
-        if (t.filled[r.pos] >= SHAPE_MAX[r.pos]) return 0;
-        if (t.filled[r.pos] >= USUAL[r.pos]) x *= EXTRA_BID[r.pos]; else if (t.filled[r.pos] >= STARTERS[r.pos]) x *= DEEP;
+        if (t.filled[r.pos] >= cap) return 0;
+        if (t.filled[r.pos] >= usual) x *= EXTRA_BID[r.pos]; else if (t.filled[r.pos] >= Math.min(usual, STARTERS[r.pos])) x *= DEEP;
         // Under $1 of interest: he bids the $1 minimum only that share of the time (so a lukewarm owner
         // doesn't win every $1 coin flip).
         if (x < 1) { if (!must && rand() >= x) return 0; x = 1; }
@@ -141,7 +159,7 @@ export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow
         w = t.planned?.has(keyOf(r)) ? t.bid(r) : shaped(t.bid(r));
         if (t === by) w = Math.max(1, w); // the nominator opens at $1
       } else {
-        w = (r.cost / calib) * Math.exp(NOISE * gauss());
+        w = (r.cost / calib) * Math.exp(NOISE * gauss()) * Math.min(MAX_PRESSURE, Math.max(1 / MAX_PRESSURE, (t.left / o / perSpot) ** PRESSURE));
         const p = t.persona;
         if (p) {
           w *= p.lean[r.pos] * p.overpay;
