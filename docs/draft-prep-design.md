@@ -106,7 +106,7 @@ Data gaps:
 
 A simple password screen on the draft prep pages, to keep leaguemates out while it is being built. Not real security: the repo is public and Nic accepts that.
 
-- The page checks a hash of the password, so the password itself is not in the code. Remembered in the browser after the first unlock.
+- The page checks a SHA-256 hash of the password, so the password itself is not in the code. Hash: `55174404f557a8209cd5aacf3c54e1a4e2b7bc5b9eaa8254dd570c67d9733685`. Remembered in the browser after the first unlock.
 - Nic's inputs are stored as plain files in the repo.
 - Mark it in code as `// shortcut: password screen only, data is public in the repo; revisit if Nic shares the tool or wants real privacy`.
 - Removing the screen later (to share with the league) is a one-line change.
