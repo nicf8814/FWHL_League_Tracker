@@ -183,6 +183,22 @@ npm run data -- drafts [--dry-run]
 
 The dry run lists unmatched owners, keepers per season and each season's team spend range. `npm run data:check` fails while `drafts.json` is out of date. After a season's draft: add the export (extend `scripts/drafts.ts` for a new file name), add any new account to `accounts.csv`, run the command, then the usual checks.
 
+### Draft prep
+
+Nic's private pre-draft board (Settings, **Draft prep**, behind a password). Design: `docs/draft-prep/design.md`. It reads `public/seed/draft-prep.json`. Built, never edited by hand:
+
+```bash
+npm run data -- draftprep <year> [--dry-run]
+```
+
+- `data/draft-prep/<year>/board.csv`: the pre-draft board, `name,team,pos,proj,price` (projected season points in league scoring; FantasyPros consensus price on a $200, 12-team scale). Optional `rank` column overrides the position rank by price.
+- `data/draft-prep/<year>/keepers.csv`: `name,pos,cost,owner`. Owner is the team key in history.json.
+- Past boards (`data/draft-prep/<year-1..year-4>/board.csv`) set the price tiers: matched to what those players sold for in `public/seed/drafts.json`. 2025's is the auctioned players from Nic's 2026 board backtest tab; 2026's is Nic's full 2026 board. Use the same price source every year.
+- Projection shrink and miss come from `drafts.json` (2018-2022 ESPN preseason projections); FLEX and WR/TE usage from `public/seed/lineups/2023-2025.json`. Rebuild drafts and lineups first if they change.
+- Cost, worth and edge are worked out in the browser (`src/engine/draftPrep.ts`). `npm test` fails while `draft-prep.json` is out of date.
+
+Next year: add `data/draft-prep/2027/board.csv` and `keepers.csv`, then `npm run data -- draftprep 2027`.
+
 ### Trade history
 
 History → All seasons → **Trades** lists every trade from 2018 to last season, each side graded A to F; a season's **Trades** view shows that year's, and owner pages show each owner's trades. Reads `public/seed/trades.json` (about 80 KB), built and never edited by hand:
