@@ -225,15 +225,30 @@ export function ScoringChart({ H, go }: { H: Hist; go: Go }) {
       {before && sleeper[0] && <p className="text-sm text-ink-2">The move to Sleeper in {sleeper[0].year} lifted the typical score from {Math.round(before.med)} to {Math.round(sleeper[0].med)}, which is why the records compare each score to its season's average.</p>}
       <Key items={[['bg-primary-soft border border-primary', 'Middle half'], ['bg-accent rounded-full', 'Season high'], ...(sleeper.length ? [['bg-even-soft', 'Sleeper years'] as [string, string]] : [])]} />
       <div ref={ref}>
-        {narrow ? (
+        {narrow ? (() => {
+          // Phone: one row per season on a shared points scale, labelled top and bottom, gridlines through every row.
+          const lo = Math.max(0, Math.floor(Math.min(...s.map((r) => r.p10)) / 25) * 25);
+          const step = hi - lo > 150 ? 50 : 25;
+          const ticks = Array.from({ length: Math.floor((hi - lo) / step) + 1 }, (_, i) => lo + i * step);
+          const p = (v: number) => `${Math.max(0, Math.min(1, (v - lo) / (hi - lo))) * 100}%`;
+          const axis = (edge: 'top' | 'bottom') => (
+            <div className="grid grid-cols-[3rem_1fr_2.25rem] gap-2 px-1" aria-hidden="true">
+              <span className="text-[0.7rem] text-ink-3">{edge === 'top' ? 'Points' : ''}</span>
+              <span className="relative h-4">{ticks.map((t) => <span key={t} className="num absolute -translate-x-1/2 text-[0.7rem] text-ink-3" style={{ left: p(t) }}>{t}</span>)}</span>
+              <span className="text-right text-[0.7rem] text-ink-3">{edge === 'top' ? 'Med' : ''}</span>
+            </div>
+          );
+          return (
+          <div className="grid gap-1">
+          {axis('top')}
           <ul className="grid">
             {[...s].reverse().map((r) => {
-              const p = (v: number) => `${(v / hi) * 100}%`;
               return (
                 <li key={r.year}>
                   <button type="button" className={`grid min-h-7 w-full grid-cols-[3rem_1fr_2.25rem] items-center gap-2 px-1 text-left ${r.platform === 'Sleeper' ? 'bg-even-soft' : ''}`} onClick={() => go({ season: String(r.year), view: 'standings' })} aria-label={`${r.year}${r.live ? ' so far' : ''}: median ${Math.round(r.med)}, middle half ${Math.round(r.p25)} to ${Math.round(r.p75)}, high ${r.high.pts.toFixed(1)}. Open the season.`}>
                     <span className="num text-xs text-ink-2">{r.year}{r.live ? '*' : ''}</span>
                     <span className="relative h-4" aria-hidden="true">
+                      {ticks.map((t) => <span key={t} className="absolute -inset-y-1.5 w-px bg-rule" style={{ left: p(t) }} />)}
                       <span className="absolute top-1/2 h-px bg-ink-3" style={{ left: p(r.p10), width: `calc(${p(r.p90)} - ${p(r.p10)})` }} />
                       <span className={`absolute inset-y-0.5 rounded-sm border border-primary ${r.live ? 'bg-rule-strong' : 'bg-primary-soft'}`} style={{ left: p(r.p25), width: `calc(${p(r.p75)} - ${p(r.p25)})` }} />
                       <span className="absolute inset-y-0 w-0.5 bg-primary" style={{ left: p(r.med) }} />
@@ -245,7 +260,10 @@ export function ScoringChart({ H, go }: { H: Hist; go: Go }) {
               );
             })}
           </ul>
-        ) : <ScoreBoxes s={s} w={w} hi={hi} H={H} top={top} />}
+          {axis('bottom')}
+          </div>
+          );
+        })() : <ScoreBoxes s={s} w={w} hi={hi} H={H} top={top} />}
       </div>
       <p className="text-xs text-ink-3">The box is the middle half of the scores, the whiskers the middle 80%, the bar the median.{s.some((r) => r.live) ? ' *So far this season.' : ''}{narrow ? ' Tap a season to open it.' : ''}</p>
     </Section>
