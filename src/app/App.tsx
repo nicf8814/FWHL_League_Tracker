@@ -26,6 +26,7 @@ const History = lazyPage(() => import('../views/History.tsx'));
 const ExportData = lazyPage(() => import('../views/ExportData.tsx'));
 const DraftPrep = lazyPage(() => import('../views/DraftPrep.tsx'));
 const DraftSettings = lazyPage(() => import('../views/DraftSettings.tsx'));
+const DraftMock = lazyPage(() => import('../views/DraftMock.tsx'));
 
 // Four sections, each a few pages shown as tabs. Phones get the sections in the bottom bar;
 // desktops list them in the rail. Nov 12, item 4: the live season sits in My Team (with a dropdown
@@ -36,7 +37,7 @@ const SECTIONS: Section[] = [
   { id: 'team', label: 'My Team', icon: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z', pages: [{ route: 'home', label: 'Home' }, { route: 'teams', label: 'Roster' }, { route: 'standings', label: 'Standings' }, { route: 'players', label: 'Players' }, { route: 'waivers', label: 'Waivers' }, { route: 'keepers', label: 'Keepers' }] },
   { id: 'trades', label: 'Trades', icon: 'M7 7h13l-3-3M17 17H4l3 3', pages: [{ route: 'finder', label: 'Finder' }, { route: 'analyzer', label: 'Analyzer' }, { route: 'tracker', label: 'Tracker' }, { route: 'market', label: 'Buy & sell' }] },
   { id: 'history', label: 'History', icon: 'M12 8v5l3 2M3 12a9 9 0 1 0 2.6-6.4M3 4v4h4', pages: [{ route: 'history', label: 'History' }] },
-  { id: 'draft', label: 'Draft', icon: 'M4 6h16M4 12h10M4 18h7M17 14l3 3-3 3', pages: [{ route: 'draft', label: 'Board' }, { route: 'draftset', label: 'Settings' }] },
+  { id: 'draft', label: 'Draft', icon: 'M4 6h16M4 12h10M4 18h7M17 14l3 3-3 3', pages: [{ route: 'draft', label: 'Board' }, { route: 'draftmock', label: 'Mock draft' }, { route: 'draftset', label: 'Settings' }] },
   { id: 'settings', label: 'Settings', icon: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1', pages: [{ route: 'data', label: 'Data & settings' }, { route: 'export', label: 'Export' }, { route: 'method', label: 'How it works' }] },
 ];
 // The pages that show one team, so the header's team dropdown belongs on them.
@@ -46,7 +47,7 @@ const sectionsFor = (passed: boolean) => (passed ? SECTIONS.map((x) => ({ ...x, 
 const sectionOf = (r: Route) => SECTIONS.find((x) => x.pages.some((p) => p.route === r))!;
 export const PAGES = SECTIONS.flatMap((x) => x.pages);
 const SHORT: Record<string, string> = { espn: 'ESPN', peaked: 'Peaked', menton: 'Menton' };
-const VIEWS: Record<Route, React.ComponentType> = { home: Home, finder: Finder, analyzer: Analyzer, tracker: Tracker, standings: Standings, history: History, players: Players, teams: Teams, data: DataSettings, method: Method, keepers: Keepers, market: Market, waivers: Waivers, export: ExportData, draft: DraftPrep, draftset: DraftSettings };
+const VIEWS: Record<Route, React.ComponentType> = { home: Home, finder: Finder, analyzer: Analyzer, tracker: Tracker, standings: Standings, history: History, players: Players, teams: Teams, data: DataSettings, method: Method, keepers: Keepers, market: Market, waivers: Waivers, export: ExportData, draft: DraftPrep, draftmock: DraftMock, draftset: DraftSettings };
 
 const EXTRA: Command[] = [
   { id: 'theme', label: 'Switch light / dark', group: 'Actions', run: () => setTheme(nextTheme(getTheme())) },

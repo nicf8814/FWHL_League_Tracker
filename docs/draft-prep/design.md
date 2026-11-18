@@ -149,6 +149,25 @@ Draft prep has its own sidebar section, **Draft**: Board and Settings.
 - Mock auctions (`src/engine/mockAuction.ts`): the other 11 teams buy the open pool 100-500 times, priciest first with some shuffle. Each bid = expected cost x persona x noise, capped by the owner's max bid, position limits and the slot's ceiling, and lower once his starters there are covered. Price = second-highest bid + $1, scaled so players sell for about their expected cost on average (2026 test run: mock prices missed real ones by $6 on average, the board's cost by $5.60).
 - Board: Get % (how often nobody else would pay more than Nic's bid: his planned bid, else expected cost; a tie counts half), likely buyers in the hover text, and plan odds in My plan. Reruns a quarter second after the last change.
 
+## Mock draft (Draft > Mock draft, Nov 18)
+
+One full auction at a time with all 12 teams on the live board, after keepers (`runAuction` in `src/engine/mockAuction.ts`; the board's Get % uses the same auction).
+
+- Nomination: teams nominate in turn. Each nomination picks top 24 / 25-72 / the rest by price at the league's measured rate for that stage of the draft (`draft-prep.json` `nomination`, from the order players came up in the 2022-26 auctions: first fifth 65% top, second 21% top and 65% middle, ... last fifth 99% cheap). Usually the priciest one left at a position the nominator doesn't need; 30% of the time a wild card from that group.
+- Nic's team bids his plan (planned bids, $1 on anyone else so leftovers fill his roster) or an auto-fill strategy as bids. The other 11 bid by persona.
+- The auction runs until every roster is full; unpriced players with the best projections fill in as $1 fodder. The nominator opens at $1, so he picks someone he could take, and late in the draft someone he wants.
+- Roster shapes like the real ones (2022-26 auctions: QB 1-2, RB 4-5, WR 5-7, TE 0-2): every team, Nic's strategy included, bids less past its starters, a fifth past a usual roster (1 QB, 5 RB, 7 WR, 1 TE; half for a backup QB) and stops at 3 QB / 6 RB / 8 WR / 3 TE. Teams must keep room for a legal lineup. Below $1 of interest an owner bids the $1 minimum only that share of the time. (Nic, Nov 18: Chris was buying only QBs.)
+- Run 100 shows each team's average roster and spend by position (keepers included) above its most-bought players.
+- One mock: every roster with prices and keepers, Nic's lost targets (who paid what against his bid), and the nomination log with the runner-up bid. Run 100: what each team most often ends up with and its usual price.
+
+## Mock dials fitted to real auctions (Nov 18)
+
+Nic: "we can't hardcode this logic". Too little data for a learned model (5 drafts under today's rules), so the mock keeps its readable steps and `npm run data -- fitmock` (`scripts/fitMock.ts`) picks its five dials (bid randomness, interest past starters, past a usual roster, money pressure, wild-card nominations) from 432 combinations by replaying the 2025 auction (Nic's full 2025 FantasyPros board, real keepers, owners as personas) and checking on 2026. Money pressure builds through the draft (none at the opening bid). Draft > Settings shows the fit.
+
+Result on 2026 (held out): money left per team off by $1.72 (was $28.38 with the starting dials); price miss $5.60 (was $6.69); roster shape 0.43 players per position (0.46); only 42% of real prices inside the mock's middle-80% range. Money pressure sits at the edge of its range: the mock's structure, not its dials, is now the limit.
+
+Stars fix (Nov 18): the persona habits (lean x overpay, x stars) used to stack, so the second-highest bid for a star sat at the slot ceiling every time (Chase $89 in all 200 mocks; he went for $70 in 2026) and Get % at expected cost read 0%. Calibration now divides those habits out per position, star or not, so a player sells for about his expected cost on average; the habits still decide who buys him. Chase on the 2027 board: Get % at his $65 cost 14% (was 0%). It stays under 50% on purpose: to win him you have to beat the one owner who wants him most, not the average price.
+
 ## Phases
 
 1. Market analysis report.

@@ -124,8 +124,14 @@ function personasFrom(drafts: Drafts, history: History, dir: string): { years: n
     const counts = new Map<string, number>();
     for (const b of myBuys) counts.set(b.t, (counts.get(b.t) ?? 0) + 1);
     const fav = [...counts].filter(([t, n]) => n >= FAV_MIN && n / myBuys.length >= FAV_LIFT * rate(t)).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([t]) => t);
+    // His roster shape after each draft (keepers included).
+    const drafted = drafts.picks.filter((p) => years.includes(p[0]) && p[2] === o.key && (PREP_POS as readonly string[]).includes(drafts.players[p[1]]![1]));
+    const seasons = [...new Set(drafted.map((p) => p[0]))];
+    const per = (q: PrepPos) => seasons.map((y) => drafted.filter((p) => p[0] === y && pos(p) === q).length);
+    const shape = Object.fromEntries(PREP_POS.map((q) => [q, Math.round((per(q).reduce((a, b) => a + b, 0) / seasons.length) * 10) / 10])) as Record<PrepPos, number>;
+    const shapeMax = Object.fromEntries(PREP_POS.map((q) => [q, Math.max(...per(q))])) as Record<PrepPos, number>;
     personas.push({
-      key: o.key, name: o.name, teamId: o.teamId,
+      key: o.key, name: o.name, teamId: o.teamId, shape, shapeMax,
       // Lean shrinks toward 1 by what he actually spent there: a $3 TE buy says little (LEAN_PRIOR).
       lean: Object.fromEntries(PREP_POS.map((q) => {
         const at = spend(mine.filter((p) => pos(p) === q)), raw = at / spend(mine) / leagueShare[q], w = at / (at + LEAN_PRIOR);
@@ -140,9 +146,24 @@ function personasFrom(drafts: Drafts, history: History, dir: string): { years: n
   return { years, personas };
 }
 
+// How the league nominates: by fifth of the draft, the share of top / middle / cheap players (by price
+// rank in that draft) that came up, from the picks' order in the auction.
+function nominationFrom(drafts: Drafts, years: number[]): [number, number, number][] {
+  const out = Array.from({ length: 5 }, () => [0, 0, 0] as [number, number, number]);
+  for (const y of years) {
+    const ps = drafts.picks.filter((p) => p[0] === y && !p[4]).sort((a, b) => a[9] - b[9]);
+    const byPrice = [...ps].sort((a, b) => b[3] - a[3]);
+    const rank = new Map(byPrice.map((p, i) => [p, i + 1]));
+    ps.forEach((p, i) => { const r = rank.get(p)!; out[Math.min(4, Math.floor((i * 5) / ps.length))]![r <= 24 ? 0 : r <= 72 ? 1 : 2]++; });
+  }
+  return out.map((c) => { const t = c[0] + c[1] + c[2] || 1; return c.map((v) => Math.round((v / t) * 100) / 100) as [number, number, number]; });
+}
+
 export interface DraftPrepReport { editions: string[]; keepersNotOnBoard: string[]; samples: number }
 
-export function buildDraftPrep(dir = 'data/draft-prep', seed = 'public/seed', historyDir = 'data/history'): { file: DraftPrepFile; report: DraftPrepReport } {
+// replay: past drafts to rebuild as board editions with their real keepers (owner keys), for fitting the
+// mock auction (scripts/fitMock.ts). They are returned beside the file, not written into it.
+export function buildDraftPrep(dir = 'data/draft-prep', seed = 'public/seed', historyDir = 'data/history', replay: number[] = []): { file: DraftPrepFile; report: DraftPrepReport; replays: DraftPrep[] } {
   const errors: string[] = [];
   const boardYears = existsSync(dir) ? readdirSync(dir).filter((d) => /^\d{4}$/.test(d) && existsSync(join(dir, d, 'board.csv'))).map(Number).sort((a, b) => a - b) : [];
   if (!boardYears.length) throw new Error(`no ${dir}/<year>/board.csv found`);
@@ -198,11 +219,19 @@ export function buildDraftPrep(dir = 'data/draft-prep', seed = 'public/seed', hi
   editions.push({ year: next, kind: 'standin', ...base, source: `${last} season production and trade values, live`, fit: fitFor(next), board: [], keepers: [], standIn: { fromYear: last, curveYear: last, curve, sampleYears: years, samples } });
   const history = JSON.parse(readFileSync(join(seed, 'history.json'), 'utf8')) as History;
   const { years: personaYears, personas } = personasFrom(drafts, history, historyDir);
-  return { file: { version: 2, editions, personaYears, personas }, report: { editions: editions.map((e) => `${e.year} ${e.kind}${e.kind === 'board' ? `: ${e.board.length} players, ${e.keepers.length} keepers, tiers from ${e.fit.marketYears.map(([y]) => y).join('+')}` : `: tiers from ${e.fit.marketYears.map(([y]) => y).join('+')}, slots ${e.fit.slotYears[0]}-${e.fit.slotYears.at(-1)}`}`), keepersNotOnBoard: notOnBoard, samples: samples.length } };
+  const replays: DraftPrep[] = replay.filter((y) => boards.has(y)).map((y) => ({
+    year: y, kind: 'board', ...base, source: `${dir}/${y}/board.csv`, fit: fitFor(y),
+    board: boards.get(y)!.map((r) => [r[0], r[1], r[2], r[3], r[4]] as BoardRow),
+    keepers: drafts.picks.filter((p) => p[0] === y && p[4] && isPos(drafts.players[p[1]]![1])).map((p) => [drafts.players[p[1]]![0], drafts.players[p[1]]![1] as PrepPos, p[3], p[2]] as KeeperRow),
+  }));
+  // Fitted mock dials are kept from the current file (they change only with `npm run data -- fitmock`).
+  const seedFile = join(seed, 'draft-prep.json');
+  const mockDials = existsSync(seedFile) ? (JSON.parse(readFileSync(seedFile, 'utf8')) as DraftPrepFile).mockDials : undefined;
+  return { replays, file: { version: 2, editions, personaYears, personas, nomination: nominationFrom(drafts, personaYears), ...(mockDials ? { mockDials } : {}) }, report: { editions: editions.map((e) => `${e.year} ${e.kind}${e.kind === 'board' ? `: ${e.board.length} players, ${e.keepers.length} keepers, tiers from ${e.fit.marketYears.map(([y]) => y).join('+')}` : `: tiers from ${e.fit.marketYears.map(([y]) => y).join('+')}, slots ${e.fit.slotYears[0]}-${e.fit.slotYears.at(-1)}`}`), keepersNotOnBoard: notOnBoard, samples: samples.length } };
 }
 
 export const formatDraftPrep = (f: DraftPrepFile) =>
-  `{"version":2,"personaYears":${JSON.stringify(f.personaYears ?? [])},"personas":[\n${(f.personas ?? []).map((p) => JSON.stringify(p)).join(',\n')}\n],\n"editions":[\n${f.editions.map((e) => {
+  `{"version":2,"personaYears":${JSON.stringify(f.personaYears ?? [])},"nomination":${JSON.stringify(f.nomination ?? [])},${f.mockDials ? `\n"mockDials":${JSON.stringify(f.mockDials)},` : ''}"personas":[\n${(f.personas ?? []).map((p) => JSON.stringify(p)).join(',\n')}\n],\n"editions":[\n${f.editions.map((e) => {
     const { board, keepers, standIn, ...head } = e;
     const { samples, ...rest } = standIn ?? { samples: [] };
     const si = standIn ? `,\n"standIn":{${JSON.stringify(rest).slice(1, -1)},"samples":[\n${samples.map((s) => JSON.stringify(s)).join(',\n')}\n]}` : '';
