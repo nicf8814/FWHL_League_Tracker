@@ -15,6 +15,8 @@ import { validateTrades } from '../src/data/trades.ts';
 import { buildTrades, formatTrades } from './trades.ts';
 import { validateCareers } from '../src/data/careers.ts';
 import { buildCareers, formatCareers } from './careers.ts';
+import { validateDraftPrep } from '../src/data/draftPrep.ts';
+import { buildDraftPrep, formatDraftPrep } from './draftPrep.ts';
 import { existsSync, mkdirSync, readdirSync } from 'node:fs';
 import {
   applyChart, applyProjections, applyResults, applyRosters, arizonaToday, dropFantasyPros, formatDataset, chartRowsFromCsv,
@@ -96,6 +98,7 @@ function checkLineups(built = buildLineups(buildHistory())) {
 
 // public/seed/drafts.json must match what data/history/drafts builds today.
 const DRAFTS = 'public/seed/drafts.json';
+const DRAFT_PREP = 'public/seed/draft-prep.json';
 function checkDrafts(h = buildHistory(), L = buildLineups(h)) {
   const { drafts } = buildDrafts(h, 'data/history', L);
   if (!existsSync(DRAFTS) || readFileSync(DRAFTS, 'utf8') !== formatDrafts(drafts)) fail(`${DRAFTS} is out of date with data/history/drafts. Run: npm run data -- drafts`);
@@ -171,6 +174,16 @@ try {
       console.log(JSON.stringify({ written: !dry, file: CAREERS, players: careers.players.length, rows: careers.rows.length, through: careers.through, seasons: report }, null, 2));
       break;
     }
+    case 'draftprep': {
+      const year = Number(rest[0]);
+      if (!Number.isInteger(year)) fail('give the draft year: draftprep <year>');
+      const { prep, report } = buildDraftPrep(year);
+      const v = validateDraftPrep(JSON.parse(formatDraftPrep(prep)));
+      if (!v.ok) fail(`the draft prep file would be invalid:\n- ${v.errors.join('\n- ')}`);
+      if (!dry) writeFileSync(DRAFT_PREP, formatDraftPrep(prep));
+      console.log(JSON.stringify({ written: !dry, file: DRAFT_PREP, year, ...report, fit: { marketYears: prep.fit.marketYears, shrink: prep.fit.shrink, miss: prep.fit.miss, flex: prep.fit.flex } }, null, 2));
+      break;
+    }
     case 'results': { const ds = load(); finish(ds, applyResults(ds, readJson(rest[0]) as never, today)); break; }
     case 'projections': { const ds = load(); finish(ds, applyProjections(ds, readJson(rest[0]) as never, today, force)); break; }
     case 'rosters': { const ds = load(); finish(ds, applyRosters(ds, readJson(rest[0]) as never, today, force)); break; }
@@ -182,7 +195,7 @@ try {
     }
     case 'drop-fantasypros': { const ds = load(); finish(ds, dropFantasyPros(ds)); break; }
     default:
-      fail(`unknown command "${cmd ?? ''}". Use: check | results <json> | projections <json> | rosters <json> | chart <peaked|menton> <week> <csv> | history | lineups | drafts | trades | careers`);
+      fail(`unknown command "${cmd ?? ''}". Use: check | results <json> | projections <json> | rosters <json> | chart <peaked|menton> <week> <csv> | history | lineups | drafts | trades | careers | draftprep <year>`);
   }
 } catch (e) {
   fail(e instanceof Error ? e.message : String(e));

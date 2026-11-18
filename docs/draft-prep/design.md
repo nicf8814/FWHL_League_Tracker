@@ -1,6 +1,6 @@
 # Draft Prep Machine: design
 
-Status: draft, Nov 18, 2026. No code yet. League rules: docs/rules/league-rules.md. Nic's earlier work: docs/draft-prep/reference/ (see References).
+Status: phase 2 built Nov 18, 2026 (cost, worth and edge for the 2026 board, Settings > Draft prep). Data: docs/data-updates.md, "Draft prep". League rules: docs/rules/league-rules.md. Nic's earlier work: docs/draft-prep/reference/ (see References).
 
 ## Goal
 
@@ -114,6 +114,19 @@ A simple password screen on the draft prep pages, to keep leaguemates out while 
 - Nic's inputs are stored as plain files in the repo.
 - Mark it in code as `// shortcut: password screen only, data is public in the repo; revisit if Nic shares the tool or wants real privacy`.
 - Removing the screen later (to share with the league) is a one-line change.
+
+## Phase 2 results (2026 board, tested on the real 2026 auction)
+
+| Cost model | Tracks real prices | Average miss |
+|---|---|---|
+| This engine (tiers fit on 2025 FantasyPros board + 2025 auction) | 0.96 | $3.50 |
+| Nic's 2026 board | 0.96 | $3.80 |
+| Raw FantasyPros consensus | 0.95 | $6.00 |
+| Tiers fit on ESPN's own auction values, 2022-25 | 0.94 | $5.30 (dropped: the price source must match the board's) |
+
+- Measured: replacement QB12, RB30, WR37, TE5 (FLEX starts 2023-25: RB 50%, WR 36%, TE 13%; WR/TE: WR 68%, TE 32%). Shrink per projected point over replacement (2018-22): QB 1.15, RB 0.74, WR 0.92, TE 0.82. Projection miss: QB 22%, RB 36%, WR 32%, TE 33%.
+- Worth through Week 10 of 2026: buys more than $10 over worth gave back about $26 each (n=6); otherwise the edge barely predicted results (correlation 0.15). One season, injuries (Lamar, Daniels): recheck after the season.
+- Bid bands rest on 2025 alone (most tiers under 8 buys, so position-wide bands). They tighten once 2026 joins the fit.
 
 ## Phases
 
