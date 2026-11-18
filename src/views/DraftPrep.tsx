@@ -3,7 +3,7 @@
 // season's production, trade values and injuries) and the 2026 test run (last August's real board).
 // Behind a password screen while Nic builds it.
 // shortcut: password screen only, the data is public in the repo; revisit if Nic shares the tool or wants real privacy.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import { playerKey } from '../data/drafts.ts';
 import { PREP_POS, draftPrepUrl, validateDraftPrep, type DraftPrep as Prep, type DraftPrepFile, type KeeperRow, type PrepPos } from '../data/draftPrep.ts';
 import { useLeague } from '../data/store.tsx';
@@ -14,6 +14,7 @@ import { Empty, fmt, PosMark, Section, Seg, signed, tone } from '../ui/component
 import { DataTable, TableBar, useTable, type Col, type FilterDef } from '../ui/table.tsx';
 import { PlanButton, PlanPanel, planPicks, rowKey, usePlan } from './DraftPlan.tsx';
 import { maxBidFor, posFull } from '../engine/rosterPlan.ts';
+import { autoFill, type Strategy } from '../engine/autoFill.ts';
 
 const PASS_HASH = '55174404f557a8209cd5aacf3c54e1a4e2b7bc5b9eaa8254dd570c67d9733685'; // SHA-256 of the password (docs/draft-prep/design.md, Access)
 const UNLOCK_KEY = 'fwhl-draft-prep-unlocked';
@@ -164,6 +165,15 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
   const liveOf = (r: PrepRow) => live?.get(keyOf(r.name, r.pos));
   const planned = useMemo(() => planPicks(board.rows, me, plan.bids).picks, [board, me, plan.bids]);
   const nextMax = maxBidFor(planned, null, prep.budget);
+  // Auto-fill: price the board with only my own buys taken (the old auto picks go back in the pool),
+  // keep keepers and my picks, and fill the empty spots.
+  const fill = (strategy: Strategy) => {
+    const own = Object.fromEntries(Object.entries(plan.bids).filter(([k]) => !plan.auto.has(k)));
+    const rowsNow = priceBoard(prep, keepers, own).rows;
+    const start = planPicks(rowsNow, me, own).picks;
+    const out = autoFill(rowsNow, start, strategy, plan.avoid, rowKey, prep.budget);
+    plan.fillWith(Object.fromEntries(out.filter((p) => !p.keeper && !(p.key in own)).map((p) => [p.key, p.bid])));
+  };
 
   const filters = useMemo<FilterDef<PrepRow>[]>(() => [
     { id: 'pos', label: 'Position', options: [['ANY', 'Any position'], ['QB', 'QB'], ['RB', 'RB'], ['WR', 'WR'], ['TE', 'TE']], test: (r, v) => r.pos === v },
@@ -171,21 +181,21 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
   ], [candidateKeys]);
   const search = useMemo(() => ({ placeholder: 'Player name', of: (r: PrepRow) => r.name }), []);
   const cols = useMemo<Col<PrepRow>[]>(() => [
-    { id: 'name', label: 'Player', left: true, fixed: true, className: 'min-w-[12rem]', value: (r) => r.name, cell: (r) => <span className="flex items-center gap-2"><PosMark pos={r.pos} /><span>{r.name}</span></span> },
-    ...(live ? [{ id: 'plan', label: 'Plan', left: true, fixed: true, value: (r: PrepRow) => (plan.has(rowKey(r)) ? 1 : 0), cell: (r: PrepRow) => <PlanButton row={r} plan={plan} mine={!!me && r.keeper?.[3] === me} maxBid={nextMax} full={posFull(planned, r.pos)} /> }] as Col<PrepRow>[] : []),
+    { id: 'name', label: 'Player', left: true, fixed: true, className: 'min-w-[9rem]', value: (r) => r.name, cell: (r) => <span className="flex items-center gap-2"><PosMark pos={r.pos} /><span>{r.name}</span></span> },
+    ...(live ? [{ id: 'plan', label: '', left: true, fixed: true, value: (r: PrepRow) => (plan.has(rowKey(r)) ? 1 : 0), cell: (r: PrepRow) => <PlanButton row={r} plan={plan} mine={!!me && r.keeper?.[3] === me} maxBid={nextMax} full={posFull(planned, r.pos)} /> }] as Col<PrepRow>[] : []),
     { id: 'keep', label: 'Kept', left: true, value: (r) => (r.keeper ? r.keeper[2] : null), cell: (r) => {
       const k = candidateKeys.get(keyOf(r.name, r.pos));
       if (!k) return '';
       return <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!r.keeper} onChange={(e) => toggle(keyOf(r.name, r.pos), e.target.checked)} aria-label={`Keep ${r.name}`} /><span className={r.keeper ? '' : 'text-ink-3'}>${k[2]} {k[3]}</span></label>;
     } },
     ...(live ? [
-      { id: 'today', label: 'Today', value: (r: PrepRow) => liveOf(r)?.today ?? null, cell: (r: PrepRow) => { const x = liveOf(r); return x ? `${r.pos}${x.today}` : '–'; } },
-      { id: 'range', label: `${prep.year} range`, value: (r: PrepRow) => liveOf(r)?.next.mid ?? null, cell: (r: PrepRow) => { const x = liveOf(r); return x ? `${r.pos}${x.next.lo}–${x.next.hi}` : '–'; } },
-      { id: 'ppg', label: 'Pts/g', value: (r: PrepRow) => liveOf(r)?.line.ppg ?? null, cell: (r: PrepRow) => { const x = liveOf(r); return x?.line.ppg == null ? '–' : `${fmt(x.line.ppg)} (${x.line.games}g)`; } },
-      { id: 'health', label: 'Season', left: true, className: 'text-ink-2', value: (r: PrepRow) => liveOf(r)?.line.share ?? null, cell: (r: PrepRow) => { const x = liveOf(r); if (!x) return '–'; const b = gamesBand(x.line.share); return b === 'full' ? 'full' : b === 'part' ? 'missed some' : 'mostly lost'; } },
+      { id: 'today', label: 'Today', hidden: true, value: (r: PrepRow) => liveOf(r)?.today ?? null, cell: (r: PrepRow) => { const x = liveOf(r); return x ? `${r.pos}${x.today}` : '–'; } },
+      { id: 'range', label: `Now → ${prep.year}`, value: (r: PrepRow) => liveOf(r)?.next.mid ?? null, cell: (r: PrepRow) => { const x = liveOf(r); return x ? <span className="whitespace-nowrap">{r.pos}{x.today} <span className="text-ink-3">→</span> {x.next.lo}–{x.next.hi}</span> : '–'; } },
+      { id: 'ppg', label: 'Pts/g', hidden: true, value: (r: PrepRow) => liveOf(r)?.line.ppg ?? null, cell: (r: PrepRow) => { const x = liveOf(r); return x?.line.ppg == null ? '–' : `${fmt(x.line.ppg)} (${x.line.games}g)`; } },
+      { id: 'health', label: 'Season', left: true, hidden: true, className: 'text-ink-2', value: (r: PrepRow) => liveOf(r)?.line.share ?? null, cell: (r: PrepRow) => { const x = liveOf(r); if (!x) return '–'; const b = gamesBand(x.line.share); return b === 'full' ? 'full' : b === 'part' ? 'missed some' : 'mostly lost'; } },
     ] as Col<PrepRow>[] : []),
     { id: 'cost', label: 'Cost', value: (r) => r.cost, cell: (r) => <b className="font-semibold">${fmt(r.cost, 0)}</b> },
-    { id: 'band', label: 'Floor–ceiling', value: (r) => r.ceiling, cell: (r) => `$${r.floor}–${r.ceiling}` },
+    { id: 'band', label: 'Window', value: (r) => r.ceiling, cell: (r) => <span className="whitespace-nowrap text-ink-2">{r.floor}–{r.ceiling}</span> },
     { id: 'worth', label: 'Worth', value: (r) => r.worth, cell: (r) => `$${fmt(r.worth, 0)}` },
     { id: 'edge', label: 'Edge', value: (r) => (r.keeper ? null : r.edge), cell: (r) => (r.keeper ? '–' : <span className={tone(r.edge, 2)}>{signed(r.edge, 0)}</span>) },
     { id: 'tier', label: 'Price tier', left: true, hidden: !!live, className: 'text-ink-2', value: (r) => `${r.pos}${r.rank} ${r.tier}`, cell: (r) => `${r.tier} (${r.pos}${r.rank})` },
@@ -201,8 +211,10 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
   return (
     <Section title={live ? `${prep.year} draft board, live` : `${prep.year} draft board, test run`} aside={`${keepers.length} keepers, $${board.keeperSpend} kept`}>
       <p className="headline-sm">${board.moneyLeft.toLocaleString()} left for {board.openSlots} open spots</p>
-      {board.boughtSpend > 0 && <p className="text-sm text-ink-2">After your plan's ${board.boughtSpend} in bids: every price below counts them as sold, so overbidding makes the rest cheaper and bargains make it dearer.</p>}
-      <ul className="grid max-w-[75ch] gap-1 text-sm text-ink-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
+        {board.boughtSpend > 0 && <span>Counts your plan's ${board.boughtSpend} in bids as sold.</span>}
+        {changed ? <button type="button" className="link" onClick={reset}>Undo my {changed} keeper switch{changed === 1 ? '' : 'es'}</button> : null}
+        <span className="flex items-center gap-2 text-ink-3">How this board works <Help label="How this board works"><ul className="grid gap-1.5 text-sm text-ink-2">
         {live && si ? (
           <li><span className="text-ink">Live stand-in</span> until the {prep.year} projections are loaded. Today = his rank this season through Week {weeks}: 70% points per game (4+ games), 30% trade value. {prep.year} range = where players at that rank, with that much of a season played, were priced the next August ({si.sampleYears[0]![0]}-{si.sampleYears.at(-1)![0]} seasons): the middle sets his price and projection ({si.curveYear} board at that rank), the range is the middle half. Injuries count through the games he can still play.</li>
         ) : (
@@ -211,11 +223,41 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
         <li><span className="text-ink">Cost</span>: what he should sell for. {live ? 'Slot price' : 'Consensus price'} × what the league paid for his price tier ({mkt} auctions) × the money left after keepers. The window is the least and most his slot (RB1, RB2, ...) sold for in the {prep.fit.slotYears[0]}-{prep.fit.slotYears.at(-1)} drafts; cost never goes over it.</li>
         <li><span className="text-ink">Worth</span>: projected points over the last starter, $1 plus ${fmt(board.perVorp, 2)} a point, after shrinking projections the way past ones fell short.</li>
         <li><span className="text-ink">Edge</span>: worth − cost. Overpaying is what hurts: 2026 buys more than $10 over worth gave back about $26 each by Week 10.</li>
-        <li><span className="text-ink">Kept</span>: {live ? "each team's best keeper calls from the Keepers page, locked contracts first" : `the real ${prep.year} keepers`}. Switch anyone on or off; the board reprices.{changed ? <> <button type="button" className="link" onClick={reset}>Undo my {changed} switch{changed === 1 ? '' : 'es'}</button></> : null}</li>
-      </ul>
-      {live && <PlanPanel rows={board.rows} me={me} plan={plan} budget={prep.budget} />}
-      <TableBar t={t} noun="players" file={`fwhl-draft-board-${prep.year}`} />
-      <DataTable t={t} rowKey={(r) => String(r.i)} minWidth={live ? 'min-w-[68rem]' : 'min-w-[56rem]'} empty="No player matches these filters." />
+        <li><span className="text-ink">Kept</span>: {live ? "each team's best keeper calls from the Keepers page, locked contracts first" : `the real ${prep.year} keepers`}. Switch anyone on or off; the board reprices.</li>
+        {live && <li><span className="text-ink">My plan</span>: your planned bids count as sold, so overbidding makes everyone left cheaper and bargains make them dearer. Auto-fill fills the empty spots; your own picks stay.</li>}
+      </ul></Help></span>
+      </div>
+      {live ? (
+        // Wide screens: the plan stays beside the pool while it scrolls.
+        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="grid min-w-0 gap-3">
+            <TableBar t={t} noun="players" file={`fwhl-draft-board-${prep.year}`} />
+            <DataTable t={t} rowKey={(r) => String(r.i)} rank={false} minWidth="min-w-[44rem]" empty="No player matches these filters." />
+          </div>
+          <aside className="order-first xl:order-none xl:sticky xl:top-28 xl:max-h-[calc(100dvh-8rem)] xl:overflow-y-auto">
+            <PlanPanel rows={board.rows} me={me} plan={plan} budget={prep.budget} onFill={fill} />
+          </aside>
+        </div>
+      ) : (
+        <>
+          <TableBar t={t} noun="players" file={`fwhl-draft-board-${prep.year}`} />
+          <DataTable t={t} rowKey={(r) => String(r.i)} minWidth="min-w-[56rem]" empty="No player matches these filters." />
+        </>
+      )}
     </Section>
+  );
+}
+
+// An (i) button with the explanation in a card (same pattern as the History page's value help).
+function Help({ label, children }: { label: string; children: ReactNode }) {
+  const id = useId().replace(/:/g, '');
+  return (
+    <>
+      <button type="button" popoverTarget={id} className="inline-grid size-7 shrink-0 place-items-center rounded-full border border-rule-strong align-middle font-mono text-xs text-ink-2 hover:bg-sunk" aria-label={label} title={label}>i</button>
+      <div id={id} popover="auto" className="popcard" role="dialog" aria-label={label}>
+        <p className="mb-2 font-display text-lg font-bold [font-stretch:85%]">{label}</p>
+        {children}
+      </div>
+    </>
   );
 }
