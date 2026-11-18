@@ -66,14 +66,14 @@ test('2020 Week 8: the Kelce trade is found from the rosters and graded', () => 
   assert.ok(ty.score! > 0.04 && dm.score! > 0.04, 'both sides won: each lineup scored more');
   assert.ok(ty.ptsGain! > 0 && dm.ptsGain! > 0);
   assert.ok(dm.kept.some((k) => name(k.p) === 'Patrick Mahomes' && k.year === 2021), 'Morris kept Mahomes in 2021');
-  assert.ok(ty.rights.some((k) => name(k.p) === 'Patrick Mahomes'), 'Ty gave up the Mahomes keeper right');
+  assert.ok(dm.keep < 0 && !ty.rights.length, 'a $37 QB keep cost more than a QB finish buys at auction: no right lost for Ty');
 });
 
 test('keepers: good and bad keeps count for the keeper, rights given up against the other side', () => {
   const t = find(2023, 'tommy-teves', "De'Von Achane");
   const tom = t.sides.find((s) => s.owner === 'tommy-teves')!, dm = t.sides.find((s) => s.owner === 'david-morris')!;
-  assert.equal(tom.keep, 33, 'Tommy kept Achane in 2024 at $12');
-  assert.equal(dm.keep, -33, 'David gave up that right');
+  assert.equal(tom.keep, 44, 'Tommy kept Achane in 2024 at $12: an RB4 finish, worth $56');
+  assert.equal(dm.keep, -44, 'David gave up that right');
   const a = find(2023, 'travis-mattson', 'Brandon Aiyuk').sides.find((s) => s.owner === 'travis-mattson')!;
   assert.equal(a.keep, -31, 'Aiyuk kept at $32 and flopped: a loss for Travis');
   const back = find(2024, 'david-morris', "De'Von Achane").sides.find((s) => s.owner === 'david-morris')!;

@@ -46,16 +46,28 @@ test('value: Kelce 2020 worked through by hand', () => {
   assert.deepEqual(k.held!.map((x) => [x.owner, x.from]), [['david-morris', 1], ['ty-carlson', 8]], 'traded to Ty in week 8');
 });
 
-test('value: bargains and busts, keepers priced at their keeper cost', () => {
-  assert.equal(pick('Arian Foster', 2010).value, 82);
+test('value: worth is what his finish costs at auction, by position', () => {
+  // Worth is the price curve at his finish: RB1 is worth the RB1 slot, averaged over that draft and the ones either side.
+  const dj = pick('David Johnson', 2016), b = book.basis.get(2016)!;
+  assert.equal(posRank(book, dj), 1);
+  assert.equal(dj.worth, Math.round(b.curve.RB![0]!));
+  assert.deepEqual([dj.keeper, dj.price, dj.worth, dj.value], [true, 11, 83, 72], 'the best keeper of the ESPN years');
+  assert.equal(pick('Arian Foster', 2010).value, 66);
   assert.ok(pick("Le'Veon Bell", 2018).value! < -90);
-  // Non-keepers set the going rate, so their values sum to about zero each season.
-  for (const y of book.years.filter((y) => y < 2026)) {
-    const open = book.byYear.get(y)!.filter((x) => !x.keeper && x.value !== null);
-    const above = open.filter((x) => x.pts! > book.basis.get(y)!.repl[x.pos]!);
-    const sum = above.reduce((a, x) => a + x.worth! - 1, 0), paid = open.reduce((a, x) => a + x.price - 1, 0);
-    assert.ok(Math.abs(sum - paid) / paid < 0.05, `${y}: worth above $1 tracks dollars above $1`);
-  }
+  // QBs and kickers are priced off their own, cheaper curves: a $2 QB season is no longer a +$75 steal.
+  assert.ok(pick('Dak Prescott', 2023).value! < 30);
+  assert.ok(pick('Bears D/ST', 2012).value! < 10);
+  // Keepers sit in the curve at what they would have cost at auction, so kept stars don't push
+  // auctioned players up a slot; the curve falls as the slots go down.
+  for (const pos of ['QB', 'RB', 'WR', 'TE']) { const c = b.curve[pos]!; assert.ok(c.every((v, i) => i === 0 || v <= c[i - 1]!), `${pos} curve falls`); }
+  assert.ok(b.inflation! > 1.3, '2016 paid 44% over market for auctioned players');
+});
+
+test('value: points for his price', () => {
+  const dj = pick('David Johnson', 2016);
+  assert.ok(dj.xPts! > 80 && dj.xPts! < 110, 'an $11 RB usually scores about 95');
+  assert.ok(dj.pts! - dj.xPts! > 200);
+  assert.equal(pick('Jaxon Smith-Njigba', 2026)?.xPts ?? null, null, 'not for a season still being played');
 });
 
 test('Sleeper seasons: points come from the lineups, projections are labelled hindsight', () => {
