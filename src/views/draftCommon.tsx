@@ -75,7 +75,7 @@ export function DraftGate({ title, children }: { title: string; children: (f: Dr
 // Persona settings: the history-based personas with Nic's changes on top, and the number of mock drafts.
 const PERSONA_KEY = 'fwhl-draft-personas'; // { runs, edits: { ownerKey: Partial<Persona> } }
 interface PersonaPrefs { runs: number; edits: Record<string, Partial<Persona>> }
-const readPrefs = (): PersonaPrefs => { try { return { runs: 200, edits: {}, ...(JSON.parse(localStorage.getItem(PERSONA_KEY) ?? '{}') as Partial<PersonaPrefs>) }; } catch { return { runs: 200, edits: {} }; } };
+const readPrefs = (): PersonaPrefs => { try { return { runs: 100, edits: {}, ...(JSON.parse(localStorage.getItem(PERSONA_KEY) ?? '{}') as Partial<PersonaPrefs>) }; } catch { return { runs: 100, edits: {} }; } };
 const prefSubs = new Set<() => void>();
 export function usePersonas(defaults: Persona[] = []) {
   const [prefs, setPrefs] = useState<PersonaPrefs>(readPrefs);

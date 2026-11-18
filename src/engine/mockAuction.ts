@@ -10,7 +10,9 @@ import type { Strategy } from './autoFill.ts';
 import type { PrepRow } from './draftPrep.ts';
 import { POS_MAX, SLOTS } from './rosterPlan.ts';
 
-export interface SimTeam { name: string; budget: number; filled: Partial<Record<PrepPos, number>>; persona: Persona | null; bid?: (r: PrepRow) => number }
+// bid: Nic's own bids instead of a persona. planned: players he bids exactly (his plan); everyone else he
+// bids follows the same roster-shape rules as the other teams.
+export interface SimTeam { name: string; budget: number; filled: Partial<Record<PrepPos, number>>; persona: Persona | null; bid?: (r: PrepRow) => number; planned?: Set<string> }
 export interface SimResult { runs: number; get: number; price: number; buyers: [string, number][] } // get: share of runs
 export interface SimOut { players: Map<string, SimResult>; planOdds: number | null }
 export interface Sale { n: number; by: string; key: string; name: string; pos: PrepPos; winner: string | null; price: number; winBid: number; runnerUp: string | null; runnerBid: number }
@@ -21,6 +23,20 @@ const NOISE = 0.18; // spread of one owner's bid around his persona price (logno
 const STAR_PRICE = 35; // a "star" buy, where the stars habit applies
 const FAV_BOOST = 1.12; // favorite NFL team
 const DEEP = 0.6; // bid factor once his starters at the position are covered
+// Roster shapes like the real ones (2022-26 auctions: QB 1-2, RB 4-5, WR 5-7, TE 0-2 per team): past
+// USUAL a team bids a fraction (EXTRA_BID); at SHAPE_MAX it stops, well inside the league's limits.
+const USUAL: Record<PrepPos, number> = { QB: 1, RB: 5, WR: 7, TE: 1 };
+const SHAPE_MAX: Record<PrepPos, number> = { QB: 3, RB: 6, WR: 8, TE: 3 };
+const EXTRA_BID: Record<PrepPos, number> = { QB: 0.5, RB: 0.2, WR: 0.2, TE: 0.2 }; // a backup QB is common (45% of teams carry 2)
+// Spots a team still has to fill to field a lineup (QB, 2 RB, 2 WR, a WR or TE for WR/TE; FLEX takes any).
+function stillNeeds(f: Record<PrepPos, number>): Partial<Record<PrepPos, number>> {
+  const n: Partial<Record<PrepPos, number>> = {};
+  if (f.QB < 1) n.QB = 1;
+  if (f.RB < 2) n.RB = 2 - f.RB;
+  if (f.WR < 2) n.WR = 2 - f.WR;
+  if (f.WR < 3 && f.TE < 1) n.WR = (n.WR ?? 0) + 1; // the WR/TE spot, met by a WR or a TE
+  return n;
+}
 const WILD = 0.3; // share of nominations that are a random player from the chosen group
 const STARTERS: Record<PrepPos, number> = { QB: 1, RB: 3, WR: 4, TE: 1 }; // a lineup's worth incl. flex spots
 // Used when the file has no measured order: 2022-26 auctions.
@@ -57,6 +73,17 @@ export function strategyBid(s: Strategy, r: PrepRow): number {
 }
 
 const open = (t: { filled: Record<PrepPos, number> }) => SLOTS.length - Object.values(t.filled).reduce((a, b) => a + b, 0);
+// Could this team take him? A spot open, under the position limit (and the usual roster shape for a
+// persona team), and, when his open spots are only enough for what his lineup still needs, one of those.
+function canTake(t: { filled: Record<PrepPos, number>; bid?: unknown }, r: PrepRow): { ok: boolean; need: boolean } {
+  const o = open(t);
+  if (o <= 0 || (POS_MAX[r.pos] !== undefined && t.filled[r.pos] >= POS_MAX[r.pos]!)) return { ok: false, need: false };
+  if (!t.bid && t.filled[r.pos] >= SHAPE_MAX[r.pos]) return { ok: false, need: false };
+  const needs = stillNeeds(t.filled), short = Object.values(needs).reduce((x, y) => x + (y ?? 0), 0);
+  const fills = (needs[r.pos] ?? 0) > 0 || (r.pos === 'TE' && t.filled.WR < 3 && t.filled.TE < 1);
+  if (o <= short && !fills) return { ok: false, need: false };
+  return { ok: true, need: o <= short && fills };
+}
 
 // One full auction. pool: players up for auction (keepers removed). order: team names in nomination order.
 export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow) => string, rand: () => number, nomination: Nomination = DEFAULT_NOMINATION, calib = 1): Auction {
@@ -78,24 +105,42 @@ export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow
     const stage = nomination[Math.min(nomination.length - 1, Math.floor((filledSoFar * nomination.length) / Math.max(1, total)))]!;
     let g = 2, x = rand() * (stage[0] + stage[1] + stage[2] || 1);
     for (let i = 0; i < 3; i++) { if (x < stage[i]!) { g = i; break; } x -= stage[i]!; }
-    let cands = [...left].filter((r) => group.get(r) === g);
-    if (!cands.length) cands = [...left];
+    // He nominates someone he could take himself (he opens the bidding at $1): by position, checked once.
+    const okPos = new Set((['QB', 'RB', 'WR', 'TE'] as PrepPos[]).filter((pos) => canTake(by, { pos } as PrepRow).ok));
+    const mine = [...left].filter((r) => okPos.has(r.pos));
+    let cands = mine.filter((r) => group.get(r) === g);
+    if (!cands.length) cands = mine.length ? mine : [...left];
     // Usually the priciest at a position he doesn't need (drain the others); sometimes a wild card.
-    const need = (r: PrepRow) => (by.filled[r.pos] < STARTERS[r.pos] ? 1 : 0) + (by.persona ? by.persona.lean[r.pos] - 1 : 0);
+    // Early and middle: a position he doesn't need, to drain the others. Late (cheap players): one he wants.
+    const want = (r: PrepRow) => (by.filled[r.pos] < USUAL[r.pos] ? 1 : 0) + (by.filled[r.pos] < STARTERS[r.pos] ? 1 : 0) + (by.persona ? by.persona.lean[r.pos] - 1 : 0);
+    const need = (r: PrepRow) => (g === 2 ? -want(r) : want(r));
     let r = cands[0]!;
     if (rand() < WILD) r = cands[Math.floor(rand() * cands.length)]!;
     else for (const c of cands) if (need(c) < need(r) || (need(c) === need(r) && c.cost > r.cost)) r = c;
     left.delete(r);
     // Bids.
+    const spotsLeft = state.reduce((x, t) => x + Math.max(0, open(t)), 0);
     let best = 0, second = 0, win = -1, run = -1;
     state.forEach((t, i) => {
-      const o = open(t);
-      if (o <= 0 || (POS_MAX[r.pos] !== undefined && t.filled[r.pos] >= POS_MAX[r.pos]!)) return;
+      const o = open(t), take = canTake(t, r);
+      if (!take.ok) return;
       const maxBid = t.left - (o - 1);
       if (maxBid < 1) return;
       let w: number;
-      if (t.bid) w = t.bid(r);
-      else {
+      const must = take.need || t === by || left.size < 2 * spotsLeft; // a lineup need, his own nomination, or the pool running out
+      // Roster shape: less interest past his starters, much less past a usual roster, none past the shape cap.
+      const shaped = (x: number) => {
+        if (t.filled[r.pos] >= SHAPE_MAX[r.pos]) return 0;
+        if (t.filled[r.pos] >= USUAL[r.pos]) x *= EXTRA_BID[r.pos]; else if (t.filled[r.pos] >= STARTERS[r.pos]) x *= DEEP;
+        // Under $1 of interest: he bids the $1 minimum only that share of the time (so a lukewarm owner
+        // doesn't win every $1 coin flip).
+        if (x < 1) { if (!must && rand() >= x) return 0; x = 1; }
+        return x;
+      };
+      if (t.bid) {
+        w = t.planned?.has(keyOf(r)) ? t.bid(r) : shaped(t.bid(r));
+        if (t === by) w = Math.max(1, w); // the nominator opens at $1
+      } else {
         w = (r.cost / calib) * Math.exp(NOISE * gauss());
         const p = t.persona;
         if (p) {
@@ -103,8 +148,9 @@ export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow
           if (r.cost >= STAR_PRICE) w *= p.stars;
           if (p.fav.includes(r.team.toUpperCase())) w *= FAV_BOOST;
         }
-        if (t.filled[r.pos] >= STARTERS[r.pos]) w *= DEEP;
-        w = Math.min(r.ceiling, Math.max(1, w)); // nobody past the most that slot has sold for
+        w = shaped(w);
+        if (!w) return;
+        w = Math.min(r.ceiling, w); // nobody past the most that slot has sold for
       }
       w = Math.min(maxBid, w);
       if (w < 1) return;

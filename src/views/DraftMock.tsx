@@ -42,7 +42,7 @@ function Mock({ prep, file }: { prep: Prep; file: DraftPrepFile }) {
     for (const k of ks) f[k[1]] = (f[k[1]] ?? 0) + 1;
     const mine = label(p) === me;
     const bid = mine ? (mode === 'plan' ? (r: PrepRow) => plan.bids[rowKey(r)] ?? 1 : (r: PrepRow) => strategyBid(mode, r)) : undefined;
-    return { name: label(p), budget: prep.budget - ks.reduce((s, k) => s + k[2], 0), filled: f, persona: mine ? null : p, bid };
+    return { name: label(p), budget: prep.budget - ks.reduce((s, k) => s + k[2], 0), filled: f, persona: mine ? null : p, bid, planned: mine && mode === 'plan' ? new Set(Object.keys(plan.bids)) : undefined };
   }), [JSON.stringify(P.list), keepers, me, mode, plan.bids, prep.budget, idx]);
 
   const pool = useMemo(() => poolOf(board.rows), [board]);
@@ -52,6 +52,12 @@ function Mock({ prep, file }: { prep: Prep; file: DraftPrepFile }) {
     if (!many) return null;
     const rand = rng(seed * 104729);
     const counts = new Map<string, Map<string, { name: string; pos: PrepPos; n: number; paid: number }>>();
+    const shape = new Map<string, Record<PrepPos, { n: number; paid: number }>>();
+    for (const t of teams) {
+      const z = { QB: { n: 0, paid: 0 }, RB: { n: 0, paid: 0 }, WR: { n: 0, paid: 0 }, TE: { n: 0, paid: 0 } };
+      for (const k of keepers.filter((k) => k[3] === t.name)) { z[k[1]].n += MANY; z[k[1]].paid += k[2] * MANY; }
+      shape.set(t.name, z);
+    }
     for (let i = 0; i < MANY; i++) {
       const a = runAuction(pool, teams, rowKey, rand, file.nomination, calib);
       for (const s of a.log) {
@@ -59,10 +65,11 @@ function Mock({ prep, file }: { prep: Prep; file: DraftPrepFile }) {
         const m = counts.get(s.winner) ?? new Map();
         const x = m.get(s.key) ?? { name: s.name, pos: s.pos, n: 0, paid: 0 };
         x.n++; x.paid += s.price; m.set(s.key, x); counts.set(s.winner, m);
+        const z = shape.get(s.winner)!; z[s.pos].n++; z[s.pos].paid += s.price;
       }
     }
-    return counts;
-  }, [many, pool, teams, seed, file.nomination, calib]);
+    return { counts, shape };
+  }, [many, pool, teams, seed, file.nomination, calib, keepers]);
 
   const keptBy = (team: string) => keepers.filter((k) => k[3] === team);
   const order = [...teams].sort((a, b) => Number(b.name === me) - Number(a.name === me) || a.name.localeCompare(b.name));
@@ -127,10 +134,13 @@ function Mock({ prep, file }: { prep: Prep; file: DraftPrepFile }) {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {order.map((t) => {
-            const m = [...(summary?.get(t.name)?.values() ?? [])].sort((a, b) => b.n - a.n).slice(0, 10);
+            const m = [...(summary?.counts.get(t.name)?.values() ?? [])].sort((a, b) => b.n - a.n).slice(0, 10);
+            const z = summary?.shape.get(t.name);
             return (
               <div key={t.name} className={`rounded border p-2.5 text-sm ${t.name === me ? 'border-accent' : 'border-line'}`}>
-                <div className="mb-1"><b>{t.name === me ? `${t.name} (you)` : t.name}</b> <span className="text-xs text-ink-3">most often bought, of {MANY}</span></div>
+                <div className="mb-1"><b>{t.name === me ? `${t.name} (you)` : t.name}</b></div>
+                {z && <p className="num mb-1.5 text-xs text-ink-2" title="Average roster across the mock drafts, keepers included: players and dollars by position">{(['QB', 'RB', 'WR', 'TE'] as PrepPos[]).map((pos) => `${(z[pos].n / MANY).toFixed(1)} ${pos} $${Math.round(z[pos].paid / MANY)}`).join(' · ')}</p>}
+                <p className="text-xs text-ink-3">Most often bought, of {MANY}:</p>
                 <ul className="grid gap-0.5">
                   {m.map((x) => <li key={x.name} className="flex items-center gap-2"><PosMark pos={x.pos} /><span className="flex-1 truncate">{x.name}</span><span className="num text-xs text-ink-3">{Math.round((x.n / MANY) * 100)}% · ${Math.round(x.paid / x.n)}</span></li>)}
                   {!m.length && <li className="text-ink-3">Nothing bought</li>}

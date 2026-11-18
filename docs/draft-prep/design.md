@@ -155,7 +155,9 @@ One full auction at a time with all 12 teams on the live board, after keepers (`
 
 - Nomination: teams nominate in turn. Each nomination picks top 24 / 25-72 / the rest by price at the league's measured rate for that stage of the draft (`draft-prep.json` `nomination`, from the order players came up in the 2022-26 auctions: first fifth 65% top, second 21% top and 65% middle, ... last fifth 99% cheap). Usually the priciest one left at a position the nominator doesn't need; 30% of the time a wild card from that group.
 - Nic's team bids his plan (planned bids, $1 on anyone else so leftovers fill his roster) or an auto-fill strategy as bids. The other 11 bid by persona.
-- The auction runs until every roster is full; unpriced players with the best projections fill in as $1 fodder.
+- The auction runs until every roster is full; unpriced players with the best projections fill in as $1 fodder. The nominator opens at $1, so he picks someone he could take, and late in the draft someone he wants.
+- Roster shapes like the real ones (2022-26 auctions: QB 1-2, RB 4-5, WR 5-7, TE 0-2): every team, Nic's strategy included, bids less past its starters, a fifth past a usual roster (1 QB, 5 RB, 7 WR, 1 TE; half for a backup QB) and stops at 3 QB / 6 RB / 8 WR / 3 TE. Teams must keep room for a legal lineup. Below $1 of interest an owner bids the $1 minimum only that share of the time. (Nic, Nov 18: Chris was buying only QBs.)
+- Run 100 shows each team's average roster and spend by position (keepers included) above its most-bought players.
 - One mock: every roster with prices and keepers, Nic's lost targets (who paid what against his bid), and the nomination log with the runner-up bid. Run 100: what each team most often ends up with and its usual price.
 
 ## Phases

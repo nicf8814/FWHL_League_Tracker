@@ -9,7 +9,7 @@ import { fitFlex, nextRank, priceBoard, ranks, replacementRanks, standInBoard, t
 const tiers = (factor = 1) => ({ upTo: 999, label: 'All', factor, n: 10 });
 function tiny(keepers: DraftPrep['keepers'] = []): DraftPrep {
   const board: DraftPrep['board'] = [];
-  for (const [pos, n, top] of [['QB', 30, 300], ['RB', 60, 250], ['WR', 80, 240], ['TE', 30, 180]] as [PrepPos, number, number][]) {
+  for (const [pos, n, top] of [['QB', 30, 300], ['RB', 80, 250], ['WR', 80, 240], ['TE', 30, 180]] as [PrepPos, number, number][]) {
     for (let i = 0; i < n; i++) board.push([`${pos} ${i + 1}`, pos, 'XX', top - i * 4, Math.max(0, 40 - i * 2)]);
   }
   return {
@@ -236,4 +236,21 @@ test('a mock auction keeps going until every roster is full', async () => {
   const teams = Array.from({ length: 12 }, (_, i) => ({ name: `T${i}`, budget: 200, filled: {}, persona: persona(`T${i}`) }));
   const a = runAuction(poolOf(rows), teams, keyOf, rng(11));
   for (const t of teams) assert.equal(a.rosters.get(t.name)!.length, 13, t.name);
+});
+
+test('mock rosters look like real ones: no team hoards QBs or TEs', async () => {
+  const { runAuction, rng, poolOf } = await import('./mockAuction.ts');
+  const rows = priceBoard(tiny()).rows;
+  const keyOf = (r: { name: string; pos: string }) => `${r.name}|${r.pos}`;
+  const persona = (key: string, qb: number) => ({ key, name: key, teamId: 0, lean: { QB: qb, RB: 1, WR: 1, TE: 1 }, overpay: 1, stars: 1, fav: [], drafts: 5 });
+  const teams = Array.from({ length: 12 }, (_, i) => ({ name: `T${i}`, budget: 200, filled: {}, persona: persona(`T${i}`, i === 0 ? 1.5 : 1) }));
+  for (let seed = 1; seed <= 5; seed++) {
+    const a = runAuction(poolOf(rows), teams, keyOf, rng(seed));
+    for (const t of teams) {
+      const r = a.rosters.get(t.name)!;
+      const n = (pos: string) => r.filter((x) => x.pos === pos).length;
+      assert.ok(n('QB') <= 3 && n('TE') <= 3, `${t.name}: ${n('QB')} QB, ${n('TE')} TE`);
+      assert.equal(r.length, 13, t.name);
+    }
+  }
 });
