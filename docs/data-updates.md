@@ -185,7 +185,7 @@ The dry run lists unmatched owners, keepers per season and each season's team sp
 
 ### Draft prep
 
-Nic's private pre-draft board (Settings, **Draft prep**, behind a password). Design: `docs/draft-prep/design.md`. It reads `public/seed/draft-prep.json`. Built, never edited by hand:
+Nic's private pre-draft board (the **Draft** section: Board and Settings, behind a password). Design: `docs/draft-prep/design.md`. It reads `public/seed/draft-prep.json`. Built, never edited by hand:
 
 ```bash
 npm run data -- draftprep [--dry-run]
@@ -195,7 +195,8 @@ npm run data -- draftprep [--dry-run]
 - `data/draft-prep/<year>/keepers.csv`: `name,pos,cost,owner` (owner = team key in history.json). A year with a board and keepers becomes a **board edition** (2026: the test run, last August's numbers). A board without keepers (2025, auctioned players only) is used for the price tiers only.
 - The year after the newest board is a **stand-in edition** (2027 now). The page fills it live from the league seed: 70% points-per-game rank (4+ games), 30% trade value rank, injuries through the games a player can still play. Where that rank landed in next August's prices comes from the 2019-2025 lineups and drafts. No input file: it follows every weekly data push.
 - Past boards set the price tiers (matched to what those players sold for in `drafts.json`). Projection shrink and miss come from `drafts.json` (2018-2022 ESPN preseason projections); FLEX and WR/TE usage from `lineups/2023-2025.json`. Rebuild drafts and lineups first if they change.
-- Cost, worth and edge are worked out in the browser (`src/engine/draftPrep.ts`). `npm test` fails while `draft-prep.json` is out of date.
+- Owner personas come from the 2022-2026 drafts in `drafts.json` and the ESPN exports (favorite NFL teams), mapped to teams through `history.json`.
+- Cost, worth and edge are worked out in the browser (`src/engine/draftPrep.ts`), mock auctions in `src/engine/mockAuction.ts`. `npm test` fails while `draft-prep.json` is out of date.
 
 Next summer: add `data/draft-prep/2027/board.csv` and `keepers.csv`, run `npm run data -- draftprep`. 2027 becomes a board edition (the source of truth) and 2028 the stand-in.
 

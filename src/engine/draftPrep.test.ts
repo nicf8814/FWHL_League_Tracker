@@ -191,3 +191,18 @@ test('auto-fill builds a full, legal roster for every button', async () => {
     if (st.id === 'balanced') assert.ok(bought.every((p) => p.bid <= 50));
   }
 });
+
+test('mock auctions: seeded, a higher bid never gets less, and persona habits show', async () => {
+  const { simulate } = await import('./mockAuction.ts');
+  const board = priceBoard(tiny()).rows;
+  const keyOf = (r: { name: string; pos: string }) => `${r.name}|${r.pos}`;
+  const persona = (key: string, rb: number) => ({ key, name: key, teamId: 0, lean: { QB: 1, RB: rb, WR: 1, TE: 1 }, overpay: 1, stars: 1, fav: [], drafts: 5 });
+  const teams = Array.from({ length: 11 }, (_, i) => ({ name: `T${i}`, budget: 200, filled: {}, persona: persona(`T${i}`, i === 0 ? 1.6 : 1) }));
+  const a = simulate(board, teams, (r) => Math.round(r.cost), keyOf, ['RB 1|RB'], 60);
+  const b = simulate(board, teams, (r) => Math.round(r.cost), keyOf, ['RB 1|RB'], 60);
+  assert.deepEqual([...a.players.get('RB 1|RB')!.buyers], [...b.players.get('RB 1|RB')!.buyers], 'same seed, same result');
+  const rich = simulate(board, teams, (r) => Math.round(r.cost) + 15, keyOf, [], 60);
+  for (const k of ['RB 1|RB', 'WR 1|WR', 'QB 1|QB']) assert.ok(rich.players.get(k)!.get >= a.players.get(k)!.get, k);
+  assert.equal(a.players.get('RB 1|RB')!.buyers[0]![0], 'T0', 'the RB-heavy owner buys the top RB most');
+  assert.ok(a.planOdds !== null && a.planOdds >= 0 && a.planOdds <= 1);
+});

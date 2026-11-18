@@ -3,60 +3,23 @@
 // season's production, trade values and injuries) and the 2026 test run (last August's real board).
 // Behind a password screen while Nic builds it.
 // shortcut: password screen only, the data is public in the repo; revisit if Nic shares the tool or wants real privacy.
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { playerKey } from '../data/drafts.ts';
-import { PREP_POS, draftPrepUrl, validateDraftPrep, type DraftPrep as Prep, type DraftPrepFile, type KeeperRow, type PrepPos } from '../data/draftPrep.ts';
+import { PREP_POS, type DraftPrep as Prep, type DraftPrepFile, type KeeperRow, type Persona, type PrepPos } from '../data/draftPrep.ts';
+import { simulate, type SimOut, type SimTeam } from '../engine/mockAuction.ts';
 import { useLeague } from '../data/store.tsx';
 import { SEASON_GAMES, gamesBand, priceBoard, standInBoard, type PrepRow, type SeasonLine, type StandInRow } from '../engine/draftPrep.ts';
 import { keeperCalls, keeperSet } from '../engine/keepers.ts';
 import { teamName } from '../engine/league.ts';
-import { Empty, fmt, PosMark, Section, Seg, signed, tone } from '../ui/components.tsx';
+import { fmt, PosMark, Section, Seg, signed, tone } from '../ui/components.tsx';
 import { DataTable, TableBar, useTable, type Col, type FilterDef } from '../ui/table.tsx';
 import { PlanButton, PlanPanel, planPicks, rowKey, usePlan } from './DraftPlan.tsx';
 import { maxBidFor, posFull } from '../engine/rosterPlan.ts';
 import { autoFill, type Strategy } from '../engine/autoFill.ts';
+import { DraftGate, Help, usePersonas } from './draftCommon.tsx';
 
-const PASS_HASH = '55174404f557a8209cd5aacf3c54e1a4e2b7bc5b9eaa8254dd570c67d9733685'; // SHA-256 of the password (docs/draft-prep/design.md, Access)
-const UNLOCK_KEY = 'fwhl-draft-prep-unlocked';
 const SWITCH_KEY = 'fwhl-draft-prep-keepers'; // per viewer: keeper switches by year { year: { name|pos: kept } }
 
-async function sha256(text: string) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-function readUnlocked() {
-  try { return localStorage.getItem(UNLOCK_KEY) === PASS_HASH; } catch { return false; }
-}
-
-function Lock({ onOpen }: { onOpen: () => void }) {
-  const [text, setText] = useState('');
-  const [wrong, setWrong] = useState(false);
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if ((await sha256(text)) !== PASS_HASH) { setWrong(true); return; }
-    try { localStorage.setItem(UNLOCK_KEY, PASS_HASH); } catch { /* still opens for this visit */ }
-    onOpen();
-  };
-  return (
-    <form onSubmit={submit} className="grid max-w-sm gap-3">
-      <p className="text-ink-2">This page is private for now.</p>
-      <label className="grid gap-1 text-sm">Password
-        <input type="password" autoComplete="current-password" value={text} onChange={(e) => { setText(e.target.value); setWrong(false); }} className="h-10 rounded border border-line bg-panel px-3" />
-      </label>
-      {wrong && <p className="text-sm text-loss">That isn't it.</p>}
-      <button type="submit" className="h-10 rounded bg-accent px-4 font-semibold text-white">Open</button>
-    </form>
-  );
-}
-
-let file: Promise<DraftPrepFile> | null = null;
-const loadPrep = () => {
-  file ??= fetch(draftPrepUrl(import.meta.env.BASE_URL), { cache: 'no-cache' })
-    .then((r) => { if (!r.ok) throw new Error(`draft prep file: HTTP ${r.status}`); return r.json(); })
-    .then((raw) => { const v = validateDraftPrep(raw); if (!v.ok) throw new Error(v.errors.join('; ')); return v.value; });
-  file.catch(() => { file = null; });
-  return file;
-};
 
 type Switches = Record<string, Record<string, boolean>>;
 function readSwitches(): Switches {
@@ -67,32 +30,25 @@ function saveSwitches(s: Switches) {
 }
 
 export default function DraftPrep() {
-  const [open, setOpen] = useState(readUnlocked);
-  if (!open) return <Section title="Draft prep"><Lock onOpen={() => setOpen(true)} /></Section>;
-  return <Editions />;
+  return <DraftGate title="Draft board">{(f) => <Editions prepFile={f} />}</DraftGate>;
 }
 
-function Editions() {
-  const [prepFile, setPrepFile] = useState<DraftPrepFile | null>(null);
-  const [err, setErr] = useState<string | null>(null);
+function Editions({ prepFile }: { prepFile: DraftPrepFile }) {
   const [year, setYear] = useState<number | null>(null);
-  useEffect(() => { loadPrep().then(setPrepFile, (e: Error) => setErr(e.message)); }, []);
-  if (err) return <Empty>Couldn't load the draft prep file: {err}</Empty>;
-  if (!prepFile) return <Empty>Loading the board…</Empty>;
   const eds = [...prepFile.editions].reverse(); // newest first
   const ed = eds.find((e) => e.year === year) ?? eds[0]!;
   const label = (e: Prep) => (e.kind === 'standin' ? `${e.year} (live)` : `${e.year} test run`);
   return (
     <div className="grid gap-4">
       {eds.length > 1 && <Seg label="Board" value={String(ed.year)} options={eds.map((e) => [String(e.year), label(e)] as const)} onChange={(v) => setYear(Number(v))} />}
-      {ed.kind === 'standin' ? <LiveBoard prep={ed} /> : <Board prep={ed} defaultKeepers={ed.keepers} />}
+      {ed.kind === 'standin' ? <LiveBoard prep={ed} personas={prepFile.personas ?? []} /> : <Board prep={ed} defaultKeepers={ed.keepers} personas={prepFile.personas ?? []} ownerOf={(p) => p.key} />}
     </div>
   );
 }
 
 // Next year's board, filled from this season: points per game and games played (every week with
 // points), the latest trade values, and injuries (games he can still play this season).
-function LiveBoard({ prep }: { prep: Prep }) {
+function LiveBoard({ prep, personas }: { prep: Prep; personas: Persona[] }) {
   const { idx, base, settings } = useLeague();
   const me = settings.myTeamId !== null && idx.teams.has(settings.myTeamId) ? teamName(idx, settings.myTeamId) : null;
   const filled = useMemo(() => {
@@ -135,12 +91,14 @@ function LiveBoard({ prep }: { prep: Prep }) {
     });
     return { prep: { ...prep, board }, rows, keepers, candidates };
   }, [prep, idx, base]);
-  return <Board prep={filled.prep} defaultKeepers={filled.keepers} candidates={filled.candidates} live={filled.rows} weeks={idx.scoresThrough} me={me} />;
+  return <Board prep={filled.prep} defaultKeepers={filled.keepers} candidates={filled.candidates} live={filled.rows} weeks={idx.scoresThrough} me={me} personas={personas} ownerOf={(p) => (idx.teams.has(p.teamId) ? teamName(idx, p.teamId) : p.name)} />;
 }
 
-interface BoardProps { prep: Prep; defaultKeepers: KeeperRow[]; candidates?: KeeperRow[]; live?: Map<string, StandInRow>; weeks?: number; me?: string | null }
+// ownerOf: a persona's owner as the keeper rows name him (team name on the live board, owner key in a test run).
+interface BoardProps { prep: Prep; defaultKeepers: KeeperRow[]; candidates?: KeeperRow[]; live?: Map<string, StandInRow>; weeks?: number; me?: string | null; personas: Persona[]; ownerOf: (p: Persona) => string }
 
-function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks, me = null }: BoardProps) {
+function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks, me = null, personas, ownerOf }: BoardProps) {
+  const P = usePersonas(personas);
   const plan = usePlan(prep.year);
   const [switches, setSwitches] = useState<Switches>(readSwitches);
   const mine = switches[prep.year] ?? {};
@@ -161,6 +119,20 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
   // Planned buys count as sold at my bid, so an overbid reprices everyone left (live board only).
   const bought = useMemo(() => (live ? plan.bids : {}), [live, plan.bids]);
   const board = useMemo(() => priceBoard(prep, keepers, bought), [prep, keepers, bought]);
+  // Mock auctions: the other teams, by persona, after their keepers. Rerun a moment after the last change
+  // so typing a bid stays instant. Nic's max per player = his planned bid, else the expected cost.
+  const [sim, setSim] = useState<SimOut | null>(null);
+  const others = useMemo<SimTeam[]>(() => P.list.filter((p) => ownerOf(p) !== me).map((p) => {
+    const ks = keepers.filter((k) => k[3] === ownerOf(p));
+    const filled: SimTeam['filled'] = {};
+    for (const k of ks) filled[k[1]] = (filled[k[1]] ?? 0) + 1;
+    return { name: p.name.split(' ')[0]!, budget: prep.budget - ks.reduce((s, k) => s + k[2], 0), filled, persona: p };
+  }), [JSON.stringify(P.list), keepers, me, prep.budget]);
+  useEffect(() => {
+    const id = setTimeout(() => setSim(simulate(board.rows, others, (r) => plan.bids[rowKey(r)] ?? Math.round(r.cost), rowKey, Object.keys(plan.bids), P.runs)), 250);
+    return () => clearTimeout(id);
+  }, [board, others, plan.bids, P.runs]);
+  const simOf = (r: PrepRow) => sim?.players.get(rowKey(r));
   const rows = useMemo(() => board.rows.filter((r) => r.price > 0 || (r.vorp ?? 0) > 0 || r.keeper || candidateKeys.has(keyOf(r.name, r.pos))), [board, candidateKeys]);
   const liveOf = (r: PrepRow) => live?.get(keyOf(r.name, r.pos));
   const planned = useMemo(() => planPicks(board.rows, me, plan.bids).picks, [board, me, plan.bids]);
@@ -195,15 +167,22 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
       { id: 'health', label: 'Season', left: true, hidden: true, className: 'text-ink-2', value: (r: PrepRow) => liveOf(r)?.line.share ?? null, cell: (r: PrepRow) => { const x = liveOf(r); if (!x) return '–'; const b = gamesBand(x.line.share); return b === 'full' ? 'full' : b === 'part' ? 'missed some' : 'mostly lost'; } },
     ] as Col<PrepRow>[] : []),
     { id: 'cost', label: 'Cost', value: (r) => r.cost, cell: (r) => <b className="font-semibold">${fmt(r.cost, 0)}</b> },
-    { id: 'band', label: 'Window', value: (r) => r.ceiling, cell: (r) => <span className="whitespace-nowrap text-ink-2">{r.floor}–{r.ceiling}</span> },
+    { id: 'band', label: 'Window', hidden: !!live, value: (r) => r.ceiling, cell: (r) => <span className="whitespace-nowrap text-ink-2">{r.floor}–{r.ceiling}</span> },
     { id: 'worth', label: 'Worth', value: (r) => r.worth, cell: (r) => `$${fmt(r.worth, 0)}` },
+    { id: 'get', label: 'Get %', value: (r) => (r.keeper ? null : simOf(r)?.get ?? null), cell: (r) => {
+      const x = simOf(r);
+      if (r.keeper || !x) return '–';
+      const buyers = x.buyers.map(([n, c]) => `${n} ${Math.round(c * 100)}%`).join(', ');
+      return <span title={`At $${plan.bids[rowKey(r)] ?? Math.round(r.cost)}. Usually sells for about $${Math.round(x.price)}${buyers ? `; likely buyers: ${buyers}` : ''}`} className={x.get >= 0.6 ? 'text-gain' : x.get < 0.3 ? 'text-loss' : ''}>{Math.round(x.get * 100)}%</span>;
+    } },
+    { id: 'buyer', label: 'Likely buyer', left: true, hidden: true, className: 'text-ink-2', value: (r) => simOf(r)?.buyers[0]?.[0] ?? null, cell: (r) => { const b = simOf(r)?.buyers[0]; return b && !r.keeper ? `${b[0]} ${Math.round(b[1] * 100)}%` : '–'; } },
     { id: 'edge', label: 'Edge', value: (r) => (r.keeper ? null : r.edge), cell: (r) => (r.keeper ? '–' : <span className={tone(r.edge, 2)}>{signed(r.edge, 0)}</span>) },
     { id: 'tier', label: 'Price tier', left: true, hidden: !!live, className: 'text-ink-2', value: (r) => `${r.pos}${r.rank} ${r.tier}`, cell: (r) => `${r.tier} (${r.pos}${r.rank})` },
     { id: 'vtier', label: 'Value tier', hidden: !!live, value: (r) => r.valueTier, cell: (r) => (r.valueTier == null ? '–' : `${r.pos} ${r.valueTier}`) },
     { id: 'proj', label: 'Proj pts', hidden: !!live, value: (r) => r.proj, cell: (r) => fmt(r.proj, 0) },
     { id: 'price', label: live ? 'Slot $' : 'Consensus $', hidden: true, value: (r) => r.price, cell: (r) => `$${r.price}` },
     { id: 'team', label: 'NFL', left: true, hidden: true, value: (r) => r.team },
-  ], [candidateKeys, live, mine, plan.bids, me, nextMax, planned]);
+  ], [candidateKeys, live, mine, plan.bids, me, nextMax, planned, sim]);
   const t = useTable(`draft-prep-${prep.kind}`, cols, rows, { id: 'cost', dir: -1 }, { filters, search, phone: ['cost', 'worth', 'edge'] });
 
   const mkt = prep.fit.marketYears.map(([y]) => y).join(' and ');
@@ -235,7 +214,7 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
             <DataTable t={t} rowKey={(r) => String(r.i)} rank={false} minWidth="min-w-[44rem]" empty="No player matches these filters." />
           </div>
           <aside className="order-first xl:order-none xl:sticky xl:top-28 xl:max-h-[calc(100dvh-8rem)] xl:overflow-y-auto">
-            <PlanPanel rows={board.rows} me={me} plan={plan} budget={prep.budget} onFill={fill} />
+            <PlanPanel rows={board.rows} me={me} plan={plan} budget={prep.budget} onFill={fill} sim={sim} />
           </aside>
         </div>
       ) : (
@@ -245,19 +224,5 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
         </>
       )}
     </Section>
-  );
-}
-
-// An (i) button with the explanation in a card (same pattern as the History page's value help).
-function Help({ label, children }: { label: string; children: ReactNode }) {
-  const id = useId().replace(/:/g, '');
-  return (
-    <>
-      <button type="button" popoverTarget={id} className="inline-grid size-7 shrink-0 place-items-center rounded-full border border-rule-strong align-middle font-mono text-xs text-ink-2 hover:bg-sunk" aria-label={label} title={label}>i</button>
-      <div id={id} popover="auto" className="popcard" role="dialog" aria-label={label}>
-        <p className="mb-2 font-display text-lg font-bold [font-stretch:85%]">{label}</p>
-        {children}
-      </div>
-    </>
   );
 }

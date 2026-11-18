@@ -66,9 +66,23 @@ export interface DraftPrep {
   standIn?: StandIn;
 }
 
+// How an owner bids, from his recent auctions (personaYears). Multipliers: 1 = league average.
+export interface Persona {
+  key: string; // owner key in history.json
+  name: string;
+  teamId: number; // league team id this season
+  lean: Record<PrepPos, number>; // his share of spend at the position / the league's share
+  overpay: number; // what he paid over expected price, against the league's average
+  stars: number; // his priciest buy each draft / the league's average priciest buy
+  fav: string[]; // NFL teams he buys well above the league's rate (ESPN drafts, team at the draft)
+  drafts: number; // drafts behind the numbers
+}
+
 export interface DraftPrepFile {
   version: 2;
   editions: DraftPrep[]; // oldest first
+  personaYears?: number[];
+  personas?: Persona[];
 }
 
 export const draftPrepUrl = (base: string) => `${base}seed/draft-prep.json`;
