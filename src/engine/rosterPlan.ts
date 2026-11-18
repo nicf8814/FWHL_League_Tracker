@@ -51,9 +51,26 @@ export function placePlan(picks: PlanPick[], budget = 200): PlanState {
   const over = (Object.keys(POS_MAX) as PrepPos[]).filter((pos) => count(pos) > POS_MAX[pos]!);
   const problems: string[] = [];
   if (left < open) problems.push(`$${left} left can't fill ${open} open spots at $1 each`);
-  if (extra.length) problems.push(`${picks.length} players for ${SLOTS.length} spots`);
+  if (extra.length) problems.push(`No spot fits ${extra.map((p) => p.name).join(', ')}`);
   for (const pos of over) problems.push(`${count(pos)} ${pos}s, the limit is ${POS_MAX[pos]}`);
   const starters = placed.filter((x) => !x.slot.bench && !x.pick).map((x) => x.slot.label);
   if (!open && starters.length) problems.push(`no one for ${starters.join(', ')}`);
   return { placed, extra, spent, left, open, maxBid, over, problems };
+}
+
+// Art. IV: no bid on a player whose position is already at its limit. Art. III: the roster has to fill a
+// lineup, so no player either who would leave no spot open that fits him (the last spot is the QB's).
+export function posFull(picks: PlanPick[], pos: PrepPos): boolean {
+  if (POS_MAX[pos] !== undefined && picks.filter((p) => p.pos === pos).length >= POS_MAX[pos]!) return true;
+  const probe: PlanPick = { key: '\u0000probe', name: '', pos, bid: 0, keeper: false };
+  return placePlan([...picks, probe]).extra.length > placePlan(picks).extra.length;
+}
+
+// The most one planned player's bid can be (Art. IV): the money left with his bid put back, less $1 for
+// every other open spot. A new player is the same with no bid to put back.
+export function maxBidFor(picks: PlanPick[], key: string | null, budget = 200): number {
+  const others = picks.filter((p) => p.key !== key);
+  const open = SLOTS.length - others.length; // includes his spot
+  if (open <= 0) return 0;
+  return Math.max(0, budget - others.reduce((s, p) => s + p.bid, 0) - (open - 1));
 }

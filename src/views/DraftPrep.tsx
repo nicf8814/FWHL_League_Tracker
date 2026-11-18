@@ -12,7 +12,8 @@ import { keeperCalls, keeperSet } from '../engine/keepers.ts';
 import { teamName } from '../engine/league.ts';
 import { Empty, fmt, PosMark, Section, Seg, signed, tone } from '../ui/components.tsx';
 import { DataTable, TableBar, useTable, type Col, type FilterDef } from '../ui/table.tsx';
-import { PlanButton, PlanPanel, rowKey, usePlan } from './DraftPlan.tsx';
+import { PlanButton, PlanPanel, planPicks, rowKey, usePlan } from './DraftPlan.tsx';
+import { maxBidFor, posFull } from '../engine/rosterPlan.ts';
 
 const PASS_HASH = '55174404f557a8209cd5aacf3c54e1a4e2b7bc5b9eaa8254dd570c67d9733685'; // SHA-256 of the password (docs/draft-prep/design.md, Access)
 const UNLOCK_KEY = 'fwhl-draft-prep-unlocked';
@@ -159,6 +160,8 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
   const board = useMemo(() => priceBoard(prep, keepers), [prep, keepers]);
   const rows = useMemo(() => board.rows.filter((r) => r.price > 0 || (r.vorp ?? 0) > 0 || r.keeper || candidateKeys.has(keyOf(r.name, r.pos))), [board, candidateKeys]);
   const liveOf = (r: PrepRow) => live?.get(keyOf(r.name, r.pos));
+  const planned = useMemo(() => planPicks(board.rows, me, plan.bids).picks, [board, me, plan.bids]);
+  const nextMax = maxBidFor(planned, null, prep.budget);
 
   const filters = useMemo<FilterDef<PrepRow>[]>(() => [
     { id: 'pos', label: 'Position', options: [['ANY', 'Any position'], ['QB', 'QB'], ['RB', 'RB'], ['WR', 'WR'], ['TE', 'TE']], test: (r, v) => r.pos === v },
@@ -167,7 +170,7 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
   const search = useMemo(() => ({ placeholder: 'Player name', of: (r: PrepRow) => r.name }), []);
   const cols = useMemo<Col<PrepRow>[]>(() => [
     { id: 'name', label: 'Player', left: true, fixed: true, className: 'min-w-[12rem]', value: (r) => r.name, cell: (r) => <span className="flex items-center gap-2"><PosMark pos={r.pos} /><span>{r.name}</span></span> },
-    ...(live ? [{ id: 'plan', label: 'Plan', left: true, fixed: true, value: (r: PrepRow) => (plan.has(rowKey(r)) ? 1 : 0), cell: (r: PrepRow) => <PlanButton row={r} plan={plan} mine={!!me && r.keeper?.[3] === me} /> }] as Col<PrepRow>[] : []),
+    ...(live ? [{ id: 'plan', label: 'Plan', left: true, fixed: true, value: (r: PrepRow) => (plan.has(rowKey(r)) ? 1 : 0), cell: (r: PrepRow) => <PlanButton row={r} plan={plan} mine={!!me && r.keeper?.[3] === me} maxBid={nextMax} full={posFull(planned, r.pos)} /> }] as Col<PrepRow>[] : []),
     { id: 'keep', label: 'Kept', left: true, value: (r) => (r.keeper ? r.keeper[2] : null), cell: (r) => {
       const k = candidateKeys.get(keyOf(r.name, r.pos));
       if (!k) return '';
@@ -188,7 +191,7 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
     { id: 'proj', label: 'Proj pts', hidden: !!live, value: (r) => r.proj, cell: (r) => fmt(r.proj, 0) },
     { id: 'price', label: live ? 'Slot $' : 'Consensus $', hidden: true, value: (r) => r.price, cell: (r) => `$${r.price}` },
     { id: 'team', label: 'NFL', left: true, hidden: true, value: (r) => r.team },
-  ], [candidateKeys, live, mine, plan.bids, me]);
+  ], [candidateKeys, live, mine, plan.bids, me, nextMax, planned]);
   const t = useTable(`draft-prep-${prep.kind}`, cols, rows, { id: 'cost', dir: -1 }, { filters, search, phone: ['cost', 'worth', 'edge'] });
 
   const mkt = prep.fit.marketYears.map(([y]) => y).join(' and ');
