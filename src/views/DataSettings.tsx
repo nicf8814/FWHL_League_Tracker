@@ -1,11 +1,10 @@
-import { useId, useRef, useState } from 'react';
+import { useId, useState } from 'react';
 import { DEFAULT_SETTINGS, type Settings } from '../data/schema.ts';
 import { useLeague } from '../data/store.tsx';
 import { dataGaps, freshness } from '../engine/league.ts';
 import { Section, Seg, TeamSelect } from '../ui/components.tsx';
 import { getTheme, setTheme, type Theme } from '../ui/theme.ts';
 import { useFull } from '../ui/detail.ts';
-import { ImportChart } from './ImportChart.tsx';
 
 export default function DataSettings() {
   const { idx, settings, setSettings } = useLeague();
@@ -44,8 +43,7 @@ export default function DataSettings() {
         <ReturnWeeks />
         <Gaps />
         <EngineSettings settings={settings} onChange={setSettings} />
-        <ImportChart />
-      </> : <p className="text-sm text-ink-3">Switch to Full at the top for injury return weeks, data gaps, the value engine and chart import.</p>}
+      </> : <p className="text-sm text-ink-3">Switch to Full at the top for injury return weeks, data gaps, and the value engine.</p>}
       <Backup />
       <p className="text-sm"><a className="link" href="#/method">How the values, odds and grades are worked out</a></p>
     </div>
@@ -190,10 +188,11 @@ function Check({ label, checked, changed, onChange }: { label: string; checked: 
   );
 }
 
+// Import was removed on purpose: the league data comes only from the deployed file, so nobody can
+// load their own data into the site. Export and reset stay.
 function Backup() {
-  const { exportBackup, importBackup, resetData, idx } = useLeague();
-  const file = useRef<HTMLInputElement>(null);
-  const [msg, setMsg] = useState<{ kind: 'ok' | 'error'; text: string; list?: string[] } | null>(null);
+  const { exportBackup, resetData, idx } = useLeague();
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
 
   const download = () => {
@@ -205,18 +204,6 @@ function Backup() {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     setMsg({ kind: 'ok', text: 'Backup downloaded.' });
   };
-  const onFile = async (f: File | undefined) => {
-    if (!f) return;
-    if (f.size > 20 * 1024 * 1024) { setMsg({ kind: 'error', text: 'That file is over 20 MB, which is far bigger than a league backup.' }); return; }
-    try {
-      const r = await importBackup(await f.text());
-      setMsg(r.ok ? { kind: 'ok', text: `Imported ${f.name}.` } : { kind: 'error', text: `Nothing was changed. ${f.name} has problems:`, list: r.errors });
-    } catch (e) {
-      setMsg({ kind: 'error', text: `Import failed and nothing was changed: ${e instanceof Error ? e.message : String(e)}` });
-    } finally {
-      if (file.current) file.current.value = '';
-    }
-  };
   const reset = async () => {
     if (!confirmReset) { setConfirmReset(true); return; }
     setConfirmReset(false);
@@ -225,12 +212,10 @@ function Backup() {
   };
 
   return (
-    <Section title="Backup and restore">
-      <p className="max-w-[70ch] text-sm text-ink-2">Everything lives in this browser. A backup holds the league data, your settings and your saved trades: export one to keep a copy or move to another device. Import takes a backup or a refreshed league data file; it is checked first, and nothing changes if it fails.</p>
+    <Section title="Backup">
+      <p className="max-w-[70ch] text-sm text-ink-2">The league data comes from the site and updates when it does. Export a backup to keep a copy of the data, your settings and your saved trades.</p>
       <div className="flex flex-wrap gap-3">
         <button type="button" className="btn btn-primary" onClick={download}>Export backup</button>
-        <button type="button" className="btn" onClick={() => file.current?.click()}>Import JSON</button>
-        <input ref={file} type="file" accept="application/json,.json" className="sr-only" tabIndex={-1} aria-hidden="true" onChange={(e) => onFile(e.target.files?.[0])} />
         <button type="button" className={`btn ${confirmReset ? 'border-loss text-loss' : ''}`} onClick={reset} onBlur={() => setConfirmReset(false)}>
           {confirmReset ? 'Tap again to reset' : 'Reset to bundled data'}
         </button>
@@ -238,7 +223,6 @@ function Backup() {
       {msg && (
         <div role={msg.kind === 'error' ? 'alert' : 'status'} className={`border px-4 py-2 text-sm ${msg.kind === 'error' ? 'border-loss bg-loss-soft' : 'border-gain bg-gain-soft'}`}>
           {msg.text}
-          {msg.list && <ul className="mt-1 list-inside list-disc">{msg.list.map((e) => <li key={e}>{e}</li>)}</ul>}
         </div>
       )}
     </Section>

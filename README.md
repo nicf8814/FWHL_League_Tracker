@@ -34,7 +34,7 @@ Four sections: **My Team** (the live season, with a dropdown in the header that 
 | Export | Pick any of 17 datasets and download them as CSV, plus the full JSON backup. |
 | Players | Every valued player with total points; search, sort any column, choose columns, export CSV, chart moves since any week. Each player's sheet has his chart-value trend. |
 | Roster | Any team's roster with role, pts/wk and value; the header dropdown picks the team. |
-| Data & settings | Your team, theme, data sources and gaps, injury return weeks, value engine presets, chart import, backup export / import / reset. |
+| Data & settings | Your team, theme, data sources and gaps, injury return weeks, value engine presets, backup export / reset. |
 | How it works | The methodology in plain words. |
 
 Every data table works the same way: dropdown filters and a search box above it, rows ranked 1 through X after whatever is filtered and sorted, a click on any column header to sort, one **Reset** that puts the sort, columns, filters and search back where they started, and **Export CSV** of exactly what is on screen (`src/ui/table.tsx`).
