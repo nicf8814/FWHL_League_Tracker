@@ -24,7 +24,7 @@ A prep tool for the auction. Before the draft it shows fair and expected prices 
 | Nomination | Suggest who to nominate. |
 | History used | 2022–2026 for prices; all years for the backtest. |
 | Age, injuries | Left out (no data). |
-| Access | Draft prep pages behind a password; Nic's inputs and plans stored encrypted (see Access). |
+| Access | Simple password screen on the draft prep pages (see Access). |
 | QB prices | Raised for 6-pt pass TDs, not left at history. |
 
 ## Inputs
@@ -104,13 +104,12 @@ Data gaps:
 
 ## Access
 
-The site and repo are public, so private data is encrypted, not just hidden.
+A simple password screen on the draft prep pages, to keep leaguemates out while it is being built. Not real security: the repo is public and Nic accepts that.
 
-- Nic's projections, prices, keeper switches, persona sliders and saved plans live in one encrypted file in the repo (AES-GCM, key derived from the password). Never committed in plain text.
-- The prep pages ask for the password, decrypt in the browser, and compute everything there.
-- To update: Nic enters or uploads inputs on the page, which encrypts them and gives back the file to commit (or Claude commits the file he hands over).
-- The password is never stored in the repo, the site or a chat. Lost password = start the file over.
-- History-based analysis uses public data; it sits behind the same screen but is not secret.
+- The page checks a hash of the password, so the password itself is not in the code. Remembered in the browser after the first unlock.
+- Nic's inputs are stored as plain files in the repo.
+- Mark it in code as `// shortcut: password screen only, data is public in the repo; revisit if Nic shares the tool or wants real privacy`.
+- Removing the screen later (to share with the league) is a one-line change.
 
 ## Phases
 
