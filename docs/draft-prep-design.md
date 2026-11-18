@@ -22,13 +22,15 @@ A prep tool for the auction. Before the draft it shows fair and expected prices 
 | Plan output | Exact players and tier price targets. |
 | Personas | One per owner from history, with sliders Nic can change. |
 | Nomination | Suggest who to nominate. |
-| History used | 2022–2026. |
+| History used | 2022–2026 for prices; all years for the backtest. |
+| Age, injuries | Left out (no data). |
+| Access | Draft prep pages behind a password. |
 | QB prices | Raised for 6-pt pass TDs, not left at history. |
 
 ## Inputs
 
-1. **Players**: name, position, NFL team, age, injury history. Age is missing today; the rosters gathering needs to add birth year.
-2. **Projections** (Nic, next summer): season points and a price per player, as a CSV. Before then, stand-ins from 2026 points per game, the Peaked/Menton values, age and injuries, shaded down.
+1. **Players**: name, position, NFL team.
+2. **Projections** (Nic, next summer): season points and a price per player, as a CSV. Before then, stand-ins from 2026 points per game and the Peaked/Menton values, shaded down.
 3. **Keepers**: the keeper list we already track (cost, contract year), plus Nic's on/off switches.
 4. **History**: drafts, keepers, trades and transactions, 2022–2026 (`public/seed/drafts.json`, `data/history/`).
 
@@ -79,7 +81,7 @@ Used to shift expected prices and to guess who bids on whom.
 - **Bench**: 3 reach starters plus 3 at $1.
 - **Engines**:
   - Points: most projected starter VORP.
-  - Title: best chance of the top weekly scores, using each position's and price band's historical spread of outcomes.
+  - Title: from history, turn a weekly score into a win chance, and a season scoring average into title odds. All years, scores as a share of that season's league average. Example: 1.0× average wins 50%, 1.2× wins 75%, 1.5× wins 92%. Outcome spread per position and price band gives each plan a range, not one number.
 - **Output**: 2–3 plans (stars and scrubs, balanced, RB-heavy). Each lists a target and a max bid per spot, two backups at about the same price, and the tier target ("an RB2 for $25–30").
 - **Controls**: locks, avoids, budget per spot, and which engine.
 
@@ -89,7 +91,11 @@ Suggest players to nominate so other teams spend money: players Nic doesn't want
 
 ## 8. Backtest
 
-Run the builder on 2022–2025 with that year's keepers and prices, then compare its plans with the 12 real rosters.
+All years. Correlate whatever each draft had (ESPN projections, ESPN average auction values) with what players actually sold for and actually scored, by position finish. Then run the builder on past drafts with that year's keepers and compare its plans with the 12 real rosters.
+
+What we have per season:
+- ESPN projections: 2018–2022 (2019 and 2021 nearly complete), 2026.
+- ESPN average auction value: 2010–2016, 2018, 2020–2025.
 
 Data gaps:
 - 2023 has ESPN preseason projections for only 19 of 156 picks.
@@ -107,7 +113,5 @@ Data gaps:
 
 ## Open questions
 
-1. Backtest projections: with the gaps above, should the backtest use our stand-in method on the prior season instead of the platforms' projections?
-2. Title engine: is "title odds" measured as the most top-6 weekly scores (as Weeks 12–14 now count), or as playoff wins?
-3. Age and injury history: can the rosters gathering add birth year and games missed per season?
-4. Where should the tool live: a new page on the site (public), or a private build?
+1. Password: the site and repo are public, so a password screen alone hides nothing. Encrypt Nic's inputs and the prep results with the password, or keep Nic's inputs out of the repo (loaded from his own file in the browser)?
+2. 2026 weekly scores in data/history/matchups.csv average 76, against about 113 in 2024–25. Check before using them for win chances.
