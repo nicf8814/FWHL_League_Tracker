@@ -20,7 +20,7 @@
 //   4. Value tiers break where the gap to the next player beats half the usual projection miss.
 // Edge = worth - cost: buy below it, never chase above the bid ceiling.
 import { playerKey, type Drafts } from '../data/drafts.ts';
-import { PREP_POS, type DraftPrep, type KeeperRow, type PrepFit, type PrepPos, type TierFit } from '../data/draftPrep.ts';
+import { NEXT_UNPRICED, PREP_POS, type BoardRow, type DraftPrep, type KeeperRow, type NextSample, type PrepFit, type PrepPos, type StandIn, type TierFit } from '../data/draftPrep.ts';
 
 export const TIER_CUTS: Record<PrepPos, [number, string][]> = {
   QB: [[4, 'Elite'], [999, 'Streamer']],
@@ -218,7 +218,13 @@ export function priceBoard(prep: DraftPrep, keepers: KeeperRow[] = prep.keepers)
       x.floor = Math.max(1, Math.round(Math.min(lo, x.cost)));
       x.ceiling = Math.max(1, Math.round(hi));
     });
-    for (const x of base) if (x.pos === pos && x.keeper) { x.floor = Math.max(1, Math.round(x.cost)); x.ceiling = x.floor; }
+    // A keeper's cost is what he would sell for if thrown back: same cap, at his rank among everyone.
+    base.filter((r) => r.pos === pos).sort((a, b) => b.cost - a.cost).forEach((x, k) => {
+      if (!x.keeper) return;
+      x.cost = Math.min(x.cost, slots[Math.min(k, slots.length - 1)]?.[1] ?? x.cost);
+      x.floor = Math.max(1, Math.round(x.cost));
+      x.ceiling = x.floor;
+    });
   }
 
   // Worth.
@@ -250,6 +256,90 @@ export function priceBoard(prep: DraftPrep, keepers: KeeperRow[] = prep.keepers)
     x.edge = round(x.worth - x.cost, 1);
   }
   return { rows: base, base: round(inflation, 4), moneyLeft, keeperSpend, openSlots, perVorp: round(perVorp, 4), repl, tierGap };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Next year's stand-in board (Nic, Nov 18): before any projections exist, rank each player by this
+// season (70% points per game rank, 30% trade value rank; trade value only under MIN_GAMES), then read
+// from history where players at that rank, with that share of games played, landed in next August's
+// prices. The middle of that spread sets his price and projection (the latest board's numbers at that
+// rank); the 25th-75th percentile is shown as his likely range.
+export const PROD_WEIGHT = 0.7; // Nic, Nov 18: 70% real production, 30% trade value
+export const MIN_GAMES = 4;
+export const SEASON_GAMES = 17;
+const MIN_CELL = 10; // fewest past players behind a move; fewer and the next broader group is used
+const RATIO_CAP = 60; // an unpriced player counts as rank 60 when measuring how far ranks move
+
+export const gamesBand = (share: number): 'full' | 'part' | 'lost' => (share >= 0.75 ? 'full' : share >= 0.4 ? 'part' : 'lost');
+const posGroup = (pos: PrepPos) => (pos === 'RB' || pos === 'WR' ? 'RB/WR' : pos);
+const rankTier = (pos: PrepPos, r: number) => (pos === 'RB' || pos === 'WR' ? (r <= 6 ? 'top' : r <= 24 ? 'mid' : 'deep') : r <= 3 ? 'top' : r <= 12 ? 'mid' : 'deep');
+
+export interface NextRank { mid: number; lo: number; hi: number; n: number; unpriced: number; from: string }
+
+// Where a player at this rank and games share lands the next August: how far past players at his
+// position group, rank tier and games share moved (next August's rank / this season's rank), applied to
+// his rank. Thin groups fall back: the next tier joins (top+mid, deep+mid), then all tiers with the same
+// games share, then the same tier any games share, then everything at his position group.
+export function nextRank(samples: NextSample[], pos: PrepPos, rank: number, share: number): NextRank {
+  const g = posGroup(pos), t = rankTier(pos, rank), b = gamesBand(share);
+  const mine = samples.filter((s) => posGroup(s[0]) === g);
+  const wide = t === 'deep' ? ['deep', 'mid'] : ['top', 'mid'];
+  const tries: [string, (s: NextSample) => boolean][] = [
+    [`${g} ${t}, ${b} season`, (s) => rankTier(s[0], s[1]) === t && gamesBand(s[2]) === b],
+    [`${g} ${wide.join('+')}, ${b} season`, (s) => wide.includes(rankTier(s[0], s[1])) && gamesBand(s[2]) === b],
+    [`${g}, ${b} season`, (s) => gamesBand(s[2]) === b],
+    [`${g} ${t}`, (s) => rankTier(s[0], s[1]) === t],
+    [g, () => true],
+  ];
+  for (const [from, test] of tries) {
+    const near = mine.filter(test);
+    if (near.length < MIN_CELL && from !== g) continue;
+    if (!near.length) break;
+    const ratios = near.map((s) => Math.min(s[3], RATIO_CAP) / s[1]).sort((x, y) => x - y);
+    const q = (f: number) => ratios[Math.floor(f * (ratios.length - 1))]!;
+    const at = (f: number) => Math.max(1, Math.round(rank * q(f)));
+    return { mid: at(0.5), lo: at(0.25), hi: at(0.75), n: near.length, unpriced: round(near.filter((s) => s[3] >= NEXT_UNPRICED).length / near.length, 2), from };
+  }
+  return { mid: rank, lo: rank, hi: rank, n: 0, unpriced: 0, from: 'no history' };
+}
+
+export interface SeasonLine {
+  name: string;
+  pos: PrepPos;
+  team: string;
+  ppg: number | null; // points per game played this season
+  games: number;
+  share: number; // games played plus healthy games left, over SEASON_GAMES
+  value: number | null; // latest trade value (average of the charts that list him)
+}
+
+export interface StandInRow { line: SeasonLine; today: number; ppgRank: number | null; valueRank: number | null; next: NextRank }
+
+export function standInBoard(si: StandIn, lines: SeasonLine[]): { board: BoardRow[]; rows: Map<string, StandInRow> } {
+  const board: BoardRow[] = [];
+  const rows = new Map<string, StandInRow>();
+  for (const pos of PREP_POS) {
+    const list = lines.filter((l) => l.pos === pos && ((l.ppg !== null && l.games >= MIN_GAMES) || l.value !== null));
+    const byPpg = list.filter((l) => l.ppg !== null && l.games >= MIN_GAMES).sort((a, b) => b.ppg! - a.ppg!);
+    const byValue = list.filter((l) => l.value !== null).sort((a, b) => b.value! - a.value!);
+    const ppgRank = new Map(byPpg.map((l, i) => [l, i + 1])), valueRank = new Map(byValue.map((l, i) => [l, i + 1]));
+    const score = (l: SeasonLine) => {
+      const p = ppgRank.get(l), v = valueRank.get(l);
+      return p !== undefined && v !== undefined ? PROD_WEIGHT * p + (1 - PROD_WEIGHT) * v : p ?? v!;
+    };
+    const ordered = [...list].sort((a, b) => score(a) - score(b));
+    const curve = si.curve[pos];
+    ordered.forEach((l, i) => {
+      const today = i + 1;
+      const next = nextRank(si.samples, pos, today, l.share);
+      const at = next.mid - 1;
+      const price = curve.price[at] ?? 0;
+      const proj = curve.proj[at] ?? curve.proj.at(-1) ?? null;
+      board.push([l.name, pos, l.team, proj, price]);
+      rows.set(playerKey(l.name, pos), { line: l, today, ppgRank: ppgRank.get(l) ?? null, valueRank: valueRank.get(l) ?? null, next });
+    });
+  }
+  return { board, rows };
 }
 
 function round(v: number, d: number) {

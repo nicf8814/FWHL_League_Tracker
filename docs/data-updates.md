@@ -188,16 +188,16 @@ The dry run lists unmatched owners, keepers per season and each season's team sp
 Nic's private pre-draft board (Settings, **Draft prep**, behind a password). Design: `docs/draft-prep/design.md`. It reads `public/seed/draft-prep.json`. Built, never edited by hand:
 
 ```bash
-npm run data -- draftprep <year> [--dry-run]
+npm run data -- draftprep [--dry-run]
 ```
 
-- `data/draft-prep/<year>/board.csv`: the pre-draft board, `name,team,pos,proj,price` (projected season points in league scoring; FantasyPros consensus price on a $200, 12-team scale). Optional `rank` column overrides the position rank by price.
-- `data/draft-prep/<year>/keepers.csv`: `name,pos,cost,owner`. Owner is the team key in history.json.
-- Past boards (`data/draft-prep/<year-1..year-4>/board.csv`) set the price tiers: matched to what those players sold for in `public/seed/drafts.json`. 2025's is the auctioned players from Nic's 2026 board backtest tab; 2026's is Nic's full 2026 board. Use the same price source every year.
-- Projection shrink and miss come from `drafts.json` (2018-2022 ESPN preseason projections); FLEX and WR/TE usage from `public/seed/lineups/2023-2025.json`. Rebuild drafts and lineups first if they change.
+- `data/draft-prep/<year>/board.csv`: a pre-draft board, `name,team,pos,proj,price` (projected season points in league scoring; FantasyPros consensus price on a $200, 12-team scale). Optional `rank` column overrides the position rank by price.
+- `data/draft-prep/<year>/keepers.csv`: `name,pos,cost,owner` (owner = team key in history.json). A year with a board and keepers becomes a **board edition** (2026: the test run, last August's numbers). A board without keepers (2025, auctioned players only) is used for the price tiers only.
+- The year after the newest board is a **stand-in edition** (2027 now). The page fills it live from the league seed: 70% points-per-game rank (4+ games), 30% trade value rank, injuries through the games a player can still play. Where that rank landed in next August's prices comes from the 2019-2025 lineups and drafts. No input file: it follows every weekly data push.
+- Past boards set the price tiers (matched to what those players sold for in `drafts.json`). Projection shrink and miss come from `drafts.json` (2018-2022 ESPN preseason projections); FLEX and WR/TE usage from `lineups/2023-2025.json`. Rebuild drafts and lineups first if they change.
 - Cost, worth and edge are worked out in the browser (`src/engine/draftPrep.ts`). `npm test` fails while `draft-prep.json` is out of date.
 
-Next year: add `data/draft-prep/2027/board.csv` and `keepers.csv`, then `npm run data -- draftprep 2027`.
+Next summer: add `data/draft-prep/2027/board.csv` and `keepers.csv`, run `npm run data -- draftprep`. 2027 becomes a board edition (the source of truth) and 2028 the stand-in.
 
 ### Trade history
 
