@@ -126,7 +126,7 @@ A simple password screen on the draft prep pages, to keep leaguemates out while 
 
 - Measured: replacement QB12, RB30, WR37, TE5 (FLEX starts 2023-25: RB 50%, WR 36%, TE 13%; WR/TE: WR 68%, TE 32%). Shrink per projected point over replacement (2018-22): QB 1.15, RB 0.74, WR 0.92, TE 0.82. Projection miss: QB 22%, RB 36%, WR 32%, TE 33%.
 - Worth through Week 10 of 2026: buys more than $10 over worth gave back about $26 each (n=6); otherwise the edge barely predicted results (correlation 0.15). One season, injuries (Lamar, Daniels): recheck after the season.
-- Bid window (Nic, Nov 18: nobody pays $133; the record is $100, Saquon 2018): the least and most the league paid for his slot (RB1, RB2, ...) in the last 5 drafts. Cost is capped at the ceiling. 2026 check: 81% of $15-40 buys and 46% of $40+ buys landed inside; the misses at the top were 2026 stars going above anything in 2021-25 (RB1 $89 vs. $82).
+- Bid window (Nic, Nov 18: nobody pays $133; the record is $100, Saquon 2018): the least and most the league paid for his slot (RB1, RB2, ...) in the last 5 drafts (Nic chose the strict 5-year cap over the all-time high or a cushion). Cost is capped at the ceiling. 2026 check: 81% of $15-40 buys and 46% of $40+ buys landed inside; the misses at the top were 2026 stars going above anything in 2021-25 (RB1 $89 vs. $82).
 - Dropped: bands from the model's own price misses on 2025 alone. Too few buys, so floors ran far too low (Chase $39) and ceilings far too high (Gibbs $133).
 
 ## Phases
