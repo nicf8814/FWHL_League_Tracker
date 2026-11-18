@@ -3,7 +3,7 @@ import { useRoute } from '../app/router.ts';
 import { useLeague } from '../data/store.tsx';
 import { validateHistory, type History as HistoryFile, type OwnerKey } from '../data/history.ts';
 import {
-  buildHist, careers, crew, headToHead, LIFER_SEASONS, ownerName, records, seasonAwards,
+  buildHist, careers, crew, headToHead, LIFER_SEASONS, ownerName, records, seasonAwards, teamOwners,
   type Career, type CareerSeason, type Game, type H2H, type Hist, type ScoreRec, type Season,
 } from '../engine/history.ts';
 import { Empty, fmt, Mono, Section, Seg, signed, tone } from '../ui/components.tsx';
@@ -12,6 +12,8 @@ import SeasonWeeks, { type WeekState } from './HistoryWeeks.tsx';
 import { DraftSearch, SeasonDraft } from './HistoryDrafts.tsx';
 import { OwnerTrades, SeasonTrades, TradeSearch } from './HistoryTrades.tsx';
 import { AllTimePlayers, KeeperSkill, RosterBuilders, Traders } from './HistoryManagers.tsx';
+import { FinishChart, LuckChart, RivalBars, ScoringChart } from './HistoryCharts.tsx';
+import { NARROW, Reveal, useWidth } from '../ui/charts.tsx';
 
 // Pick a season (or All seasons) and what to show from two dropdowns; the page below fills in.
 // ?season=all|<year>&view=<section>; ?owner= an owner's page; ?wk=<year>-<week>&m=<owner> a week and
@@ -36,7 +38,7 @@ function useHistoryFile() {
 }
 
 export default function HistoryView() {
-  const { idx } = useLeague();
+  const { idx, settings } = useLeague();
   const file = useHistoryFile();
   const H = useMemo(() => (file && typeof file !== 'string' ? buildHist(file, idx) : null), [file, idx]);
   const all = useMemo(() => (H ? careers(H) : []), [H]);
@@ -51,12 +53,14 @@ export default function HistoryView() {
   const owner = query.get('owner');
   const c = owner ? all.find((x) => x.owner === owner) : undefined;
   if (c) return <div className="grid grid-cols-1 gap-8"><OwnerPage H={H} c={c} go={set} /></div>;
-  return <Browser H={H} all={all} query={query} go={set} />;
+  // The viewer's own owner key, so the charts can pick him out.
+  const me = settings.myTeamId != null ? teamOwners(H).get(settings.myTeamId) : undefined;
+  return <Browser H={H} all={all} query={query} go={set} me={me} />;
 }
 
 type Go = (patch: Record<string, string | null>) => void;
 
-function Browser({ H, all, query, go }: { H: Hist; all: Career[]; query: URLSearchParams; go: Go }) {
+function Browser({ H, all, query, go, me }: { H: Hist; all: Career[]; query: URLSearchParams; go: Go; me?: OwnerKey }) {
   const first = H.seasons[0]!.year, last = H.seasons.at(-1)!;
   const wk = parseWk(query.get('wk'));
   const seasonParam = query.get('season') ?? query.get('year') ?? (wk ? String(wk.year) : query.get('tab') || query.get('vs') ? 'all' : 'all');
@@ -87,10 +91,10 @@ function Browser({ H, all, query, go }: { H: Hist; all: Career[]; query: URLSear
       </div>
       {s ? <SeasonPanel key={s.year} H={H} s={s} go={go} view={view as SeasonView} weeks={wk?.year === s.year ? { week: wk.week, open: query.get('m') } : null} />
         : <>
-          {view === 'champions' && <Champions H={H} all={all} go={go} />}
+          {view === 'champions' && <Champions H={H} all={all} go={go} me={me} />}
           {view === 'owners' && <Owners H={H} all={all} go={go} />}
-          {view === 'luck' && <LuckTab H={H} all={all} go={go} />}
-          {view === 'rivals' && <Rivals H={H} all={all} pair={query.get('vs')} go={go} />}
+          {view === 'luck' && <LuckTab H={H} all={all} go={go} me={me} />}
+          {view === 'rivals' && <Rivals H={H} all={all} pair={query.get('vs')} go={go} me={me} />}
           {view === 'records' && <RecordsTab H={H} go={go} />}
           {view === 'players' && <AllTimePlayers H={H} />}
           {view === 'builders' && <RosterBuilders H={H} onOwner={(o: OwnerKey) => go({ owner: o })} />}
@@ -222,7 +226,7 @@ function SeasonStandings({ H, s, go }: { H: Hist; s: Season; go: Go }) {
 }
 
 // ---------- All seasons: champions ----------
-function Champions({ H, all, go }: { H: Hist; all: Career[]; go: Go }) {
+function Champions({ H, all, go, me }: { H: Hist; all: Career[]; go: Go; me?: OwnerKey }) {
   const most = (f: (c: Career) => number) => { const m = Math.max(...all.map(f)); return { m, who: all.filter((c) => f(c) === m && m > 0) }; };
   const titles = most((c) => c.titles.length);
   const finalsLost = most((c) => c.runnerUps.length);
@@ -242,7 +246,8 @@ function Champions({ H, all, go }: { H: Hist; all: Career[]; go: Go }) {
         <Stat label="Luckiest career" value={<>{lucky[0]!.name} <Luck v={lucky[0]!.luck} /></>} sub={`wins above what their scores earned (${LIFER_SEASONS}+ seasons)`} />
         <Stat label="Unluckiest career" value={<>{lucky.at(-1)!.name} <Luck v={lucky.at(-1)!.luck} /></>} sub={`wins below what their scores earned (${LIFER_SEASONS}+ seasons)`} />
       </div>
-      <ChampionTable H={H} done={done} go={go} champLuck={champLuck} />
+      <FinishChart H={H} all={all} go={go} me={me} />
+      <Reveal label="Show every champion"><ChampionTable H={H} done={done} go={go} champLuck={champLuck} /></Reveal>
     </>
   );
 }
@@ -388,20 +393,17 @@ function OwnerH2H({ H, rivals, go }: { H: Hist; rivals: Rival[]; go: Go }) {
 }
 
 // ---------- All seasons: luck ----------
-function LuckTab({ H, all, go }: { H: Hist; all: Career[]; go: Go }) {
-  const [everyone, setEveryone] = useState(false);
-  const shown = all.filter((c) => everyone || c.lifer).sort((a, b) => b.luck - a.luck);
-  const seasons = H.seasons.flatMap((x) => x.rows.filter((r) => !H.owners.get(r.owner)?.filler).map((r) => ({ ...r, year: x.year, live: x.live })));
+function LuckTab({ H, all, go, me }: { H: Hist; all: Career[]; go: Go; me?: OwnerKey }) {
+  const active = useMemo(() => all.filter((c) => c.active), [all]);
+  const seasons = useMemo(() => seasonRows(H), [H]);
   return (
     <>
-      <Section title="Career luck" aside={<Seg label="Owners shown" value={everyone ? 'all' : 'lifers'} options={[['lifers', 'Lifers'], ['all', 'Everyone']]} onChange={(v) => setEveryone(v === 'all')} />}>
-        <LuckBars rows={shown.map((c) => ({ key: c.owner, label: c.name, v: c.luck, title: `${c.name}: ${rec(c.w, c.l, c.t)}, ${fmt(c.xw)} expected wins over ${c.seasons.length} seasons` }))} />
-        <p className="max-w-[70ch] text-sm text-ink-2">
-          Luck is actual wins minus expected wins. Each week a score is compared with every other score that week: beating 8 of 11 is worth 8/11 of a win, whoever you actually played.
-          Over a season that adds up to expected wins (xW). Each season's drawer has its own luck column.
-        </p>
-      </Section>
-      <SeasonLuckTable H={H} rows={seasons} go={go} />
+      <LuckChart H={H} cs={active} go={go} me={me} />
+      <p className="max-w-[70ch] text-sm text-ink-2">
+        Luck is actual wins minus expected wins. Each week a score is compared with every other score that week: beating 8 of 11 is worth 8/11 of a win, whoever you actually played.
+        Over a season that adds up to expected wins (xW). The chart shows everyone in the league now; past owners are in the Owners table.
+      </p>
+      <Reveal label="Show every season by luck"><SeasonLuckTable H={H} rows={seasons} go={go} /></Reveal>
     </>
   );
 }
@@ -460,8 +462,9 @@ function LuckBars({ rows }: { rows: { key: string; label: string; v: number; tit
 }
 
 // ---------- Rivals ----------
-function Rivals({ H, all, pair, go }: { H: Hist; all: Career[]; pair: string | null; go: Go }) {
-  const lifers = all.filter((c) => c.lifer).sort((a, b) => a.name.localeCompare(b.name));
+function Rivals({ H, all, pair, go, me }: { H: Hist; all: Career[]; pair: string | null; go: Go; me?: OwnerKey }) {
+  const lifers = useMemo(() => all.filter((c) => c.lifer).sort((a, b) => a.name.localeCompare(b.name)), [all]);
+  const [ref, w] = useWidth<HTMLDivElement>();
   const [a, b] = (pair ?? '').split('~');
   const pairs = all.flatMap((x, i) => all.slice(i + 1).map((y) => ({ x, y, h: headToHead(H, x.owner, y.owner) })));
   const lopsided = pairs.filter((p) => p.h.games.length >= 10).map((p) => ({ ...p, edge: Math.abs(p.h.w - p.h.l) / p.h.games.length })).sort((p, q) => q.edge - p.edge).slice(0, 8);
@@ -475,8 +478,24 @@ function Rivals({ H, all, pair, go }: { H: Hist; all: Career[]; pair: string | n
       </li>
     );
   };
+  // On a phone the grid is one manager against everyone, and the full grid waits behind a button.
+  const grid = <LiferGrid H={H} lifers={lifers} go={go} />;
   return (
     <>
+      <div ref={ref} className="grid grid-cols-1 gap-5">
+        {w < NARROW ? <><RivalBars H={H} lifers={lifers} go={go} me={me} /><Reveal label="Show the full grid">{grid}</Reveal></> : grid}
+      </div>
+      {a && b && H.owners.has(a) && H.owners.has(b) && <Series H={H} a={a} b={b} go={go} />}
+      <div className="grid gap-8 lg:grid-cols-2">
+        <Section title="Most one-sided (10+ games)"><ol className="grid">{lopsided.map(line)}</ol></Section>
+        <Section title="Most played"><ol className="grid">{busiest.map(line)}</ol></Section>
+      </div>
+    </>
+  );
+}
+
+function LiferGrid({ H, lifers, go }: { H: Hist; lifers: Career[]; go: Go }) {
+  return (
       <Section title="Lifers head to head" aside="Row owner's record against the column owner; regular season and playoffs">
         <Scroll min="min-w-[50rem]">
           <thead><tr><th className="l stick">vs →</th>{lifers.map((c) => <th key={c.owner} className="!text-center" title={c.name}>{c.name.split(' ').map((w) => w[0]).join('')}</th>)}<th title="Record against the other lifers">vs lifers</th></tr></thead>
@@ -505,12 +524,6 @@ function Rivals({ H, all, pair, go }: { H: Hist; all: Career[]; pair: string | n
           </tbody>
         </Scroll>
       </Section>
-      {a && b && H.owners.has(a) && H.owners.has(b) && <Series H={H} a={a} b={b} go={go} />}
-      <div className="grid gap-8 lg:grid-cols-2">
-        <Section title="Most one-sided (10+ games)"><ol className="grid">{lopsided.map(line)}</ol></Section>
-        <Section title="Most played"><ol className="grid">{busiest.map(line)}</ol></Section>
-      </div>
-    </>
   );
 }
 
@@ -561,6 +574,7 @@ function RecordsTab({ H, go }: { H: Hist; go: Go }) {
   );
   return (
     <>
+      <ScoringChart H={H} go={go} />
       <p className="max-w-[70ch] text-sm text-ink-2">Scores are ranked against that season's league average (1.00×), so ESPN and Sleeper years compare fairly. Consolation games are left out.</p>
       <div className="grid gap-8 lg:grid-cols-2">
         <Section title="Biggest games"><ol className="grid">{R.high.map(score)}</ol></Section>
@@ -582,7 +596,7 @@ function RecordsTab({ H, go }: { H: Hist; go: Go }) {
         <Section title="Best scoring seasons"><ol className="grid">{[...seasons].sort((a, b) => b.index - a.index).slice(0, 10).map((r) => seasonLine(r, <>{fmt(r.pf)} <span className="block text-xs text-ink-3">{vsAvg(r.index)} vs avg</span></>))}</ol></Section>
         <Section title="Best records"><ol className="grid">{[...seasons].sort((a, b) => b.w - a.w || a.l - b.l || b.pf - a.pf).slice(0, 10).map((r) => seasonLine(r, <>{rec(r.w, r.l, r.t)} <span className="block text-xs text-ink-3">{place(r.finish)}</span></>))}</ol></Section>
       </div>
-      <EveryGame H={H} go={go} />
+      <Reveal label="Show every game"><EveryGame H={H} go={go} /></Reveal>
     </>
   );
 }

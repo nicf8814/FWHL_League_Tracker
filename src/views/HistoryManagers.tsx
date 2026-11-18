@@ -16,6 +16,8 @@ import { bestAndWorstKeepers, keeperBets, keeperCareers, type KeeperCareer, type
 import { bestAndWorstBuilders, builderCareers, BUILDER_METRICS, MIN_DRAFTS, MIN_KEEPERS, type BuilderCareer, type BuilderMetric } from '../engine/builders.ts';
 import { Empty, fmt, pct, Section, Seg, signed, tone } from '../ui/components.tsx';
 import { DataTable, TableBar, useTable, type Col, type FilterDef } from '../ui/table.tsx';
+import { Key, NARROW, Reveal, useWidth } from '../ui/charts.tsx';
+import { shortName, starterShares } from '../engine/historyCharts.ts';
 import { Stamp } from '../ui/stamp.tsx';
 import { PosTag, useDraftBook, ValueHelp } from './HistoryDrafts.tsx';
 import { useTrades } from './HistoryTrades.tsx';
@@ -46,6 +48,70 @@ const POS_FILTER: [string, string][] = [['ANY', 'Any position'], ['QB', 'QB'], [
 const who = (H: Hist, o: OwnerKey) => ownerName(H, o);
 
 // ---------- 1. All-time players ----------
+// H7 (Nov 18): the top players by starter points, each bar split by the managers who started him.
+// Desktop: one row per player. Phone: one card per player. Five colours for the managers with the
+// most points among the players shown; everyone else is grey. The viewer is always the dark green,
+// the same colour that means "you" on the other History charts.
+const PAL = ['bg-pos-wr', 'bg-pos-te', 'bg-accent', 'bg-pos-qb'];
+const n0 = (v: number) => Math.round(v).toLocaleString('en-US');
+type ChartPos = 'ANY' | 'QB' | 'RB' | 'WR' | 'TE';
+function PlayerChart({ H, book, onPick }: { H: Hist; book: CareerBook; onPick: (p: PlayerCareer) => void }) {
+  const { settings } = useLeague();
+  const me = settings.myTeamId != null ? teamOwners(H).get(settings.myTeamId) : undefined;
+  const [pos, setPos] = useState<ChartPos>('ANY');
+  const [ref, w] = useWidth<HTMLDivElement>();
+  const narrow = w < NARROW;
+  const eight = useMemo(() => book.players.filter((p) => pos === 'ANY' || p.pos === pos).sort((a, b) => b.startPts - a.startPts).slice(0, 8).map((p) => ({ p, s: starterShares(p) })), [book, pos]);
+  const top = narrow ? eight.slice(0, 6) : eight;
+  // Colours come from the top eight, so a manager keeps his colour on a phone and on a laptop.
+  const colour = useMemo(() => {
+    const by = new Map<OwnerKey, number>();
+    for (const { s } of eight) for (const x of s) by.set(x.owner, (by.get(x.owner) ?? 0) + x.pts);
+    const rest = [...by].filter(([o]) => o !== me).sort((a, b) => b[1] - a[1]).slice(0, PAL.length).map(([o], i) => [o, PAL[i]!] as [OwnerKey, string]);
+    return new Map<OwnerKey, string>(me && by.has(me) ? [[me, 'bg-primary'], ...rest] : rest);
+  }, [eight, me]);
+  const max = Math.max(1, ...top.map((t) => t.p.startPts));
+  const two = (s: { owner: OwnerKey; pts: number }[], total: number) => s.slice(0, 2).map((x) => `${shortName(H, x.owner)} ${Math.round((x.pts / Math.max(1, total)) * 100)}%`).join(' · ');
+  return (
+    <Section title="The league's workhorses" aside={`Starter points since ${book.players.length ? Math.min(...book.players.map((p) => p.first)) : ''}`}>
+      <Seg label="Position" value={pos} options={[['ANY', 'All'], ['QB', 'QB'], ['RB', 'RB'], ['WR', 'WR'], ['TE', 'TE']]} onChange={setPos} />
+      <Key items={[...[...colour].map(([o, c]) => [c, shortName(H, o)] as [string, string]), ['bg-rule-strong', 'Others']]} />
+      <div ref={ref}>
+        <ol className="grid gap-2">
+          {top.map(({ p, s }, i) => {
+            const total = s.reduce((a, x) => a + x.pts, 0);
+            const bar = (
+              <span className="flex h-3 gap-px" aria-hidden="true" style={narrow ? undefined : { width: `${(p.startPts / max) * 100}%` }}>
+                {s.map((x) => <span key={x.owner} className={`rounded-sm ${colour.get(x.owner) ?? 'bg-rule-strong'}`} style={{ flex: `${x.pts} 1 0` }} title={`${who(H, x.owner)}: ${n0(x.pts)}`} />)}
+              </span>
+            );
+            const meta = `${p.pos} · ${p.first === p.last ? p.first : `${p.first}–${p.last}`}${p.rings ? ` · ${p.rings} ring${p.rings > 1 ? 's' : ''}` : ''}`;
+            const label = `${p.name}, ${meta}: ${n0(p.startPts)} starter points. ${two(s, total)}. Open his career.`;
+            return (
+              <li key={`${p.name}|${p.pos}`}>
+                {narrow ? (
+                  <button type="button" className="grid w-full gap-1.5 rounded border border-rule bg-surface px-3 py-2.5 text-left" onClick={() => onPick(p)} aria-label={label}>
+                    <span className="flex items-baseline justify-between gap-2"><span className="text-sm font-semibold">{i + 1}. {p.name} <span className="text-xs font-normal text-ink-3">{meta}</span></span><span className="num text-sm font-medium">{n0(p.startPts)}</span></span>
+                    {bar}
+                    <span className="text-xs text-ink-2">{two(s, total)}</span>
+                  </button>
+                ) : (
+                  <button type="button" className="grid w-full grid-cols-[14rem_1fr_4.5rem] items-center gap-3 rounded px-2 py-1.5 text-left hover:bg-sunk" onClick={() => onPick(p)} aria-label={label}>
+                    <span className="grid"><span className="truncate text-sm font-medium">{i + 1}. {p.name}</span><span className="text-xs text-ink-3">{meta}</span></span>
+                    <span className="grid gap-1">{bar}<span className="text-xs text-ink-2">{two(s, total)}</span></span>
+                    <span className="num text-right text-sm font-medium">{n0(p.startPts)}</span>
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+      <p className="text-xs text-ink-3">Points scored in FWHL starting lineups, not adjusted for era. Pick a player for his career.</p>
+    </Section>
+  );
+}
+
 export function AllTimePlayers({ H }: { H: Hist }) {
   const book = useCareerBook(H);
   const [sheet, setSheet] = useState<PlayerCareer | null>(null);
@@ -53,8 +119,9 @@ export function AllTimePlayers({ H }: { H: Hist }) {
   if (typeof book === 'string') return <Empty>{book}</Empty>;
   return (
     <div className="grid grid-cols-1 gap-10">
-      <CareerTable H={H} book={book} onPick={setSheet} />
-      <RingLeaders H={H} book={book} onPick={setSheet} />
+      <PlayerChart H={H} book={book} onPick={setSheet} />
+      <Reveal label="Show all players"><CareerTable H={H} book={book} onPick={setSheet} /></Reveal>
+      <Reveal label="Show the championship-roster leaders"><RingLeaders H={H} book={book} onPick={setSheet} /></Reveal>
       <ChampionRosters H={H} book={book} />
       <CareerSheet H={H} player={sheet} onClose={() => setSheet(null)} />
     </div>
