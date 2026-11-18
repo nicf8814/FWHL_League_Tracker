@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    /* ==========================
+       Modern, accessible styling
+       (CSS-first revamp)
+       ========================== */
+
+    :root {
+      /* --- Brand palette --- */
+      --bg: #F3FFBD;
+      --panel: #ffffff;
+      --panel-2: #B2DBBF;
+      --border: #B2DBBF;
+      --text: #111827;
+      --muted: #4b5563;
+      --primary: #247BA0;
+      --primary-600: #70C1B3;
+      --primary-700: #247BA0;
+      --success: #70C1B3;
+      --success-100: color-mix(in oklab, var(--success) 18%, white);
+      --danger: #FF1654;
+      --danger-100: color-mix(in oklab, var(--danger) 14%, white);
+      --warning: #FF1654;
+      --shadow: 0 1px 3px rgba(0,0,0,.06), 0 6px 20px rgba(0,0,0,.06);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1d23;
+        --panel: #13232a;
+        --panel-2: #1a2e36;
+        --border: #23424c;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --primary: #70C1B3;
+        --primary-600: #B2DBBF;  
+        --primary-700: #70C1B3;
+        --success: #70C1B3;
+        --success-100: color-mix(in oklab, var(--success) 20%, black);
+        --danger: #FF1654;
+        --danger-100: color-mix(in oklab, var(--danger) 20%, black);
+        --shadow: 0 1px 3px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.35);
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      margin: 0;
+      background-color: var(--bg);
+      color: var(--text);
+      padding: clamp(8px, 1.2vw, 14px) clamp(8px, 1.4vw, 14px);
+      max-width: none;
+      margin-inline: 0;
+      width: 100%;
+    }
+
+    h3 {
+      margin-top: 28px;
+      margin-bottom: 10px;
+      font-size: 20px;
+      color: var(--text);
+    }
+
+    .controls {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, max-content));
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding: 12px;
+      background: color-mix(in oklab, var(--bg) 85%, transparent);
+      -webkit-backdrop-filter: saturate(180%) blur(6px);
+      backdrop-filter: saturate(180%) blur(6px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    .controls input[type="text"],
+    .controls select,
+    .controls button,
+    .controls input[type="number"] {
+      height: 38px;
+      padding: 8px 12px;
+      font-size: 14px;
+      border-radius: 10px;
+    }
+
+    input[type="text"],
+    select,
+    button,
+    input[type="number"] {
+      border: 1px solid var(--border);
+      background-color: var(--panel);
+      transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease, transform .06s ease;
+      color: var(--text);
+    }
+
+    input[type="text"]:focus,
+    select:focus,
+    input[type="number"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 30%, transparent);
+      outline: none;
+    }
+
+    input[type="number"] { width: 80px; text-align: center; font-variant-numeric: tabular-nums; }
+    select { min-width: 120px; }
+
+    button { cursor: pointer; border: none; font-weight: 600; letter-spacing: .2px; }
+    button:disabled { cursor: not-allowed; opacity: .6; }
+
+    .controls button,
+    button {
+      background-color: var(--primary);
+      color: white;
+      box-shadow: 0 1px 0 rgba(0,0,0,.04);
+    }
+    .controls button:hover { background-color: var(--primary-600); }
+    .controls button:active { background-color: var(--primary-700); transform: translateY(1px); }
+
+    button[onclick*="resetMockDraft"],
+    button[onclick*="clearKeeper"],
+    button[onclick*="clearTarget"] { background-color: var(--danger); }
+    button[onclick*="resetMockDraft"]:hover,
+    button[onclick*="clearKeeper"]:hover,
+    button[onclick*="clearTarget"]:hover { background-color: #b91c1c; }
+
+    button[onclick*="clearFilters"],
+    button[onclick*="forceRecalculation"],
+    button[onclick*="refreshData"] {
+      background: linear-gradient(0deg, color-mix(in oklab, var(--panel) 92%, transparent), color-mix(in oklab, var(--panel) 92%, transparent));
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    button[onclick*="clearFilters"]:hover,
+    button[onclick*="forceRecalculation"]:hover,
+    button[onclick*="refreshData"]:hover { background: var(--panel); }
+
+    .table-container {
+      display: block;
+      width: 100%;
+      max-height: 595px; 
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background-color: var(--panel);
+      box-shadow: var(--shadow);
+      margin-top: 10px;
+      margin-bottom: 28px;
+      min-height: 160px;
+      scroll-behavior: smooth;
+    }
+
+    .table-container-mock {
+      display: block;
+      width: 100%;
+      max-height: 72vh;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background-color: var(--panel);
+      box-shadow: var(--shadow);
+      margin-top: 10px;
+      margin-bottom: 28px;
+      min-height: 280px;
+      scroll-behavior: smooth;
+    }
+
+    .table-container::-webkit-scrollbar,
+    .table-container-mock::-webkit-scrollbar { width: 10px; height: 10px; }
+    .table-container::-webkit-scrollbar-thumb,
+    .table-container-mock::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--text) 15%, transparent); border-radius: 8px; }
+    .table-container { scrollbar-color: color-mix(in oklab, var(--text) 15%, transparent) transparent; }
+
+    .loading-message { text-align: center; padding: 40px; color: var(--muted); font-style: italic; }
+
+    table { border-collapse: collapse; width: 100%; font-size: 13px; }
+
+    th, td {
+      border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+      padding: 6px 8px;
+      text-align: center;
+      vertical-align: middle;
+      line-height: 1.2;
+    }
+
+    thead th {
+      position: sticky; top: 0; z-index: 3;
+      background-color: var(--panel-2);
+      color: var(--text);
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 2px solid color-mix(in oklab, var(--primary) 35%, transparent);
+    }
+    thead th:hover { background-color: color-mix(in oklab, var(--panel-2) 80%, var(--primary) 8%); }
+
+    thead th:first-child, tbody td:first-child {
+      position: sticky; left: 0; z-index: 2;
+      background: linear-gradient(90deg, var(--panel) 0%, var(--panel) 85%, transparent 100%);
+      box-shadow: 2px 0 0 var(--border);
+      text-align: left;
+    }
+
+    thead th:nth-child(3), thead th:nth-child(4), thead th:nth-child(5), thead th:nth-child(7),
+    tbody td:nth-child(3), tbody td:nth-child(4), tbody td:nth-child(5), tbody td:nth-child(7) {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    tbody td:nth-child(2) {
+      text-align: center;
+      font-weight: 600;
+      background: transparent;
+      color: var(--text);
+      border-radius: 0;
+      padding: 10px 12px;
+      width: auto;
+      margin: 0;
+    }
+    tbody td:nth-child(2) > * { pointer-events: none; }
+
+    tbody tr:nth-child(odd) td { background: color-mix(in oklab, var(--panel) 92%, var(--text) 2%); }
+    tbody tr:hover td { background: color-mix(in oklab, var(--panel) 88%, var(--primary) 6%); }
+
+    table select, table input[type="number"], table input[type="checkbox"] { height: 32px; }
+    input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); }
+
+    #mockSummary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin: 8px 0 10px;
+      color: var(--text);
+    }
+    .stat {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      box-shadow: var(--shadow);
+    }
+    .stat .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
+    .stat .value { font-size: 20px; font-weight: 800; margin-top: 4px; }
+    .summary-row { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; }
+    .badge { display: inline-block; padding: 6px 10px; border-radius: 999px; font-weight: 700; border: 1px solid var(--border); }
+    .badge.ok { background: var(--success-100); color: var(--success); }
+    .badge.warn { background: var(--danger-100); color: var(--danger); }
+
+    #errorMessage, #successMessage {
+      position: fixed; top: 16px; right: 16px; z-index: 99999;
+      min-width: 280px; max-width: 420px;
+      padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);
+      display: none; box-shadow: var(--shadow); font-weight: 600;
+      animation: slideDown .22s ease-out;
+    }
+    #errorMessage { background-color: var(--danger-100); color: var(--danger); border-left: 4px solid var(--danger); }
+    #successMessage { background-color: var(--success-100); color: var(--success); border-left: 4px solid var(--success); }
+
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-6px);} to { opacity: 1; transform: translateY(0);} }
+
+    #spinnerOverlay {
+      position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 9999;
+      background-color: color-mix(in oklab, var(--bg) 82%, transparent);
+      display: none; align-items: center; justify-content: center;
+      -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+    }
+    #spinnerOverlay .spinner {
+      width: 54px; height: 54px; border: 6px solid color-mix(in oklab, var(--text) 16%, transparent);
+      border-top: 6px solid var(--primary); border-radius: 50%; animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 900px) {
+      body { padding: 16px; }
+      .controls { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .table-container, .table-container-mock { max-height: 60vh; }
+      table { font-size: 12px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition: none !important; }
+    }
+
+    .two-col { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.4fr); gap: 12px; align-items: start; }
+    @media (max-width: 1100px) { .two-col { grid-template-columns: 1fr; } }
+  </style>
+</head>
+
+<body>
+  <div id="errorMessage" class="error-message"></div>
+  <div id="successMessage" class="success-message"></div>
+
+  <div class="controls">
+    <input type="text" id="searchInput" placeholder="Search player..." list="playerList">
+    <datalist id="playerList"></datalist>
+
+    <select id="positionFilter" onchange="handlePositionChange()">
+      <option value="All">All</option>
+      <option value="QB">QB</option>
+      <option value="RB">RB</option>
+      <option value="WR">WR</option>
+      <option value="TE">TE</option>
+    </select>
+
+    <button onclick="applyFilters()">Search</button>
+    <button onclick="clearFilters()">Clear Filters</button>
+    <button onclick="clearKeeperSelections()">Clear Keepers</button>
+    <button onclick="clearTargetSelections()">Clear Targets</button>
+    <button onclick="resetMockDraft()">Reset All</button>
+    <button onclick="forceRecalculation()">Recalculate</button>
+    <button onclick="refreshData()">Refresh</button>
+    <!-- NEW: stand-alone button to zero keeper costs -->
+    <button onclick="resetAllKeeperCostsToZero()">Reset Keeper $0</button>
+  </div>
+
+  <div class="two-col">
+    <section>
+      <div class="table-container" id="playerTableContainer">
+        <div class="loading-message">Loading draft pool data...</div>
+      </div>
+    </section>
+    <section>
+      <h3>Mock Draft Roster</h3>
+      <div id="mockSummary" class="summary"></div>
+      <div class="table-container-mock" id="mockDraftContainer">
+        <div class="loading-message">Loading mock draft roster...</div>
+      </div>
+    </section>
+  </div>
+
+  <div id="spinnerOverlay">
+    <div class="spinner"></div>
+  </div>
+
+  <script>
+    /* ===========
+       Client logic
+       =========== */
+    let allPlayers = [];
+    let currentSort = { column: null, ascending: true };
+    let isUpdating = false;
+    let searchTimeout;
+
+    function showSpinner() {
+      document.getElementById("spinnerOverlay").style.display = "flex";
+      disableControls(true);
+    }
+    function hideSpinner() {
+      document.getElementById("spinnerOverlay").style.display = "none";
+      disableControls(false);
+    }
+    function disableControls(disable) {
+      document.querySelectorAll('input, select, button').forEach(el => el.disabled = disable);
+    }
+    function showMessage(message, type) {
+      const el = document.getElementById(type === 'success' ? 'successMessage' : 'errorMessage');
+      el.textContent = message; el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 3000);
+    }
+    function handleError(error) {
+      console.error(error);
+      showMessage('Error: ' + (error.message || error), 'error');
+      hideSpinner();
+    }
+
+    function populateDatalist(data) {
+      const datalist = document.getElementById("playerList");
+      datalist.innerHTML = "";
+      const seen = new Set();
+      data.forEach(row => {
+        const name = row[0];
+        if (name && !seen.has(name)) {
+          seen.add(name);
+          const option = document.createElement("option");
+          option.value = name;
+          datalist.appendChild(option);
+        }
+      });
+    }
+
+    function getSortIndicator(column) {
+      if (currentSort.column !== column) return '↕';
+      return currentSort.ascending ? '↑' : '↓';
+    }
+
+    function populatePlayerTable(data) {
+      if (!data || data.length === 0) {
+        document.getElementById("playerTableContainer").innerHTML =
+          '<div class="loading-message">No draft pool data available.</div>';
+        return;
+      }
+      const colIndexMap = { name: 0, inflated: 2, ceil: 3, points: 4 };
+      if (currentSort.column && colIndexMap[currentSort.column] !== undefined) {
+        const idx = colIndexMap[currentSort.column];
+        data.sort((a,b) => {
+          const A = a[idx] ?? 0, B = b[idx] ?? 0;
+          if (currentSort.column === 'name') {
+            return currentSort.ascending
+              ? String(A).localeCompare(String(B))
+              : String(B).localeCompare(String(A));
+          }
+          return currentSort.ascending ? (A - B) : (B - A);
+        });
+      }
+      let html = `<table><thead><tr>
+        <th onclick="sortTableBy('name')">Player ${getSortIndicator('name')}</th>
+        <th>Pos</th>
+        <th onclick="sortTableBy('inflated')">Inflated Price ${getSortIndicator('inflated')}</th>
+        <th onclick="sortTableBy('ceil')">Max Bid ${getSortIndicator('ceil')}</th>
+        <th onclick="sortTableBy('points')">Points ${getSortIndicator('points')}</th>
+        <th>Keeper</th>
+        <th>Keeper Cost</th>
+        <th>Target</th>
+      </tr></thead><tbody>`;
+      data.forEach(row => {
+        const [name, pos, inflated, ceil, points, keeper, keeperCost, target] = row;
+        const isTargetChecked = target === "Yes" ? "checked" : "";
+        const keeperValue = keeper || "No";
+        html += `<tr>
+          <td><strong>${escapeHtml(name || '')}</strong></td>
+          <td>${escapeHtml(pos || '')}</td>
+          <td>$${Number(inflated || 0).toFixed(1)}</td>
+          <td>$${Number(ceil || 0).toFixed(1)}</td>
+          <td>${Number(points || 0).toFixed(1)}</td>
+          <td>
+            <select onchange="updateKeeperStatus('${escapeHtml(name)}', this.value)" ${isUpdating ? 'disabled' : ''}>
+              <option value="No" ${keeperValue === "No" ? "selected" : ""}>No</option>
+              <option value="Yes" ${keeperValue === "Yes" ? "selected" : ""}>Yes</option>
+              <option value="My Keeper" ${keeperValue === "My Keeper" ? "selected" : ""}>My Keeper</option>
+            </select>
+          </td>
+          <td>
+            <input type="number" value="${Number(keeperCost || 0)}" min="0" step="0.5"
+                   onchange="updateKeeperCost('${escapeHtml(name)}', this.value)"
+                   ${isUpdating ? 'disabled' : ''}>
+          </td>
+          <td>
+            <input type="checkbox" ${isTargetChecked}
+                   onchange="updateTargetStatus('${escapeHtml(name)}', this.checked)"
+                   ${isUpdating ? 'disabled' : ''}>
+          </td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+      document.getElementById("playerTableContainer").innerHTML = html;
+    }
+
+    function sortTableBy(column) {
+      if (currentSort.column === column) {
+        currentSort.ascending = !currentSort.ascending;
+      } else {
+        currentSort.column = column;
+        currentSort.ascending = column === 'name';
+      }
+      populatePlayerTable([...allPlayers]);
+    }
+
+    function applyFilters() {
+      const searchValue = document.getElementById("searchInput").value.trim().toLowerCase();
+      const positionSelect = document.getElementById("positionFilter");
+      const selectedPosition = positionSelect.value;
+
+      let filtered = [...allPlayers];
+      if (searchValue) {
+        filtered = filtered.filter(row => (row[0] || '').toLowerCase().includes(searchValue));
+        if (filtered.length > 0) {
+          const posMatches = filtered.filter(row => row[1] === selectedPosition);
+          if (selectedPosition !== "All" && posMatches.length === 0) {
+            const positions = [...new Set(filtered.map(row => row[1]))];
+            positionSelect.value = positions.length === 1 ? positions[0] : "All";
+          } else if (selectedPosition === "All" && filtered.length === 1) {
+            const matchedPos = filtered[0][1];
+            if (matchedPos) positionSelect.value = matchedPos;
+          }
+        }
+      }
+      const finalPos = positionSelect.value;
+      if (finalPos !== "All") filtered = filtered.filter(row => row[1] === finalPos);
+      populatePlayerTable(filtered);
+    }
+
+    function handlePositionChange() {
+      const searchInput = document.getElementById("searchInput");
+      const positionSelect = document.getElementById("positionFilter");
+      if (positionSelect.value === "All" && searchInput.value.trim()) {
+        searchInput.value = "";
+      }
+      applyFilters();
+    }
+
+    function handleSearchInput() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(applyFilters, 200);
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text.toString();
+      return div.innerHTML;
+    }
+
+    document.getElementById('searchInput').addEventListener('input', handleSearchInput);
+  </script>
+
+  <!-- Firebase compat SDKs for Apps Script HTML pages -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    /* ====================
+       Firestore integration
+       ==================== */
+
+    // 1) Your Firebase config
+    const firebaseConfig = {
+      apiKey: "<redacted>",
+      authDomain: "<redacted>",
+      projectId: "<redacted>",
+      storageBucket: "<redacted>",
+      messagingSenderId: "<redacted>",
+      appId: "<redacted>",
+      measurementId: "<redacted>"
+    };
+
+    // 2) Init + Auth
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db   = firebase.firestore();
+    const provider = new firebase.auth.GoogleAuthProvider();
+
+    // Cache: player name_lower -> doc id
+    const nameToId = new Map();
+    const toLowerName = (n) => (n||"").toString().trim().toLowerCase();
+
+    // ----- Settings cache (for VORP replacement levels) -----
+    let SETTINGS = null;
+    async function ensureSettings() {
+      if (SETTINGS) return SETTINGS;
+      // defaults match your Apps Script fallbacks
+      const defaults = { replacements: { QB:250, RB:150, WR:130, TE:80 } };
+      try {
+        const doc = await db.collection('settings').doc('general').get();
+        SETTINGS = doc.exists ? (doc.data() || defaults) : defaults;
+      } catch { SETTINGS = defaults; }
+      return SETTINGS;
+    }
+
+    // ----- Roster rules/constants -----
+   // ----- Roster rules/constants -----
+const ROSTER_SLOTS = [
+  // starters
+  { key:'QB',    label:'QB',   allows:['QB'],             type:'starter' },
+  { key:'RB1',   label:'RB1',  allows:['RB'],             type:'starter' },
+  { key:'RB2',   label:'RB2',  allows:['RB'],             type:'starter' },
+  { key:'WR1',   label:'WR1',  allows:['WR'],             type:'starter' },
+  { key:'WR2',   label:'WR2',  allows:['WR'],             type:'starter' },
+  { key:'FLEX1', label:'FLEX', allows:['WR','TE','RB'],   type:'starter' },
+  { key:'FLEX2', label:'FLEX', allows:['WR','TE'],        type:'starter' },
+  // bench (accept anything)
+  { key:'BENCH1', label:'BENCH', allows:['QB','RB','WR','TE'], type:'bench' },
+  { key:'BENCH2', label:'BENCH', allows:['QB','RB','WR','TE'], type:'bench' },
+  { key:'BENCH3', label:'BENCH', allows:['QB','RB','WR','TE'], type:'bench' },
+  { key:'BENCH4', label:'BENCH', allows:['QB','RB','WR','TE'], type:'bench' },
+  { key:'BENCH5', label:'BENCH', allows:['QB','RB','WR','TE'], type:'bench' },
+  { key:'BENCH6', label:'BENCH', allows:['QB','RB','WR','TE'], type:'bench' },
+];
+const MAX_RB_TOTAL = 5; // across starters + bench
+
+
+    // ----- Cost / value helpers -----
+    const minOne = (n) => Math.max(1, Number(n||0)); // enforce $1 min when slotted
+    const posOf = (p) => String(p.position||'').toUpperCase();
+    function priceForRoster(p) {
+      const isKeeper = String(p.keeper||'').toLowerCase() === 'my keeper';
+      const base = isKeeper ? Number(p.keeperCost||0)
+                            : (p.inflatedPrice ?? p.projectedPrice ?? 0);
+      return minOne(base);
+    }
+    function vorpFor(p, settings) {
+      const repl = (settings?.replacements || {})[posOf(p)] ?? 0;
+      const points = Number(p.projectedPoints||0);
+      return points - Number(repl||0);
+    }
+    function vpdFor(p, settings) {
+      const cost = priceForRoster(p);
+      if (cost <= 0) return 0;
+      return vorpFor(p, settings) / cost;
+    }
+    function preferredSlotOrder(pos) {
+      switch (pos) {
+        case 'QB': return ['QB'];
+        case 'RB': return ['RB1','RB2','FLEX1'];
+        case 'WR': return ['WR1','WR2','FLEX2','FLEX1'];
+        case 'TE': return ['FLEX2','FLEX1'];
+        default:   return ['FLEX1','FLEX2'];
+      }
+    }
+
+    // 3) Load players from Firestore (left table)
+    async function loadPlayers() {
+      try {
+        showSpinner();
+        if (!auth.currentUser) {
+          try {
+            await auth.signInWithPopup(provider);
+          } catch (e) {
+            if (String(e.code||'').includes('popup')) {
+              await auth.signInWithRedirect(provider);
+              return;
+            }
+            throw e;
+          }
+        }
+
+        const container = document.getElementById("playerTableContainer");
+        container.innerHTML = '<div class="loading-message">Loading draft pool data...</div>';
+
+        const snap = await db.collection('players').orderBy('name_lower').get();
+
+        const rows = [];
+        nameToId.clear();
+        snap.forEach(doc => {
+          const p = doc.data();
+          nameToId.set(toLowerName(p.name), doc.id);
+          rows.push([
+            p.name || "",
+            (p.position || "").toUpperCase(),
+            Number(p.inflatedPrice || 0),
+            Number(p.bidCeiling || 0),
+            Number(p.projectedPoints || 0),
+            String(p.keeper || "No"),
+            Number(p.keeperCost || 0),
+            p.target ? "Yes" : ""
+          ]);
+        });
+
+        allPlayers = rows;
+        populatePlayerTable(rows);
+        populateDatalist(rows);
+        hideSpinner();
+      } catch (e) { handleError(e); }
+    }
+
+    // ===== Target-driven Mock Draft (live) =====
+    let unsubTargets = null, unsubKeepers = null;
+
+    async function loadMockDraft() {
+      await ensureSettings();
+
+      // clear existing listeners to avoid duplicates
+      if (unsubTargets) unsubTargets();
+      if (unsubKeepers) unsubKeepers();
+
+      const keepersMap = new Map();
+      const targetsMap = new Map();
+
+      const renderFromCurrent = () => {
+        // merge keepers + targets (keepers win if same player appears twice)
+        const byId = new Map();
+        keepersMap.forEach((p, id) => byId.set(id, p));
+        targetsMap.forEach((p, id) => { if (!byId.has(id)) byId.set(id, p); });
+
+        const keepers = [];
+        const targets = [];
+        byId.forEach(p => {
+          const isKeeper = String(p.keeper||'').toLowerCase() === 'my keeper';
+          (isKeeper ? keepers : targets).push(p);
+        });
+
+        const { rows, totals, flags } = buildRoster(keepers, targets, SETTINGS);
+        renderMockDraft({
+          players: rows,
+          analysis: [totals.cost, totals.points, totals.avgVorpPerDollar, flags.tooManyRBs, flags.valid]
+        });
+      };
+
+      // listen to targeted players
+      unsubTargets = db.collection('players')
+        .where('target','==', true)
+        .onSnapshot(snap => {
+          targetsMap.clear();
+          snap.forEach(d => targetsMap.set(d.id, d.data()));
+          renderFromCurrent();
+        }, handleSnapshotErr);
+
+      // listen to "My Keeper" (case-insensitiveish with 'in')
+      unsubKeepers = db.collection('players')
+        .where('keeper','in',['My Keeper','my keeper','MY KEEPER'])
+        .onSnapshot(snap => {
+          keepersMap.clear();
+          snap.forEach(d => keepersMap.set(d.id, d.data()));
+          renderFromCurrent();
+        }, handleSnapshotErr);
+    }
+
+    function handleSnapshotErr(err){
+      if (err.code === 'permission-denied') {
+        document.getElementById("mockDraftContainer").innerHTML =
+          '<div class="loading-message">No access to mock roster (check Firestore rules).</div>';
+        document.getElementById("mockSummary").innerHTML = '';
+      } else {
+        handleError(err);
+      }
+    }
+
+    // Roster engine: keepers first, then targets by value
+function buildRoster(keepers, targets, settings) {
+  const enrich = (p) => {
+    const cost   = priceForRoster(p);           // $1 min enforced
+    const points = Number(p.projectedPoints||0);
+    const vpd    = vpdFor(p, settings);         // keepers use keeperCost here
+    return { ...p, _pos: posOf(p), _cost: cost, _points: points, _vpd: vpd };
+  };
+  const K = keepers.map(enrich);
+  const T = targets.map(enrich);
+
+  // rank by VORP/$ then points
+  const byValue = (a,b) => (b._vpd - a._vpd) || (b._points - a._points);
+  K.sort(byValue); T.sort(byValue);
+
+  const slots = ROSTER_SLOTS.map(s => ({...s, pick:null}));
+
+  const starterKeys = ROSTER_SLOTS.filter(s=>s.type==='starter').map(s=>s.key);
+  const benchKeys   = ROSTER_SLOTS.filter(s=>s.type==='bench').map(s=>s.key);
+
+  const tryPlaceIntoKeys = (p, keys) => {
+    for (const key of keys) {
+      const slot = slots.find(s => s.key === key);
+      if (slot && !slot.pick && slot.allows.includes(p._pos)) {
+        slot.pick = p; return true;
+      }
+    }
+    return false;
+  };
+
+  const tryPlaceTightStarters = (p) => {
+    const order = preferredSlotOrder(p._pos).filter(k => starterKeys.includes(k));
+    return tryPlaceIntoKeys(p, order);
+  };
+
+  // 1) Place keepers into starters first (tight), then bench if needed
+  for (const p of K) if (!tryPlaceTightStarters(p)) {/* fall through */}
+  for (const p of K) if (!slots.some(s=>s.pick===p)) tryPlaceIntoKeys(p, benchKeys);
+
+  // 2) Fill remaining with targets: any starter slot, then bench
+  for (const p of T) if (!tryPlaceIntoKeys(p, starterKeys)) {/* fall through */}
+  for (const p of T) if (!slots.some(s=>s.pick===p)) tryPlaceIntoKeys(p, benchKeys);
+
+  // 3) Build rows, count RBs across ALL placed players
+  const rows = [];
+  let rbCount = 0;
+  for (const s of slots) {
+    if (s.pick) {
+      const p = s.pick;
+      if (p._pos === 'RB') rbCount++;
+      rows.push([s.label, p.name||'', p._pos, p._cost, p._points, p._vpd, String(p.keeper||'')]);
+    } else {
+      rows.push([s.label, '', '', '', '', '', '']);
+    }
+  }
+
+  // If somehow more keepers exist than 13 slots, still show them
+  const placedNames = new Set(slots.filter(s=>s.pick).map(s=>s.pick.name));
+  const overflowKeepers = K.filter(p => !placedNames.has(p.name));
+  for (const p of overflowKeepers) {
+    if (p._pos === 'RB') rbCount++;
+    rows.push(['EXTRA', p.name||'', p._pos, p._cost, p._points, p._vpd, String(p.keeper||'')]);
+  }
+
+  // Totals: use ALL filled slots (starters + bench)
+  const totals = computeTotals(rows);
+
+  // Validity: starters must be filled and each starter cost >= $1
+  const starters = rows.slice(0, 7);
+  const valid = starters.every(r => r[1] && Number(r[3]||0) >= 1) ? 'VALID' : 'INVALID';
+
+  const flags  = { tooManyRBs: rbCount > MAX_RB_TOTAL, valid };
+  return { rows, totals, flags };
+}
+
+function computeTotals(rosterRows) {
+  // include ALL filled rows (starters + bench)
+  const filled = rosterRows.filter(r => r[1]); // has a player name
+  const cost   = filled.reduce((s,r)=> s + Number(r[3]||0), 0);
+  const points = filled.reduce((s,r)=> s + Number(r[4]||0), 0);
+  const vpds   = filled.map(r=> Number(r[5]||0)).filter(Number.isFinite);
+  const avgVPD = vpds.length ? (vpds.reduce((a,b)=>a+b,0) / vpds.length) : 0;
+  return {
+    cost: Number(cost.toFixed(1)),
+    points: Number(points.toFixed(1)),
+    avgVorpPerDollar: Number(avgVPD.toFixed(2))
+  };
+}
+
+    // Render mock roster (Remove = untarget; keepers cannot be removed here)
+    function renderMockDraft(data) {
+      const container = document.getElementById("mockDraftContainer");
+      const summary   = document.getElementById("mockSummary");
+      const players   = data?.players || [];
+      const [totalCost, totalPoints, avgVorp, tooManyRBs, isValid] =
+        data?.analysis || [0, 0, 0, false, 'VALID'];
+
+      let html = `<table><thead><tr>
+        <th>Position</th><th>Player</th><th>Pos</th><th>Cost</th>
+        <th>Points</th><th>Vorp/$</th><th>Keeper</th><th></th>
+      </tr></thead><tbody>`;
+
+      if (players.length === 0) {
+        html += '<tr><td colspan="8" style="text-align:center; color: var(--muted); padding: 40px;">No targeted players or keepers yet</td></tr>';
+      } else {
+        players.forEach((row) => {
+          const [slot, name, pos, cost, pts, vpd, keeper] = row;
+          const isKeeper = String(keeper||'').toLowerCase() === 'my keeper';
+          html += `<tr>
+            <td>${escapeHtml(slot||'')}</td>
+            <td>${escapeHtml(name||'')}</td>
+            <td>${escapeHtml(pos||'')}</td>
+            <td>$${Number(cost||0).toFixed(1)}</td>
+            <td>${Number(pts||0).toFixed(1)}</td>
+            <td>${Number(vpd||0).toFixed(2)}</td>
+            <td>${escapeHtml(keeper||'')}</td>
+            <td>${
+              isKeeper
+                ? '<span class="muted">—</span>'
+                : `<button onclick="updateTargetStatus('${escapeHtml(name)}', false)">Remove</button>`
+            }</td>
+          </tr>`;
+        });
+      }
+      html += "</tbody></table>";
+      container.innerHTML = html;
+
+      const validClass = String(isValid).toUpperCase() === 'VALID' ? 'ok' : 'warn';
+      const rbClass = tooManyRBs ? 'warn' : 'ok';
+      summary.innerHTML = `
+        <div class="summary-row">
+          <span class="badge ${validClass}" title="Roster validity">${escapeHtml(isValid || 'VALID')}</span>
+          <span class="badge ${rbClass}" title="RB balance">${tooManyRBs ? 'RBs: Too Many' : 'RBs: Balanced'}</span>
+        </div>
+        <div class="stat"><div class="label">Total Cost</div><div class="value">$${Number(totalCost||0).toFixed(1)}</div></div>
+        <div class="stat"><div class="label">Total Points</div><div class="value">${Number(totalPoints||0).toFixed(1)}</div></div>
+        <div class="stat"><div class="label">Avg VORP/$</div><div class="value">${Number(avgVorp||0).toFixed(2)}</div></div>
+      `;
+    }
+
+    // 5) Writes → Firestore
+    async function getDocRefByName(name) {
+      const key = toLowerName(name);
+      if (nameToId.has(key)) return db.collection('players').doc(nameToId.get(key));
+      const q = await db.collection('players').where('name_lower','==', key).limit(1).get();
+      if (q.empty) throw new Error(`Player not found: ${name}`);
+      const d = q.docs[0]; nameToId.set(key, d.id);
+      return d.ref;
+    }
+
+    async function updateKeeperStatus(playerName, status) {
+      if (isUpdating) return;
+      try {
+        isUpdating = true; showSpinner();
+        const ref = await getDocRefByName(playerName);
+        await ref.update({ keeper: status });
+        showMessage('Keeper updated', 'success');
+      } catch (e) { handleError(e); }
+      finally { isUpdating = false; refreshData(); }
+    }
+
+    async function updateKeeperCost(playerName, cost) {
+      if (isUpdating) return;
+      try {
+        isUpdating = true; showSpinner();
+        const ref = await getDocRefByName(playerName);
+        await ref.update({ keeperCost: Number(cost)||0 });
+        showMessage('Keeper cost updated', 'success');
+      } catch (e) { handleError(e); }
+      finally { isUpdating = false; refreshData(); }
+    }
+
+  async function updateTargetStatus(playerName, isChecked) {
+  if (isUpdating) return;
+  try {
+    isUpdating = true;
+    showSpinner();
+
+    const ref = await getDocRefByName(playerName);
+    await ref.update({ target: !!isChecked });
+
+    showMessage(`Target ${isChecked ? 'added' : 'removed'} for ${playerName}`, 'success');
+  } catch (e) {
+    handleError(e);
+  } finally {
+    isUpdating = false;
+    hideSpinner();
+    // Update both panes:
+    // - Mock panel updates via its snapshot listener automatically
+    // - Left table needs a refresh to reflect checkbox state
+    loadPlayers();
+  }
+}
+
+    async function clearKeeperSelections() {
+      if (!confirm('Clear all keeper selections?')) return;
+      try {
+        isUpdating = true; showSpinner();
+        const snap = await db.collection('players').get();
+        let batch = db.batch(); let count = 0;
+        snap.forEach(doc => {
+          batch.update(doc.ref, { keeper: "No", keeperCost: 0 });
+          if (++count % 400 === 0) { batch.commit(); batch = db.batch(); }
+        });
+        await batch.commit();
+        showMessage('Keeper selections cleared', 'success');
+      } catch (e) { handleError(e); }
+      finally { isUpdating = false; refreshData(); }
+    }
+
+    async function clearTargetSelections() {
+      if (!confirm('Clear all target selections?')) return;
+      try {
+        isUpdating = true; showSpinner();
+        const q = await db.collection('players').where('target','==', true).get();
+        let batch = db.batch();
+        q.forEach(doc => batch.update(doc.ref, { target: false }));
+        await batch.commit();
+        showMessage('Target selections cleared', 'success');
+      } catch (e) { handleError(e); }
+      finally { isUpdating = false; hideSpinner(); }
+    }
+
+    async function resetMockDraft() {
+      if (!confirm('Reset mock draft and clear keepers/targets?')) return;
+      try {
+        isUpdating = true; showSpinner();
+        const snap = await db.collection('players').get();
+        let batch = db.batch(); let count = 0;
+        snap.forEach(doc => {
+          batch.update(doc.ref, { keeper: "No", keeperCost: 0, target: false });
+          if (++count % 400 === 0) { batch.commit(); batch = db.batch(); }
+        });
+        await batch.commit();
+        showMessage('Mock draft reset', 'success');
+      } catch (e) { handleError(e); }
+      finally { isUpdating = false; hideSpinner(); }
+    }
+
+    function forceRecalculation() {
+      showMessage('Values load from Firestore — no server recalculation needed.', 'success');
+      refreshData();
+    }
+
+  async function resetAllKeeperCostsToZero(){
+  if (!confirm('Set Keeper Cost = $0 for ALL players?')) return;
+  try {
+    showSpinner();
+
+    // Make sure we’re authenticated (popup fallback → redirect if needed)
+    if (!auth.currentUser) {
+      try {
+        await auth.signInWithPopup(provider);
+      } catch (e) {
+        if (String(e.code||'').includes('popup')) {
+          await auth.signInWithRedirect(provider);
+          return;
+        }
+        throw e;
+      }
+    }
+
+    // Batch updates in chunks of 400
+    const snap = await db.collection('players').get();
+    let batch = db.batch(), count = 0;
+    const commits = [];
+    snap.forEach(doc => {
+      batch.update(doc.ref, { keeperCost: 0 });
+      if (++count % 400 === 0) { commits.push(batch.commit()); batch = db.batch(); }
+    });
+    commits.push(batch.commit());
+    await Promise.all(commits);
+
+    showMessage('All keeper costs set to $0', 'success');
+  } catch (e) {
+    handleError(e);
+  } finally {
+    hideSpinner();
+    // Refresh the left table so you immediately see 0s reflected
+    loadPlayers();
+  }
+}
+
+
+    function refreshData() {
+      loadPlayers();
+      loadMockDraft();
+    }
+
+    window.loadPlayers = loadPlayers;
+    window.loadMockDraft = loadMockDraft;
+    window.refreshData = refreshData;
+    window.updateKeeperStatus = updateKeeperStatus;
+    window.updateKeeperCost = updateKeeperCost;
+    window.updateTargetStatus = updateTargetStatus;
+    window.clearKeeperSelections = clearKeeperSelections;
+    window.clearTargetSelections = clearTargetSelections;
+    window.resetMockDraft = resetMockDraft;
+    window.forceRecalculation = forceRecalculation;
+    window.resetAllKeeperCostsToZero = resetAllKeeperCostsToZero;
+
+    window.onload = () => { loadPlayers(); loadMockDraft(); };
+  </script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # Draft Prep Machine: design
 
-Status: draft, Nov 18, 2026. No code yet. League rules: docs/rules/league-rules.md.
+Status: draft, Nov 18, 2026. No code yet. League rules: docs/rules/league-rules.md. Nic's earlier work: docs/draft-prep/reference/ (see References).
 
 ## Goal
 
@@ -56,9 +56,9 @@ The original question, answered from 2022–2026:
 Two numbers per player (Nic, Nov 18):
 
 - **Cost** (what he will sell for): Nic's 2026 board method. FantasyPros consensus $ x league tier factor x keeper-aware base inflation, with a bid floor and ceiling. It predicted 2026 prices at 0.96. Tier factors refit on many seasons, not just 2025, and nudged by personas.
-- **Worth** (what he is worth to us): projected points over replacement turned into dollars so the pool's money is spent (the Python pipeline's approach).
+- **Worth** (what he is worth to us): the 2026FF_PreDraft_App pipeline's stages 1, 3, 4, 5: shrink projections toward the mean, points over replacement per game, tier breaks where the gap exceeds half the position's projection error, then $2,400 spread by VORP with a $1 floor. Every constant (replacement level, projection error, shrink, exponent) re-measured from this repo's history, scored with 6-pt pass TDs.
 - **Edge** = worth minus cost. History: buying above the bid ceiling returned 1.8 VORP/$ in 2026 vs 2.6 within it; 2018-22 overpays returned 1.2-1.6 vs 2.7 for fair prices.
-- **Tiers**: ranking tiers by projected points, cut where the gap between players is biggest; price bands from history.
+- **Tiers**: ranking tiers by projected points, cut where the gap exceeds half the position's projection error; price bands from history. Show tiers and $ ranges, not exact ranks (the pipeline's Monte Carlo check: adjacent ranks flip often).
 
 ## 4. Keepers
 
@@ -123,6 +123,21 @@ A simple password screen on the draft prep pages, to keep leaguemates out while 
 4. Roster builder (both engines).
 5. Nomination.
 6. Backtest, then load Nic's projections next summer.
+
+## References
+
+Nic's earlier work, kept for reference only. Build from this repo's data; re-measure, don't copy, their constants.
+
+| File | What it is |
+|---|---|
+| `reference/2026_Draft_Board.xlsx` | The 2026 board: tiered cost model, keepers, 2025 backtest. Source of the cost method. |
+| `reference/Draft_Value_Methodology.md` | How the board's numbers are calculated. |
+| `reference/Legacy_vs_2026_Comparison.md` | 2025 app vs. the Python pipeline. Errors: QB max is 4, not 2; keeper raises are modeled in this repo. |
+| `reference/Draft_Intelligence_Spec.md` | Draft-day budget, scarcity and buy/wait/pass spec. Later phase. Budget reserve math reused by the builder. |
+| `reference/legacy-Index.html`, `legacy-Baseline_Calcs.js` | 2025 Apps Script/Firebase app (config redacted). UI ideas only: keeper No/Yes/My Keeper, target checkbox, mock roster panel. |
+| github.com/nicf8814/2026ff_predraft_app | Python pipeline (source of the worth method). Stale: scores pass TDs at 4; rules doc says max 2 QB and exactly 2 keepers; its measured constants can't be audited (source workbook missing). Its `2026_draft_results.csv` is 2025's auction. |
+
+Findings from that repo to check against our data: 120 pts/week was only the 62nd percentile in 2025 and a top-3 finish needed about 128+; teams left about 14.6 pts/week on the bench in 2025.
 
 ## Open questions
 
