@@ -5,7 +5,7 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'rea
 import { useLeague } from '../data/store.tsx';
 import { draftsUrl, validateDrafts, type DraftSeason, type Drafts } from '../data/drafts.ts';
 import type { OwnerKey } from '../data/history.ts';
-import { buildDraftBook, ordinal, posRank, REPLACEMENT, type DraftBook, type DraftPick } from '../engine/drafts.ts';
+import { buildDraftBook, ordinal, posRank, type DraftBook, type DraftPick } from '../engine/drafts.ts';
 import { crewName, ownerName, teamOwners, type Hist, type Season } from '../engine/history.ts';
 import { Empty, fmt, Seg, Sheet, signed, tone } from '../ui/components.tsx';
 import { Filters } from '../ui/filters.tsx';
@@ -55,13 +55,13 @@ export function ValueHelp({ label = 'How value is worked out' }: { label?: strin
       <div id={id} popover="auto" className="popcard" role="dialog" aria-label={label}>
         <p className="mb-2 font-display text-lg font-bold [font-stretch:85%]">How value is worked out</p>
         <ol className="grid list-decimal gap-1.5 pl-5 text-sm text-ink-2">
-          <li><span className="text-ink">Replacement level.</span> What the 12th-best drafted QB or TE, the 30th RB or the 36th WR scored that season: about what $1 buys.</li>
-          <li><span className="text-ink">Points over replacement.</span> His season points minus that level (none if below it).</li>
-          <li><span className="text-ink">The draft's going rate.</span> Every non-keeper's dollars above $1, divided by their points over replacement. About $0.30 to $0.60 a point.</li>
-          <li><span className="text-ink">Worth</span> = $1 + points over replacement × going rate. <span className="text-ink">Value</span> = worth − price paid.</li>
+          <li><span className="text-ink">The price of each finish.</span> Every draft's prices by position, most expensive first: what the 1st RB went for, the 2nd, and so on. Kept players are slotted in at what they'd have cost at auction (their market price times how much the league overpaid that year).</li>
+          <li><span className="text-ink">Smoothed.</span> Each slot is averaged over that draft and the ones either side, so one bidding war doesn't swing it.</li>
+          <li><span className="text-ink">Worth</span> = the price of his finish at his position: an RB2 season is worth what the 2nd RB costs. <span className="text-ink">Value</span> = worth − price paid.</li>
+          <li><span className="text-ink">Points for his price:</span> what players bought near his price at his position usually scored, in the drafts around his.</li>
         </ol>
-        <p className="mt-3 text-sm text-ink-2">Example: in 2020 the 12th TE scored 84. Kelce scored 208, 124 over. That draft paid $0.45 a point, so he was worth $1 + 124 × $0.45 = $56. He cost $49: value +$7.</p>
-        <p className="mt-2 text-xs text-ink-3">Hindsight: it shows how a pick turned out, not whether it was a good bet at the time. Keepers are judged against their keeper price. Tap anywhere to close.</p>
+        <p className="mt-3 text-sm text-ink-2">Example: in 2016 David Johnson, kept at $11, finished RB1. The 1st RB slot cost $83 across 2015-2017, so he was worth $83: value +$72. An $11 RB usually scored about 95; he scored 326.</p>
+        <p className="mt-2 text-xs text-ink-3">Real league prices, keeper inflation included: what you'd have paid for that season. QBs, TEs and kickers have their own, cheaper curves. Hindsight: it shows how a pick turned out, not whether it was a good bet. Keepers are judged against their keeper price. Tap anywhere to close.</p>
       </div>
     </>
   );
@@ -207,8 +207,6 @@ function SeasonDetail({ H, book, x, ps, onYear }: { H: Hist; book: DraftBook; x:
   const season = H.byYear.get(x.year);
   const row = season?.rows.find((r) => r.owner === x.owner);
   const b = book.basis.get(x.year);
-  const repl = b?.repl[x.pos];
-  const over = x.pts === null || repl === undefined ? null : Math.max(0, Math.round(x.pts - repl));
   const rank = posRank(book, x);
   const i = ps.indexOf(x);
   const usage = x.held === null ? (s?.pts === 'to-date' ? 'Weekly use shows once the season has scores.' : 'Weekly lineups not recorded.')
@@ -231,17 +229,18 @@ function SeasonDetail({ H, book, x, ps, onYear }: { H: Hist; book: DraftBook; x:
         <Row label="Price reference" note={x.ref === null ? 'Not recorded this year' : s?.ref === 'est' ? "Export estimate, not a Sleeper number" : 'ESPN average auction value'}>{x.ref === null ? '–' : `$${Math.round(x.ref)}`}</Row>
         <Row label="Projected points" note={x.proj === null ? (x.year < 2018 ? 'ESPN projections start in 2018' : 'Not recorded for this player') : projSource(s)}>{x.proj === null ? '–' : fmt(x.proj, 0)}</Row>
         <Row label="Season points" note={[rank && `${x.pos}${rank} among drafted ${x.pos}s`, s?.pts === 'rostered' && 'weeks on a league roster only', s?.pts === 'to-date' && 'season to date'].filter(Boolean).join(', ')}>{x.pts === null ? '–' : fmt(x.pts, 0)}</Row>
-        <Row label="Worth" note="what his season was worth at that draft's prices">{money(x.worth)}</Row>
+        <Row label="Worth" note="what his finish costs at auction">{money(x.worth)}</Row>
         <Row label="Value" note="worth minus paid"><Value v={x.value} /></Row>
+        <Row label="Points for his price" note={x.xPts === null ? (s?.pts === 'to-date' ? 'once the season is over' : 'too few players near his price') : `what a $${x.price} ${x.pos} usually scored`}>{x.xPts === null ? '–' : fmt(x.xPts, 0)}</Row>
+        <Row label="Over his price" note="season points minus that">{x.xPts === null || x.pts === null ? '–' : signed(x.pts - x.xPts, 0)}</Row>
       </dl>
-      {x.worth !== null && b && repl !== undefined && (
+      {x.worth !== null && b && rank !== null && (
         <details className="border-t border-rule">
           <summary className="flex min-h-11 cursor-pointer items-center justify-between text-sm">How this value was worked out <span className="text-xs text-ink-3">{x.year} draft</span></summary>
           <ol className="mb-3 grid max-w-[70ch] list-decimal gap-1 pl-5 text-sm text-ink-2">
-            <li>Replacement level: the {ordinal(REPLACEMENT[x.pos] ?? 12)}-best drafted {x.pos} in {x.year} scored <span className="num">{fmt(repl, 0)}</span>.</li>
-            <li>{x.name} scored <span className="num">{fmt(x.pts, 0)}</span>, so <span className="num">{over}</span> points over replacement{over === 0 ? ' (none, so he was worth the $1 minimum)' : ''}.</li>
-            <li>That draft paid <span className="num">${b.dollarsPerPoint.toFixed(2)}</span> per point over replacement.</li>
-            <li>Worth = $1 + {over} × ${b.dollarsPerPoint.toFixed(2)} = <span className="num font-semibold">${x.worth}</span>. Value = worth − paid = <Value v={x.value} />.</li>
+            <li>{x.name} scored <span className="num">{fmt(x.pts, 0)}</span>: {x.pos}{rank} among drafted {x.pos}s{s?.pts === 'to-date' ? ' so far' : ''}.</li>
+            <li>The {ordinal(rank)} {x.pos} price slot averaged <span className="num">${fmt(b.curve[x.pos]?.[rank - 1] ?? 1, 0)}</span> across the {x.year - 1}-{x.year + 1} drafts{b.inflation ? ` (in ${x.year} the league paid ${Math.round((b.inflation - 1) * 100)}% over market for auctioned players)` : ''}.</li>
+            <li>Worth = <span className="num font-semibold">${x.worth}</span>. Value = worth − paid = <Value v={x.value} />.</li>
           </ol>
         </details>
       )}

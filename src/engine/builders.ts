@@ -6,7 +6,7 @@
 //   draft    dollars of hindsight value per draft, open-auction picks only (engine/drafts.ts)
 //   keeper   the same dollars on kept players, but against what every OTHER keeper returned that
 //            season. The keeper price is set by a rule, not an auction, so the whole field swings
-//            with the year: a keeper was $14 underwater on average in 2022 and $6 up in 2018. The
+//            with the year: a keeper was $6 underwater on average in 2022 and $12 up in 2018. The
 //            raw dollars are kept as keeperAbs; only the relative figure is ranked.
 //   scoring  points per game against the league average that season, averaged (history.ts index)
 //

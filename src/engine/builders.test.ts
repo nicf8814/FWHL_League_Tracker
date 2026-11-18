@@ -49,9 +49,9 @@ test('each measure is ranked on its own, never blended', () => {
   const lifers = bs.filter((b) => b.lifer);
   // The reason there is no single score: these two are mirror images of each other.
   assert.equal(bestAndWorstBuilders(lifers, 'draft').best!.owner, 'chandler-hovik');
-  assert.equal(bestAndWorstBuilders(lifers, 'draft').worst!.owner, 'wes-anderson');
-  assert.equal(bestAndWorstBuilders(lifers, 'keeper').best!.owner, 'wes-anderson');
-  assert.equal(bestAndWorstBuilders(lifers, 'keeper').worst!.owner, 'chandler-hovik');
+  assert.equal(bestAndWorstBuilders(lifers, 'keeper').worst!.owner, 'braedyn-jones');
+  assert.ok(who('chandler-hovik').keeper! < 0, 'the best drafter is a below-average keeper');
+  assert.equal(bestAndWorstBuilders(lifers, 'keeper').best!.owner, 'nicholas-ferrara');
   // Scoring index is finished seasons only, so it is stable.
   assert.equal(bestAndWorstBuilders(lifers, 'index').best!.owner, 'nick-heisterkamp');
   assert.equal(who('nick-heisterkamp').index, 1.077);
@@ -59,14 +59,14 @@ test('each measure is ranked on its own, never blended', () => {
 
 test('keepers are judged against that season\'s keeper market, not the open auction', () => {
   const lifers = bs.filter((b) => b.lifer);
-  // The keeper price is a rule, so the whole field swings by year. Against the open auction almost
-  // everyone looks bad; against the other keepers that season most managers are near even.
-  assert.ok(lifers.filter((b) => (b.keeperAbs ?? 0) > 0).length <= 4, 'raw dollars punish nearly everyone');
-  assert.ok(lifers.filter((b) => (b.keeper ?? 0) > 0).length >= 8, 'the relative figure does not');
-  // Correcting for the year does not rescue the order: Hovik is last either way.
-  const worstAbs = [...lifers].sort((a, b) => (a.keeperAbs ?? 0) - (b.keeperAbs ?? 0))[0]!;
-  assert.equal(worstAbs.owner, 'chandler-hovik');
-  assert.equal(bestAndWorstBuilders(lifers, 'keeper').worst!.owner, 'chandler-hovik');
+  // The keeper price is a rule, so the whole field swings by year. Priced against what their finish
+  // costs at auction (keepers' inflation included), most keepers come out ahead in raw dollars;
+  // against the other keepers that season about half the managers are above even.
+  assert.ok(lifers.filter((b) => (b.keeperAbs ?? 0) > 0).length >= 10, 'raw dollars: keeping usually pays');
+  assert.ok(lifers.filter((b) => (b.keeper ?? 0) > 0).length >= 7, 'the relative figure splits the field');
+  // Hovik and Braedyn are the two lowest either way.
+  const worstAbs = [...lifers].sort((a, b) => (a.keeperAbs ?? 0) - (b.keeperAbs ?? 0)).slice(0, 2).map((b) => b.owner).sort();
+  assert.deepEqual(worstAbs, ['braedyn-jones', 'chandler-hovik']);
   // Every keeper beating its own season's average is counted, and the rate agrees with the count.
   for (const b of lifers) if (b.beatRate !== null) assert.equal(b.beatRate, b.beat / b.keepers);
   assert.ok(ranked(who('travis-mattson'), 'keeper'));
