@@ -11,8 +11,10 @@ import type { PrepRow } from './draftPrep.ts';
 import { POS_MAX, SLOTS } from './rosterPlan.ts';
 
 // bid: Nic's own bids instead of a persona. planned: players he bids exactly (his plan); everyone else he
-// bids follows the same roster-shape rules as the other teams.
-export interface SimTeam { name: string; budget: number; filled: Partial<Record<PrepPos, number>>; persona: Persona | null; bid?: (r: PrepRow) => number; planned?: Set<string> }
+// bids follows the same roster-shape rules as the other teams. market: off-plan players are bid like a
+// plain owner (expected cost, money pressure, no persona habits) instead of by bid(), so he spends his
+// money like a real team (Nic, Nov 18: $1 on everyone else left ~$100 on the table).
+export interface SimTeam { name: string; budget: number; filled: Partial<Record<PrepPos, number>>; persona: Persona | null; bid?: (r: PrepRow) => number; planned?: Set<string>; market?: boolean }
 export interface SimResult { runs: number; get: number; price: number; buyers: [string, number][] } // get: share of runs
 export interface SimOut { players: Map<string, SimResult>; planOdds: number | null }
 export interface Sale { n: number; by: string; key: string; name: string; pos: PrepPos; winner: string | null; price: number; winBid: number; runnerUp: string | null; runnerBid: number }
@@ -169,8 +171,9 @@ export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow
         if (x < 1) { if (!must && rand() >= x) return 0; x = 1; }
         return x;
       };
-      if (t.bid) {
-        w = t.planned?.has(keyOf(r)) ? t.bid(r) : shaped(t.bid(r));
+      const isPlanned = t.planned?.has(keyOf(r)) ?? false;
+      if (t.bid && (isPlanned || !t.market)) {
+        w = isPlanned ? t.bid(r) : shaped(t.bid(r));
         if (t === by) w = Math.max(1, w); // the nominator opens at $1
       } else {
         w = (r.cost / calibOf(calib, r)) * Math.exp(dials.noise * gauss()) * Math.min(MAX_PRESSURE, Math.max(1 / MAX_PRESSURE, (t.left / o / perSpot) ** (dials.pressure * phase)));
@@ -183,6 +186,13 @@ export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow
         w = shaped(w);
         if (!w) return;
         w = Math.min(r.ceiling, w); // nobody past the most that slot has sold for
+      }
+      // Off-plan buys keep back the money his planned players still need (Nic, Nov 18: the rest of the
+      // team is filled around the players he wants, without spending their money).
+      if (t.bid && !isPlanned && t.planned?.size) {
+        let keep = 0;
+        for (const x of left) if (t.planned.has(keyOf(x))) keep += Math.max(0, t.bid(x) - 1);
+        w = Math.min(w, Math.max(t === by ? 1 : 0, maxBid - keep));
       }
       w = Math.min(maxBid, w);
       if (w < 1) return;
