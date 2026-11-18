@@ -26,6 +26,7 @@ A prep tool for the auction. Before the draft it shows fair and expected prices 
 | Age, injuries | Left out (no data). |
 | Access | Simple password screen on the draft prep pages (see Access). |
 | QB prices | Raised for 6-pt pass TDs, not left at history. |
+| Pricing | Cost and worth shown side by side; edge is the gap. |
 
 ## Inputs
 
@@ -52,8 +53,11 @@ The original question, answered from 2022–2026:
 
 ## 3. Valuation
 
-- **Fair price**: VORP turned into dollars so the whole pool's money is spent. If keepers were bargains, everyone left costs more.
-- **Expected price**: fair price adjusted toward what the league actually pays (history curves and personas).
+Two numbers per player (Nic, Nov 18):
+
+- **Cost** (what he will sell for): Nic's 2026 board method. FantasyPros consensus $ x league tier factor x keeper-aware base inflation, with a bid floor and ceiling. It predicted 2026 prices at 0.96. Tier factors refit on many seasons, not just 2025, and nudged by personas.
+- **Worth** (what he is worth to us): projected points over replacement turned into dollars so the pool's money is spent (the Python pipeline's approach).
+- **Edge** = worth minus cost. History: buying above the bid ceiling returned 1.8 VORP/$ in 2026 vs 2.6 within it; 2018-22 overpays returned 1.2-1.6 vs 2.7 for fair prices.
 - **Tiers**: ranking tiers by projected points, cut where the gap between players is biggest; price bands from history.
 
 ## 4. Keepers
