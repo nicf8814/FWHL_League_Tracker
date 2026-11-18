@@ -133,3 +133,17 @@ test('a plan places keepers first, fills the tightest slot and enforces the mone
   assert.ok(broke.problems.some((x) => x.includes('limit is 5')));
   assert.ok(broke.problems.some((x) => x.includes("can't fill")));
 });
+
+test('no bid can break the max-bid rule', async () => {
+  const { maxBidFor } = await import('./rosterPlan.ts');
+  const p = (name: string, bid: number) => ({ key: name, name, pos: 'WR' as PrepPos, bid, keeper: false });
+  const picks = [p('A', 96), p('B', 64), p('C', 25)];
+  assert.equal(maxBidFor(picks, null), 15 - 9); // a new player: $15 left, 9 other spots after him
+  assert.equal(maxBidFor(picks, 'C'), 40 - 10); // C's own bid back in: $40 left, 10 other spots
+  assert.equal(maxBidFor(Array.from({ length: 13 }, (_, i) => p(`X${i}`, 1)), null), 0); // roster full
+  const { posFull } = await import('./rosterPlan.ts');
+  const rbs = Array.from({ length: 5 }, (_, i) => ({ ...p(`R${i}`, 1), pos: 'RB' as PrepPos }));
+  assert.ok(posFull(rbs, 'RB') && !posFull(rbs, 'WR') && !posFull(rbs, 'TE'));
+  const twelve = Array.from({ length: 12 }, (_, i) => ({ ...p(`W${i}`, 1), pos: (i < 5 ? 'RB' : i < 10 ? 'WR' : 'TE') as PrepPos }));
+  assert.ok(posFull(twelve, 'WR') && !posFull(twelve, 'QB'), 'the last spot is the QB\'s');
+});

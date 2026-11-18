@@ -1,10 +1,11 @@
 // Draft plan panel on the Draft prep page: Nic's 13-man target roster. His flagged keepers drop in at
 // their keeper cost; "+" on a board row adds a player at his expected cost, and every bid can be typed.
+// No bid can break the max-bid rule (Art. IV): typed bids stop at the max, and + is off at $0.
 // The plan lives in this browser (localStorage), one per draft year.
 import { useState } from 'react';
 import { playerKey } from '../data/drafts.ts';
 import type { PrepRow } from '../engine/draftPrep.ts';
-import { placePlan, type PlanPick } from '../engine/rosterPlan.ts';
+import { maxBidFor, placePlan, type PlanPick } from '../engine/rosterPlan.ts';
 import { fmt, PosMark } from '../ui/components.tsx';
 
 const PLAN_KEY = 'fwhl-draft-plan'; // { year: { playerKey: bid } }
@@ -29,26 +30,33 @@ export function usePlan(year: number) {
 }
 export type Plan = ReturnType<typeof usePlan>;
 
-export function PlanButton({ row, plan, mine }: { row: PrepRow; plan: Plan; mine: boolean }) {
-  const k = rowKey(row);
-  if (mine) return <span className="text-xs text-ink-3">yours</span>;
-  if (row.keeper) return null;
-  return plan.has(k)
-    ? <button type="button" className="rowbtn h-7 rounded border border-line px-2 text-xs" onClick={() => plan.remove(k)} aria-label={`Take ${row.name} off the plan`}>✓ planned</button>
-    : <button type="button" className="rowbtn h-7 rounded border border-line px-2 text-xs" onClick={() => plan.add(k, row.cost)} aria-label={`Add ${row.name} to the plan`}>+ plan</button>;
-}
-
-export function PlanPanel({ rows, me, plan, budget }: { rows: PrepRow[]; me: string | null; plan: Plan; budget: number }) {
+// The plan's players: my keepers at their keeper cost, then the planned bids. A planned player now kept
+// by someone else is listed as gone.
+export function planPicks(rows: PrepRow[], me: string | null, bids: Record<string, number>) {
   const byKey = new Map(rows.map((r) => [rowKey(r), r]));
   const picks: PlanPick[] = [];
   for (const r of rows) if (me && r.keeper?.[3] === me) picks.push({ key: rowKey(r), name: r.name, pos: r.pos, bid: r.keeper[2], keeper: true });
   const gone: string[] = [];
-  for (const [k, bid] of Object.entries(plan.bids)) {
+  for (const [k, bid] of Object.entries(bids)) {
     const r = byKey.get(k);
     if (!r) continue;
     if (r.keeper) { if (r.keeper[3] !== me) gone.push(`${r.name} (kept by ${r.keeper[3]})`); continue; }
     picks.push({ key: k, name: r.name, pos: r.pos, bid, keeper: false });
   }
+  return { picks, gone, byKey };
+}
+
+export function PlanButton({ row, plan, mine, maxBid, full }: { row: PrepRow; plan: Plan; mine: boolean; maxBid: number; full: boolean }) {
+  const k = rowKey(row);
+  if (mine) return <span className="text-xs text-ink-3">yours</span>;
+  if (row.keeper) return null;
+  return plan.has(k)
+    ? <button type="button" className="rowbtn h-7 rounded border border-line px-2 text-xs" onClick={() => plan.remove(k)} aria-label={`Take ${row.name} off the plan`}>✓ planned</button>
+    : <button type="button" disabled={maxBid < 1 || full} title={maxBid < 1 ? 'No money or spot left' : full ? `No open spot for a ${row.pos}` : undefined} className="rowbtn h-7 rounded border border-line px-2 text-xs disabled:opacity-40" onClick={() => plan.add(k, Math.min(Math.max(1, row.cost), maxBid))} aria-label={`Add ${row.name} to the plan`}>+ plan</button>;
+}
+
+export function PlanPanel({ rows, me, plan, budget }: { rows: PrepRow[]; me: string | null; plan: Plan; budget: number }) {
+  const { picks, gone, byKey } = planPicks(rows, me, plan.bids);
   const s = placePlan(picks, budget);
   return (
     <div className="grid gap-3 rounded border border-line p-3">
@@ -70,7 +78,7 @@ export function PlanPanel({ rows, me, plan, budget }: { rows: PrepRow[]; me: str
                 <tr key={i} className="border-t border-line">
                   <td className="py-1 pr-2 text-ink-2">{label}</td>
                   <td className="pr-2">{p ? <span className="flex items-center gap-2"><PosMark pos={p.pos} />{p.name}{p.keeper && <span className="text-xs text-ink-3">keeper</span>}</span> : <span className="text-ink-3">–</span>}</td>
-                  <td className="text-right">{p && !p.keeper ? <input type="number" min={1} value={p.bid} onChange={(e) => plan.setBid(p.key, Number(e.target.value))} className="h-8 w-16 rounded border border-line bg-panel px-2 text-right" aria-label={`Bid for ${p.name}`} /> : p ? `$${p.bid}` : ''}</td>
+                  <td className="text-right">{p && !p.keeper ? <input type="number" min={1} max={maxBidFor(picks, p.key, budget)} value={p.bid} onChange={(e) => plan.setBid(p.key, Math.min(Number(e.target.value), maxBidFor(picks, p.key, budget)))} className="h-8 w-16 rounded border border-line bg-panel px-2 text-right" aria-label={`Bid for ${p.name}`} title={`Max $${maxBidFor(picks, p.key, budget)}`} /> : p ? `$${p.bid}` : ''}</td>
                   <td className="num text-right text-ink-2">{r ? `$${fmt(r.cost, 0)} ($${r.floor}–${r.ceiling})` : ''}</td>
                   <td className="num text-right text-ink-2">{r ? `$${fmt(r.worth, 0)}` : ''}</td>
                   <td className="text-right">{p && !p.keeper && <button type="button" className="rowbtn h-7 px-2 text-xs text-ink-3" onClick={() => plan.remove(p.key)} aria-label={`Remove ${p.name}`}>✕</button>}</td>
