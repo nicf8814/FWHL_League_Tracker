@@ -6,7 +6,7 @@ import { validateDraftPrep, type DraftPrep, type PrepPos } from '../data/draftPr
 import { buildDraftPrep, formatDraftPrep } from '../../scripts/draftPrep.ts';
 import { fitFlex, priceBoard, ranks, replacementRanks, tierIndex } from './draftPrep.ts';
 
-const tiers = (factor = 1) => ({ upTo: 999, label: 'All', factor, lo: 0.8, hi: 1.2, n: 10 });
+const tiers = (factor = 1) => ({ upTo: 999, label: 'All', factor, n: 10 });
 function tiny(keepers: DraftPrep['keepers'] = []): DraftPrep {
   const board: DraftPrep['board'] = [];
   for (const [pos, n, top] of [['QB', 30, 300], ['RB', 60, 250], ['WR', 80, 240], ['TE', 30, 180]] as [PrepPos, number, number][]) {
@@ -18,6 +18,7 @@ function tiny(keepers: DraftPrep['keepers'] = []): DraftPrep {
       marketYears: [[2026, 4]], tiers: { QB: [tiers()], RB: [tiers()], WR: [tiers()], TE: [tiers()] },
       projYears: [2018], shrink: { QB: 1, RB: 1, WR: 1, TE: 1 }, miss: { QB: 0.3, RB: 0.3, WR: 0.3, TE: 0.3 },
       flex: { years: [2025], flexRB: 0.5, flexWR: 0.4, flexTE: 0.1, recWR: 0.7, recTE: 0.3 },
+      slotYears: [2025], slots: { QB: [[1, 999]], RB: [[1, 999]], WR: [[1, 999]], TE: [[1, 999]] },
     },
   };
 }
@@ -55,6 +56,16 @@ test('a cheap keeper pushes everyone else up; an expensive one pulls them down',
   assert.ok(cheap.rows.find((r) => r.name === 'RB 1')!.keeper);
 });
 
+test('no cost or ceiling above what the league has paid for that slot', () => {
+  const prep = tiny();
+  prep.fit.slots = { QB: [[30, 40]], RB: [[70, 82], [60, 75]], WR: [[60, 89]], TE: [[10, 20]] };
+  const b = priceBoard(prep);
+  const rb = b.rows.filter((r) => r.pos === 'RB').sort((x, y) => y.cost - x.cost);
+  assert.deepEqual([rb[0]!.floor, rb[0]!.ceiling], [Math.round(Math.min(70, rb[0]!.cost)), 82]);
+  assert.ok(rb[0]!.cost <= 82 && rb[1]!.cost <= 75);
+  for (const r of b.rows) assert.ok(r.floor <= Math.max(1, r.cost) + 0.5 && r.cost <= r.ceiling + 0.5, `${r.name} ${r.floor} ${r.cost} ${r.ceiling}`);
+});
+
 test('the 2026 board builds, validates and prices the studs on top', () => {
   const { prep, report } = buildDraftPrep(2026);
   const v = validateDraftPrep(JSON.parse(formatDraftPrep(prep)));
@@ -68,4 +79,6 @@ test('the 2026 board builds, validates and prices the studs on top', () => {
   const cost = (n: string) => b.rows.find((r) => r.name === n)!.cost;
   assert.ok(cost('Jahmyr Gibbs') > cost('Christian McCaffrey') && cost('Christian McCaffrey') > cost('Josh Allen'));
   assert.equal(b.keeperSpend, 560);
+  const top = Math.max(...b.rows.map((r) => r.ceiling));
+  assert.ok(top <= 100, `highest ceiling ${top}`);
 });

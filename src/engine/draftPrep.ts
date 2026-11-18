@@ -8,7 +8,8 @@
 //      price, measured on recent auctions (fitMarket). Studs get bid up, the middle collapses.
 //   3. Weighted price = consensus x tier factor. The money left after keepers is spread over the open
 //      pool in proportion to it (base inflation), so keeper bargains push everyone else up.
-//   4. Bid floor and ceiling = the 20th and 80th percentile of past prices against the model, by tier.
+//   4. Bid window = the least and most the league paid for his slot (RB1, RB2, ...) in recent drafts;
+//      cost never goes over the ceiling.
 // Worth (what he is worth to a team), the 2026FF_PreDraft_App method on our own history:
 //   1. Points over replacement: the replacement player is the last starter league-wide, with FLEX and
 //      WR/TE starts split the way our league actually used them (fit.flex).
@@ -32,8 +33,6 @@ export const MARKET_YEARS_BACK = 4; // the four auctions before the draft, newes
 // 156 picks, 2024-25 Sleeper projections were pulled after the season, 2026's are current numbers.
 export const PROJ_YEARS = [2018, 2019, 2020, 2021, 2022];
 export const FLEX_YEARS = [2023, 2024, 2025]; // lineup since 2023: QB, 2 RB, 2 WR, WR/TE, FLEX
-const BAND_LO = 0.2, BAND_HI = 0.8; // bid floor and ceiling percentiles
-const MIN_BAND_N = 8; // fewer past buys than this: use the whole position's band
 const MIN_REF = 3; // consensus price below this is noise at the $1-2 minimum: left out of the fit
 
 // Rank within a list, ties sharing the better rank (two $63 RBs are both RB1).
@@ -48,22 +47,17 @@ export const tierIndex = (pos: PrepPos, rank: number) => {
 // The fitted tier for a position rank (the file's own cutoffs, so an older file still prices right).
 export const tierFor = (fit: PrepFit, pos: PrepPos, rank: number): TierFit => fit.tiers[pos].find((t) => rank <= t.upTo) ?? fit.tiers[pos].at(-1)!;
 
-function quantile(xs: number[], q: number): number {
-  if (!xs.length) return 1;
-  const s = [...xs].sort((a, b) => a - b), at = (s.length - 1) * q, lo = Math.floor(at);
-  return s[lo]! + (s[Math.min(lo + 1, s.length - 1)]! - s[lo]!) * (at - lo);
-}
 
 // A past pre-draft board: consensus prices from the same source as this year's board, so the tier
 // factors compare like with like. (Fit on ESPN's own auction values instead, the 2026 test missed real
 // prices by $5.30 on average against $3.80 for Nic's FantasyPros-based board.)
 export interface PastBoard { year: number; rows: { name: string; pos: PrepPos; price: number; rank: number | null }[] }
 
-// Tier factors and bid bands from past boards, matched to what those players sold for.
+// Tier factors from past boards, matched to what those players sold for.
 export function fitMarket(drafts: Drafts, year: number, boards: PastBoard[]): Pick<PrepFit, 'marketYears' | 'tiers'> {
   const years: [number, number][] = [];
   for (let y = year - MARKET_YEARS_BACK, w = 1; y < year; y++, w++) if (boards.some((b) => b.year === y) && drafts.seasons.some((s) => s.year === y)) years.push([y, w]);
-  type Buy = { pos: PrepPos; t: number; price: number; q: number; y: number };
+  type Buy = { pos: PrepPos; t: number; price: number; y: number };
   const buys: Buy[] = [];
   const paid: Record<string, number> = {}, share: Record<string, number> = {};
   for (const [y, w] of years) {
@@ -86,26 +80,32 @@ export function fitMarket(drafts: Drafts, year: number, boards: PastBoard[]): Pi
       const k = `${b.pos}${b.t}`;
       paid[k] = (paid[k] ?? 0) + w * b.price / totalPaid;
       share[k] = (share[k] ?? 0) + w * refs[i]! / totalRef;
-      buys.push({ ...b, q: refs[i]! / totalRef });
+      buys.push(b);
     });
   }
   const factor = (pos: PrepPos, t: number) => { const k = `${pos}${t}`; return share[k] ? paid[k]! / share[k]! : 1; };
-  // Bands: each buy's price against what the fitted tiers say it should have cost in its own draft.
-  const scale = new Map<number, number>();
-  for (const [y] of years) {
-    const ys = buys.filter((b) => b.y === y);
-    scale.set(y, ys.reduce((s, b) => s + b.price, 0) / ys.reduce((s, b) => s + b.q * factor(b.pos, b.t), 0));
-  }
-  const ratio = (b: Buy) => b.price / (b.q * factor(b.pos, b.t) * scale.get(b.y)!);
-  const tiers = Object.fromEntries(PREP_POS.map((pos) => {
-    const all = buys.filter((b) => b.pos === pos).map(ratio);
-    return [pos, TIER_CUTS[pos].map(([upTo, label], t): TierFit => {
-      const mine = buys.filter((b) => b.pos === pos && b.t === t).map(ratio);
-      const xs = mine.length >= MIN_BAND_N ? mine : all;
-      return { upTo, label, factor: round(factor(pos, t), 3), lo: round(Math.min(1, quantile(xs, BAND_LO)), 3), hi: round(Math.max(1, quantile(xs, BAND_HI)), 3), n: mine.length };
-    })];
-  })) as Record<PrepPos, TierFit[]>;
+  const tiers = Object.fromEntries(PREP_POS.map((pos) => [pos, TIER_CUTS[pos].map(([upTo, label], t): TierFit => ({
+    upTo, label, factor: round(factor(pos, t), 3), n: buys.filter((b) => b.pos === pos && b.t === t).length,
+  }))])) as Record<PrepPos, TierFit[]>;
   return { marketYears: years, tiers };
+}
+
+// Price slots: the k-th most expensive auctioned player at each position, lowest and highest paid
+// over the last SLOT_YEARS_BACK auctions. Raw prices: they already reflect what owners will pay.
+export const SLOT_YEARS_BACK = 5;
+const SLOTS = 40;
+export function fitSlots(drafts: Drafts, year: number): Pick<PrepFit, 'slotYears' | 'slots'> {
+  const years = drafts.seasons.map((s) => s.year).filter((y) => y < year && y >= year - SLOT_YEARS_BACK);
+  const slots = Object.fromEntries(PREP_POS.map((pos) => {
+    const byYear = years.map((y) => drafts.picks.filter((p) => p[0] === y && !p[4] && drafts.players[p[1]]![1] === pos).map((p) => p[3]).sort((a, b) => b - a));
+    const out: [number, number][] = [];
+    for (let k = 0; k < SLOTS; k++) {
+      const xs = byYear.map((ps) => ps[k] ?? 1);
+      out.push([Math.min(...xs), Math.max(...xs)]);
+    }
+    return [pos, out];
+  })) as Record<PrepPos, [number, number][]>;
+  return { slotYears: years, slots };
 }
 
 // Shrink and projection miss from seasons with real preseason projections.
@@ -204,11 +204,21 @@ export function priceBoard(prep: DraftPrep, keepers: KeeperRow[] = prep.keepers)
   const open = base.filter((r) => !r.keeper).sort((a, b) => weighted.get(b)! - weighted.get(a)!).slice(0, openSlots);
   const pool = open.reduce((s, r) => s + weighted.get(r)!, 0);
   const inflation = pool ? moneyLeft / pool : 1;
-  for (const x of base) {
-    const t = tierFor(fit, x.pos, x.rank);
-    x.cost = round(weighted.get(x)! * inflation, 1);
-    x.floor = Math.max(1, Math.round(x.cost * t.lo));
-    x.ceiling = Math.max(1, Math.round(x.cost * t.hi));
+  for (const x of base) x.cost = round(weighted.get(x)! * inflation, 1);
+
+  // Bid window from the league's own history: his slot is where his cost ranks among auctioned
+  // players at his position (RB1, RB2, ...). Floor = the least that slot sold for in the last
+  // SLOT_YEARS_BACK drafts, ceiling = the most. Cost never goes over the ceiling (Nic, Nov 18: the
+  // model's $103 and $133 for Gibbs were more than anyone has paid; the record is $100, 2018).
+  for (const pos of PREP_POS) {
+    const slots = fit.slots[pos];
+    base.filter((r) => r.pos === pos && !r.keeper).sort((a, b) => b.cost - a.cost).forEach((x, k) => {
+      const [lo, hi] = slots[Math.min(k, slots.length - 1)] ?? [1, x.cost];
+      x.cost = Math.min(x.cost, hi);
+      x.floor = Math.max(1, Math.round(Math.min(lo, x.cost)));
+      x.ceiling = Math.max(1, Math.round(hi));
+    });
+    for (const x of base) if (x.pos === pos && x.keeper) { x.floor = Math.max(1, Math.round(x.cost)); x.ceiling = x.floor; }
   }
 
   // Worth.

@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { playerKey, validateDrafts, type Drafts } from '../src/data/drafts.ts';
 import { PREP_POS, type BoardRow, type DraftPrep, type KeeperRow, type PrepPos } from '../src/data/draftPrep.ts';
 import type { Lineups } from '../src/data/lineups.ts';
-import { FLEX_YEARS, MARKET_YEARS_BACK, fitFlex, fitMarket, fitProjections, type PastBoard } from '../src/engine/draftPrep.ts';
+import { FLEX_YEARS, MARKET_YEARS_BACK, fitFlex, fitMarket, fitProjections, fitSlots, type PastBoard } from '../src/engine/draftPrep.ts';
 import { parseCsv } from './updates.ts';
 
 const TEAMS = 12, BUDGET = 200, ROSTER = 13; // docs/rules/league-rules.md, Art. II and IV
@@ -69,7 +69,7 @@ export function buildDraftPrep(year: number, dir = 'data/draft-prep', seed = 'pu
   const prep: DraftPrep = {
     version: 1, year, teams: TEAMS, budget: BUDGET, roster: ROSTER,
     source: `${folder}/board.csv`,
-    fit: { ...fitMarket(drafts, year, past), ...fitProjections(drafts), flex: fitFlex([...starts.values()], FLEX_YEARS) },
+    fit: { ...fitMarket(drafts, year, past), ...fitProjections(drafts), flex: fitFlex([...starts.values()], FLEX_YEARS), ...fitSlots(drafts, year) },
     board, keepers,
   };
   const names = new Set(board.map((b) => playerKey(b[0], b[1])));

@@ -88,7 +88,7 @@ function Board() {
     <Section title={`${prep.year} draft board`} aside={`${prep.keepers.length} keepers, $${board.keeperSpend} kept`}>
       <p className="headline-sm">${board.moneyLeft.toLocaleString()} left for {board.openSlots} open spots</p>
       <ul className="grid max-w-[75ch] gap-1 text-sm text-ink-2">
-        <li><span className="text-ink">Cost</span>: what he should sell for. Consensus price × what the league paid for his price tier ({mkt} auctions) × the money left after keepers. Floor and ceiling hold the middle 60% of past prices.</li>
+        <li><span className="text-ink">Cost</span>: what he should sell for. Consensus price × what the league paid for his price tier ({mkt} auctions) × the money left after keepers. The window is the least and most his slot (RB1, RB2, ...) sold for in the {prep.fit.slotYears[0]}-{prep.fit.slotYears.at(-1)} drafts, and cost never goes over it.</li>
         <li><span className="text-ink">Worth</span>: what his projected points over the last starter are worth, $1 plus ${fmt(board.perVorp, 2)} a point, after shrinking projections the way past ones fell short ({Object.entries(prep.fit.shrink).map(([p, s]) => `${p} ×${s}`).join(', ')}).</li>
         <li><span className="text-ink">Edge</span>: worth − cost. Overpaying is what hurts: 2026 buys more than $10 over worth gave back about $26 each by Week 10.</li>
       </ul>

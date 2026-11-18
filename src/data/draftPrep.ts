@@ -12,8 +12,6 @@ export interface TierFit {
   upTo: number;
   label: string;
   factor: number; // what the league paid for this tier vs. its share of consensus price (1 = in line)
-  lo: number; // bid floor as a share of the expected price (20th percentile of past prices)
-  hi: number; // bid ceiling as a share of the expected price (80th percentile)
   n: number; // past auction buys behind the numbers
 }
 
@@ -24,6 +22,10 @@ export interface PrepFit {
   shrink: Record<PrepPos, number>; // points over replacement actually delivered per projected point
   miss: Record<PrepPos, number>; // average projection miss as a share of the projection
   flex: { years: number[]; flexRB: number; flexWR: number; flexTE: number; recWR: number; recTE: number }; // share of FLEX and WR/TE starts by position
+  // Guardrail (Nic, Nov 18: nobody pays $133): by position, the [lowest, highest] price the league
+  // paid for the k-th most expensive auctioned player, over slotYears. Index 0 = the priciest.
+  slotYears: number[];
+  slots: Record<PrepPos, [number, number][]>;
 }
 
 // [name, position, NFL team, projected season points (league scoring), consensus price ($200, 12 teams)]
@@ -59,8 +61,9 @@ export function validateDraftPrep(raw: unknown): { ok: true; value: DraftPrep } 
   }
   for (const p of PREP_POS) {
     const t = d.fit.tiers?.[p];
-    if (!Array.isArray(t) || !t.length || t.some((x) => !(x.factor > 0) || !(x.lo > 0) || !(x.hi >= x.lo))) errors.push(`bad ${p} tiers`);
+    if (!Array.isArray(t) || !t.length || t.some((x) => !(x.factor > 0))) errors.push(`bad ${p} tiers`);
     if (!(d.fit.shrink?.[p] > 0) || !(d.fit.miss?.[p] > 0)) errors.push(`missing ${p} shrink or projection miss`);
+    if (!Array.isArray(d.fit.slots?.[p])) errors.push(`missing ${p} price slots`);
   }
   return errors.length ? { ok: false, errors } : { ok: true, value: d };
 }
