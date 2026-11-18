@@ -5,11 +5,10 @@
 // shortcut: password screen only, the data is public in the repo; revisit if Nic shares the tool or wants real privacy.
 import { useEffect, useMemo, useState } from 'react';
 import { playerKey } from '../data/drafts.ts';
-import { PREP_POS, type DraftPrep as Prep, type DraftPrepFile, type KeeperRow, type Persona, type PrepPos } from '../data/draftPrep.ts';
-import { simulate, type SimOut, type SimTeam } from '../engine/mockAuction.ts';
+import type { DraftPrep as Prep, DraftPrepFile, KeeperRow, Persona } from '../data/draftPrep.ts';
+import { simulate, type Nomination, type SimOut, type SimTeam } from '../engine/mockAuction.ts';
 import { useLeague } from '../data/store.tsx';
-import { SEASON_GAMES, gamesBand, priceBoard, standInBoard, type PrepRow, type SeasonLine, type StandInRow } from '../engine/draftPrep.ts';
-import { keeperCalls, keeperSet } from '../engine/keepers.ts';
+import { gamesBand, priceBoard, type PrepRow, type StandInRow } from '../engine/draftPrep.ts';
 import { teamName } from '../engine/league.ts';
 import { fmt, PosMark, Section, Seg, signed, tone } from '../ui/components.tsx';
 import { DataTable, TableBar, useTable, type Col, type FilterDef } from '../ui/table.tsx';
@@ -17,17 +16,8 @@ import { PlanButton, PlanPanel, planPicks, rowKey, usePlan } from './DraftPlan.t
 import { maxBidFor, posFull } from '../engine/rosterPlan.ts';
 import { autoFill, type Strategy } from '../engine/autoFill.ts';
 import { DraftGate, Help, usePersonas } from './draftCommon.tsx';
+import { useKeepers, useLiveEdition } from './draftLive.ts';
 
-const SWITCH_KEY = 'fwhl-draft-prep-keepers'; // per viewer: keeper switches by year { year: { name|pos: kept } }
-
-
-type Switches = Record<string, Record<string, boolean>>;
-function readSwitches(): Switches {
-  try { return JSON.parse(localStorage.getItem(SWITCH_KEY) ?? '{}') as Switches; } catch { return {}; }
-}
-function saveSwitches(s: Switches) {
-  try { localStorage.setItem(SWITCH_KEY, JSON.stringify(s)); } catch { /* switches last for this visit */ }
-}
 
 export default function DraftPrep() {
   return <DraftGate title="Draft board">{(f) => <Editions prepFile={f} />}</DraftGate>;
@@ -41,80 +31,28 @@ function Editions({ prepFile }: { prepFile: DraftPrepFile }) {
   return (
     <div className="grid gap-4">
       {eds.length > 1 && <Seg label="Board" value={String(ed.year)} options={eds.map((e) => [String(e.year), label(e)] as const)} onChange={(v) => setYear(Number(v))} />}
-      {ed.kind === 'standin' ? <LiveBoard prep={ed} personas={prepFile.personas ?? []} /> : <Board prep={ed} defaultKeepers={ed.keepers} personas={prepFile.personas ?? []} ownerOf={(p) => p.key} />}
+      {ed.kind === 'standin' ? <LiveBoard prep={ed} personas={prepFile.personas ?? []} nomination={prepFile.nomination} /> : <Board prep={ed} defaultKeepers={ed.keepers} personas={prepFile.personas ?? []} nomination={prepFile.nomination} ownerOf={(p) => p.key} />}
     </div>
   );
 }
 
 // Next year's board, filled from this season: points per game and games played (every week with
 // points), the latest trade values, and injuries (games he can still play this season).
-function LiveBoard({ prep, personas }: { prep: Prep; personas: Persona[] }) {
-  const { idx, base, settings } = useLeague();
+function LiveBoard({ prep, personas, nomination }: { prep: Prep; personas: Persona[]; nomination?: Nomination }) {
+  const { idx, settings } = useLeague();
+  const filled = useLiveEdition(prep);
   const me = settings.myTeamId !== null && idx.teams.has(settings.myTeamId) ? teamName(idx, settings.myTeamId) : null;
-  const filled = useMemo(() => {
-    const si = prep.standIn!;
-    const played = new Map<string, { pts: number; games: number }>();
-    for (const [w, week] of idx.weeks) {
-      if (w > idx.scoresThrough) continue;
-      for (const [pid, pw] of week) {
-        if (!pw.points || pw.points <= 0) continue;
-        const g = played.get(pid) ?? { pts: 0, games: 0 };
-        g.pts += pw.points; g.games++;
-        played.set(pid, g);
-      }
-    }
-    const lines: SeasonLine[] = [];
-    for (const [pid, p] of idx.players) {
-      if (!(PREP_POS as readonly string[]).includes(p.pos)) continue;
-      const g = played.get(pid);
-      const vals = [idx.chart.peaked.get(pid), idx.chart.menton.get(pid)].filter((v): v is number => v != null);
-      if (!g && !vals.length) continue;
-      const back = base.returnWeek(pid);
-      let left = 0;
-      for (let w = idx.scoresThrough + 1; w <= SEASON_GAMES; w++) if (back < SEASON_GAMES + 1 && w >= back) left++;
-      lines.push({ name: p.name, pos: p.pos as PrepPos, team: p.nflTeam ?? '', ppg: g ? g.pts / g.games : null, games: g?.games ?? 0, share: Math.min(1, ((g?.games ?? 0) + left) / SEASON_GAMES), value: vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null });
-    }
-    const { board, rows } = standInBoard(si, lines);
-    // Keeper guesses: each roster's best calls from the Keepers page (locked contracts first).
-    const calls = keeperCalls(base);
-    const keepers: KeeperRow[] = [];
-    for (const [team, roster] of idx.roster) {
-      for (const pid of keeperSet(calls, roster, idx.ds.season.keeper.slots)) {
-        const p = idx.players.get(pid), c = calls.get(pid);
-        if (p && c?.cost != null && (PREP_POS as readonly string[]).includes(p.pos)) keepers.push([p.name, p.pos as PrepPos, c.cost, teamName(idx, team)]);
-      }
-    }
-    // Everyone with a keeper cost can be switched on.
-    const candidates: KeeperRow[] = idx.ds.keepers.flatMap((k) => {
-      const p = idx.players.get(k.playerId), team = idx.owner.get(k.playerId);
-      return p && k.cost != null && team !== undefined && (PREP_POS as readonly string[]).includes(p.pos) ? [[p.name, p.pos as PrepPos, k.cost, teamName(idx, team)] as KeeperRow] : [];
-    });
-    return { prep: { ...prep, board }, rows, keepers, candidates };
-  }, [prep, idx, base]);
-  return <Board prep={filled.prep} defaultKeepers={filled.keepers} candidates={filled.candidates} live={filled.rows} weeks={idx.scoresThrough} me={me} personas={personas} ownerOf={(p) => (idx.teams.has(p.teamId) ? teamName(idx, p.teamId) : p.name)} />;
+  return <Board prep={filled.prep} defaultKeepers={filled.keepers} candidates={filled.candidates} live={filled.rows} weeks={idx.scoresThrough} me={me} personas={personas} nomination={nomination} ownerOf={(p) => (idx.teams.has(p.teamId) ? teamName(idx, p.teamId) : p.name)} />;
 }
 
 // ownerOf: a persona's owner as the keeper rows name him (team name on the live board, owner key in a test run).
-interface BoardProps { prep: Prep; defaultKeepers: KeeperRow[]; candidates?: KeeperRow[]; live?: Map<string, StandInRow>; weeks?: number; me?: string | null; personas: Persona[]; ownerOf: (p: Persona) => string }
+interface BoardProps { prep: Prep; defaultKeepers: KeeperRow[]; candidates?: KeeperRow[]; live?: Map<string, StandInRow>; weeks?: number; me?: string | null; personas: Persona[]; nomination?: Nomination; ownerOf: (p: Persona) => string }
 
-function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks, me = null, personas, ownerOf }: BoardProps) {
+function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks, me = null, personas, nomination, ownerOf }: BoardProps) {
   const P = usePersonas(personas);
   const plan = usePlan(prep.year);
-  const [switches, setSwitches] = useState<Switches>(readSwitches);
-  const mine = switches[prep.year] ?? {};
+  const { keepers, candidateKeys, toggle, reset, changed, mine } = useKeepers(prep.year, defaultKeepers, candidates);
   const keyOf = (name: string, pos: string) => playerKey(name, pos);
-  const keepers = useMemo(() => {
-    const on = new Set(defaultKeepers.map((k) => keyOf(k[0], k[1])));
-    for (const [k, v] of Object.entries(mine)) if (v) on.add(k); else on.delete(k);
-    return candidates.filter((k) => on.has(keyOf(k[0], k[1])));
-  }, [defaultKeepers, candidates, mine]);
-  const candidateKeys = useMemo(() => new Map(candidates.map((k) => [keyOf(k[0], k[1]), k])), [candidates]);
-  const toggle = (key: string, on: boolean) => {
-    const next = { ...switches, [prep.year]: { ...mine, [key]: on } };
-    setSwitches(next); saveSwitches(next);
-  };
-  const reset = () => { const next = { ...switches }; delete next[prep.year]; setSwitches(next); saveSwitches(next); };
-  const changed = Object.keys(mine).length;
 
   // Planned buys count as sold at my bid, so an overbid reprices everyone left (live board only).
   const bought = useMemo(() => (live ? plan.bids : {}), [live, plan.bids]);
@@ -129,7 +67,7 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
     return { name: p.name.split(' ')[0]!, budget: prep.budget - ks.reduce((s, k) => s + k[2], 0), filled, persona: p };
   }), [JSON.stringify(P.list), keepers, me, prep.budget]);
   useEffect(() => {
-    const id = setTimeout(() => setSim(simulate(board.rows, others, (r) => plan.bids[rowKey(r)] ?? Math.round(r.cost), rowKey, Object.keys(plan.bids), P.runs)), 250);
+    const id = setTimeout(() => setSim(simulate(board.rows, others, (r) => plan.bids[rowKey(r)] ?? Math.round(r.cost), rowKey, Object.keys(plan.bids), P.runs, 7, nomination)), 250);
     return () => clearTimeout(id);
   }, [board, others, plan.bids, P.runs]);
   const simOf = (r: PrepRow) => sim?.players.get(rowKey(r));

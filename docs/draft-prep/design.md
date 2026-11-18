@@ -149,6 +149,15 @@ Draft prep has its own sidebar section, **Draft**: Board and Settings.
 - Mock auctions (`src/engine/mockAuction.ts`): the other 11 teams buy the open pool 100-500 times, priciest first with some shuffle. Each bid = expected cost x persona x noise, capped by the owner's max bid, position limits and the slot's ceiling, and lower once his starters there are covered. Price = second-highest bid + $1, scaled so players sell for about their expected cost on average (2026 test run: mock prices missed real ones by $6 on average, the board's cost by $5.60).
 - Board: Get % (how often nobody else would pay more than Nic's bid: his planned bid, else expected cost; a tie counts half), likely buyers in the hover text, and plan odds in My plan. Reruns a quarter second after the last change.
 
+## Mock draft (Draft > Mock draft, Nov 18)
+
+One full auction at a time with all 12 teams on the live board, after keepers (`runAuction` in `src/engine/mockAuction.ts`; the board's Get % uses the same auction).
+
+- Nomination: teams nominate in turn. Each nomination picks top 24 / 25-72 / the rest by price at the league's measured rate for that stage of the draft (`draft-prep.json` `nomination`, from the order players came up in the 2022-26 auctions: first fifth 65% top, second 21% top and 65% middle, ... last fifth 99% cheap). Usually the priciest one left at a position the nominator doesn't need; 30% of the time a wild card from that group.
+- Nic's team bids his plan (planned bids, $1 on anyone else so leftovers fill his roster) or an auto-fill strategy as bids. The other 11 bid by persona.
+- The auction runs until every roster is full; unpriced players with the best projections fill in as $1 fodder.
+- One mock: every roster with prices and keepers, Nic's lost targets (who paid what against his bid), and the nomination log with the runner-up bid. Run 100: what each team most often ends up with and its usual price.
+
 ## Phases
 
 1. Market analysis report.

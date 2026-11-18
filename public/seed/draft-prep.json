@@ -1,4 +1,4 @@
-{"version":2,"personaYears":[2022,2023,2024,2025,2026],"personas":[
+{"version":2,"personaYears":[2022,2023,2024,2025,2026],"nomination":[[0.65,0.31,0.04],[0.21,0.65,0.14],[0.01,0.64,0.36],[0.01,0.15,0.85],[0,0.01,0.99]],"personas":[
 {"key":"david-morris","name":"David Morris","teamId":2,"lean":{"QB":1.18,"RB":1.16,"WR":0.85,"TE":0.97},"overpay":1.08,"stars":1.13,"fav":["KC","CIN"],"drafts":5},
 {"key":"clint-h","name":"Clint H","teamId":1,"lean":{"QB":0.9,"RB":0.82,"WR":1.16,"TE":1.87},"overpay":0.95,"stars":0.79,"fav":["LAC"],"drafts":5},
 {"key":"ryan-cooper","name":"Ryan Cooper","teamId":8,"lean":{"QB":0.88,"RB":1.4,"WR":0.77,"TE":0.97},"overpay":1.01,"stars":1.03,"fav":[],"drafts":5},

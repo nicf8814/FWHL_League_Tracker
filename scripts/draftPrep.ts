@@ -140,6 +140,19 @@ function personasFrom(drafts: Drafts, history: History, dir: string): { years: n
   return { years, personas };
 }
 
+// How the league nominates: by fifth of the draft, the share of top / middle / cheap players (by price
+// rank in that draft) that came up, from the picks' order in the auction.
+function nominationFrom(drafts: Drafts, years: number[]): [number, number, number][] {
+  const out = Array.from({ length: 5 }, () => [0, 0, 0] as [number, number, number]);
+  for (const y of years) {
+    const ps = drafts.picks.filter((p) => p[0] === y && !p[4]).sort((a, b) => a[9] - b[9]);
+    const byPrice = [...ps].sort((a, b) => b[3] - a[3]);
+    const rank = new Map(byPrice.map((p, i) => [p, i + 1]));
+    ps.forEach((p, i) => { const r = rank.get(p)!; out[Math.min(4, Math.floor((i * 5) / ps.length))]![r <= 24 ? 0 : r <= 72 ? 1 : 2]++; });
+  }
+  return out.map((c) => { const t = c[0] + c[1] + c[2] || 1; return c.map((v) => Math.round((v / t) * 100) / 100) as [number, number, number]; });
+}
+
 export interface DraftPrepReport { editions: string[]; keepersNotOnBoard: string[]; samples: number }
 
 export function buildDraftPrep(dir = 'data/draft-prep', seed = 'public/seed', historyDir = 'data/history'): { file: DraftPrepFile; report: DraftPrepReport } {
@@ -198,11 +211,11 @@ export function buildDraftPrep(dir = 'data/draft-prep', seed = 'public/seed', hi
   editions.push({ year: next, kind: 'standin', ...base, source: `${last} season production and trade values, live`, fit: fitFor(next), board: [], keepers: [], standIn: { fromYear: last, curveYear: last, curve, sampleYears: years, samples } });
   const history = JSON.parse(readFileSync(join(seed, 'history.json'), 'utf8')) as History;
   const { years: personaYears, personas } = personasFrom(drafts, history, historyDir);
-  return { file: { version: 2, editions, personaYears, personas }, report: { editions: editions.map((e) => `${e.year} ${e.kind}${e.kind === 'board' ? `: ${e.board.length} players, ${e.keepers.length} keepers, tiers from ${e.fit.marketYears.map(([y]) => y).join('+')}` : `: tiers from ${e.fit.marketYears.map(([y]) => y).join('+')}, slots ${e.fit.slotYears[0]}-${e.fit.slotYears.at(-1)}`}`), keepersNotOnBoard: notOnBoard, samples: samples.length } };
+  return { file: { version: 2, editions, personaYears, personas, nomination: nominationFrom(drafts, personaYears) }, report: { editions: editions.map((e) => `${e.year} ${e.kind}${e.kind === 'board' ? `: ${e.board.length} players, ${e.keepers.length} keepers, tiers from ${e.fit.marketYears.map(([y]) => y).join('+')}` : `: tiers from ${e.fit.marketYears.map(([y]) => y).join('+')}, slots ${e.fit.slotYears[0]}-${e.fit.slotYears.at(-1)}`}`), keepersNotOnBoard: notOnBoard, samples: samples.length } };
 }
 
 export const formatDraftPrep = (f: DraftPrepFile) =>
-  `{"version":2,"personaYears":${JSON.stringify(f.personaYears ?? [])},"personas":[\n${(f.personas ?? []).map((p) => JSON.stringify(p)).join(',\n')}\n],\n"editions":[\n${f.editions.map((e) => {
+  `{"version":2,"personaYears":${JSON.stringify(f.personaYears ?? [])},"nomination":${JSON.stringify(f.nomination ?? [])},"personas":[\n${(f.personas ?? []).map((p) => JSON.stringify(p)).join(',\n')}\n],\n"editions":[\n${f.editions.map((e) => {
     const { board, keepers, standIn, ...head } = e;
     const { samples, ...rest } = standIn ?? { samples: [] };
     const si = standIn ? `,\n"standIn":{${JSON.stringify(rest).slice(1, -1)},"samples":[\n${samples.map((s) => JSON.stringify(s)).join(',\n')}\n]}` : '';

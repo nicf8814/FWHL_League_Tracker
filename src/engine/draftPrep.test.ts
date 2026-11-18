@@ -206,3 +206,34 @@ test('mock auctions: seeded, a higher bid never gets less, and persona habits sh
   assert.equal(a.players.get('RB 1|RB')!.buyers[0]![0], 'T0', 'the RB-heavy owner buys the top RB most');
   assert.ok(a.planOdds !== null && a.planOdds >= 0 && a.planOdds <= 1);
 });
+
+test('one mock auction: rosters full and legal, money never below zero, my plan only', async () => {
+  const { runAuction, rng, poolOf } = await import('./mockAuction.ts');
+  const rows = priceBoard(tiny()).rows;
+  const keyOf = (r: { name: string; pos: string }) => `${r.name}|${r.pos}`;
+  const persona = (key: string) => ({ key, name: key, teamId: 0, lean: { QB: 1, RB: 1, WR: 1, TE: 1 }, overpay: 1, stars: 1, fav: [], drafts: 5 });
+  const myBids: Record<string, number> = { 'RB 2|RB': 70, 'WR 3|WR': 40 };
+  const teams = [
+    { name: 'Me', budget: 200, filled: {}, persona: null, bid: (r: { name: string; pos: string }) => myBids[keyOf(r)] ?? 1 },
+    ...Array.from({ length: 11 }, (_, i) => ({ name: `T${i}`, budget: 200, filled: {}, persona: persona(`T${i}`) })),
+  ];
+  const a = runAuction(poolOf(rows), teams, keyOf, rng(3));
+  for (const t of teams) {
+    const r = a.rosters.get(t.name)!;
+    assert.ok(r.length <= 13, `${t.name} has ${r.length}`);
+    assert.ok(a.left.get(t.name)! >= 0, `${t.name} left ${a.left.get(t.name)}`);
+    assert.equal(200 - r.reduce((s, x) => s + x.price, 0), a.left.get(t.name));
+  }
+  assert.ok(a.rosters.get('Me')!.every((s) => s.key in myBids || s.price === 1), 'my team buys what I planned, or $1 leftovers');
+  assert.ok(a.log.every((s) => !s.winner || s.price >= 1));
+});
+
+test('a mock auction keeps going until every roster is full', async () => {
+  const { runAuction, rng, poolOf } = await import('./mockAuction.ts');
+  const rows = priceBoard(tiny()).rows;
+  const keyOf = (r: { name: string; pos: string }) => `${r.name}|${r.pos}`;
+  const persona = (key: string) => ({ key, name: key, teamId: 0, lean: { QB: 1, RB: 1, WR: 1, TE: 1 }, overpay: 1, stars: 1, fav: [], drafts: 5 });
+  const teams = Array.from({ length: 12 }, (_, i) => ({ name: `T${i}`, budget: 200, filled: {}, persona: persona(`T${i}`) }));
+  const a = runAuction(poolOf(rows), teams, keyOf, rng(11));
+  for (const t of teams) assert.equal(a.rosters.get(t.name)!.length, 13, t.name);
+});

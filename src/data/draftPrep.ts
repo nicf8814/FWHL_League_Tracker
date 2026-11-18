@@ -83,6 +83,9 @@ export interface DraftPrepFile {
   editions: DraftPrep[]; // oldest first
   personaYears?: number[];
   personas?: Persona[];
+  // Nomination order in real auctions (personaYears): for each fifth of the draft, the share of
+  // nominations that were [top 24, 25-72, the rest] by price among that draft's auctioned players.
+  nomination?: [number, number, number][];
 }
 
 export const draftPrepUrl = (base: string) => `${base}seed/draft-prep.json`;
