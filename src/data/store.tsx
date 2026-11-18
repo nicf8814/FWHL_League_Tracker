@@ -3,7 +3,7 @@ import { buildIndex, deadlineInfo, type Index } from '../engine/league.ts';
 import { buildBase, buildValues, type Base, type Values } from '../engine/model.ts';
 import type { SimInput, SimResult } from '../engine/sim.ts';
 import { simulateHistory, simulateOdds } from '../engine/simClient.ts';
-import { localRepository, parseBackup, type BackupFile, type Repository } from './repository.ts';
+import { localRepository, type BackupFile, type Repository } from './repository.ts';
 import type { Dataset, SavedTrade, Settings } from './schema.ts';
 
 // The only place components get league data from. Views call useLeague(); nothing imports storage.
@@ -18,9 +18,7 @@ interface League {
   settings: Settings;
   setSettings: (patch: Partial<Settings>) => void;
   exportBackup: () => BackupFile;
-  importBackup: (text: string) => Promise<{ ok: true } | { ok: false; errors: string[] }>;
   resetData: () => Promise<void>;
-  replaceDataset: (ds: Dataset) => Promise<void>;
   savedTrades: SavedTrade[];
   setSavedTrades: (next: (list: SavedTrade[]) => SavedTrade[]) => void;
 }
@@ -154,30 +152,6 @@ export function LeagueProvider({ children, repo = localRepository }: { children:
     return { kind: 'fwhl-backup', exportedAt: new Date().toISOString(), dataset: ds, settings, savedTrades };
   }, [ds, settings, savedTrades]);
 
-  const importBackup = useCallback(
-    async (text: string) => {
-      const r = parseBackup(text);
-      if (!r.ok) return r;
-      await repo.saveDataset(r.dataset); // save first: a failed write must not leave the UI on unsaved data
-      setSim(null);
-      setLoad({ state: 'ready', ds: r.dataset });
-      const teams = new Set(r.dataset.teams.map((t) => t.id));
-      const next = r.settings ?? { ...settings, myTeamId: settings.myTeamId !== null && teams.has(settings.myTeamId) ? settings.myTeamId : null };
-      repo.saveSettings(next);
-      setSettingsState(next);
-      if (r.savedTrades) setSavedTrades(() => r.savedTrades!);
-      return { ok: true as const };
-    },
-    [repo, settings, setSavedTrades],
-  );
-
-  // In-app imports (FEAT-1): the caller has already validated ds. Saved before it's shown, like importBackup.
-  const replaceDataset = useCallback(async (next: Dataset) => {
-    await repo.saveDataset(next);
-    setSim(null);
-    setLoad({ state: 'ready', ds: next });
-  }, [repo]);
-
   const resetData = useCallback(async () => {
     const fresh = await repo.resetDataset();
     setSim(null);
@@ -188,7 +162,7 @@ export function LeagueProvider({ children, repo = localRepository }: { children:
   if (load.state === 'error') return <Splash text={load.message} error />;
   if (!idx || !base || !values || !simInput) return <Splash text="Preparing…" />;
   return (
-    <Ctx.Provider value={{ idx, base, values, valuesVersion: version.current, sim, simInput, settings, setSettings, exportBackup, importBackup, resetData, replaceDataset, savedTrades, setSavedTrades }}>
+    <Ctx.Provider value={{ idx, base, values, valuesVersion: version.current, sim, simInput, settings, setSettings, exportBackup, resetData, savedTrades, setSavedTrades }}>
       {children}
     </Ctx.Provider>
   );
