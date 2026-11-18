@@ -141,6 +141,14 @@ Nic: "Gibbs is RB1 today, so he should be worth RB1 in 2027; if he gets hurt he 
 - QB prices, 6-pt passing TDs: no bump. QB share of points over replacement was 9.6%, 10.9%, 7.8% in 2023-25 (4 pts) and 7.4% in 2026 (6 pts): the extra points lift QB12 too, so the gap that sets value barely moves. The 2026 auction (already 6 pts) gave QBs 6.6% of open money. Worth already counts 6 pts.
 - Replaced by Nic's FantasyPros file next summer (`data/draft-prep/2027/`).
 
+## Draft section: board, settings, personas and mock auctions (Nov 18)
+
+Draft prep has its own sidebar section, **Draft**: Board and Settings.
+
+- Personas (`draft-prep.json` `personas`, built from the 2022-2026 drafts): position lean (his share of spend at the position over the league's, pulled toward 1 by how much he spent there), overpay (paid vs. expected price), stars (his priciest buy each draft), favorite NFL teams (2.5x the league's rate, 5+ buys, ESPN drafts since 2018). Settings shows them as sliders; changes are saved in the viewer's browser.
+- Mock auctions (`src/engine/mockAuction.ts`): the other 11 teams buy the open pool 100-500 times, priciest first with some shuffle. Each bid = expected cost x persona x noise, capped by the owner's max bid, position limits and the slot's ceiling, and lower once his starters there are covered. Price = second-highest bid + $1, scaled so players sell for about their expected cost on average (2026 test run: mock prices missed real ones by $6 on average, the board's cost by $5.60).
+- Board: Get % (how often nobody else would pay more than Nic's bid: his planned bid, else expected cost; a tie counts half), likely buyers in the hover text, and plan odds in My plan. Reruns a quarter second after the last change.
+
 ## Phases
 
 1. Market analysis report.
