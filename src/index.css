@@ -238,7 +238,7 @@
   /* Segmented control: one hairline box, the active segment inks in */
   .seg { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: var(--radius); overflow: hidden; }
   .seg > button {
-    min-height: 2.75rem; min-width: 2.75rem; padding: 0 0.875rem; font-size: var(--text-sm); font-weight: 500;
+    min-height: 2.75rem; min-width: 2.75rem; padding: 0 0.875rem; font-size: var(--text-sm); font-weight: 500; flex-shrink: 0; white-space: nowrap;
     color: var(--ink-2); background: var(--surface); border-left: 1px solid var(--rule);
     transition: background-color var(--dur-hover) var(--ease-snap), color var(--dur-hover) var(--ease-snap);
   }

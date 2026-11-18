@@ -200,10 +200,13 @@ function ChampionRosters({ H, book }: { H: Hist; book: CareerBook }) {
   if (!open) return null;
   return (
     <Section title="Every championship roster" aside={`${rosters.length} titles`}>
-      <div className="seg w-max max-w-full overflow-x-auto" role="group" aria-label="Season">
-        {rosters.map((r) => <button key={r.year} type="button" aria-pressed={r.year === open.year} onClick={() => setYear(r.year)}>{r.year}</button>)}
-      </div>
-      <p className="headline-sm">{open.year}: {who(H, open.owner)}</p>
+      <label className="grid gap-1 text-sm text-ink-2 sm:max-w-xs">
+        Season
+        <select className="field text-base" value={open.year} onChange={(e) => setYear(Number(e.target.value))}>
+          {rosters.map((r) => <option key={r.year} value={r.year}>{r.year} · {who(H, r.owner)}</option>)}
+        </select>
+      </label>
+      <p className="headline-sm mt-2 leading-tight">{open.year}: {who(H, open.owner)}</p>
       <ul className="grid gap-x-8 sm:grid-cols-2 lg:grid-cols-3">
         {open.players.map((p) => {
           const s = p.seasons.find((x) => x.year === open.year && x.ring);
