@@ -8,7 +8,7 @@ import { playerKey } from '../src/data/drafts.ts';
 import type { Lineups } from '../src/data/lineups.ts';
 import type { HistTrade, Trades } from '../src/data/trades.ts';
 import { buildDraftBook } from '../src/engine/drafts.ts';
-import { gradeTrade, indexSeason, parseSlots, type SeasonInput, type SeasonRules } from '../src/engine/tradeHistory.ts';
+import { finishSide, gradeTrade, indexSeason, parseSlots, partScales, type DraftFacts, type Future, type GradedSide, type SeasonInput, type SeasonRules } from '../src/engine/tradeHistory.ts';
 import { buildDrafts } from './drafts.ts';
 import { ownerKey } from './history.ts';
 import { buildLineups } from './lineups.ts';
@@ -67,10 +67,14 @@ export function buildTrades(h: History, dir = 'data/history', lineups?: Lineups[
     seasons.set(y, v);
     return v;
   };
-  const nextKeepers = (y: number) => {
-    const ps = book.byYear.get(y + 1);
-    if (!ps) return null;
-    return { final: y + 1 < h.current.year, kept: (o: OwnerKey, k: string) => { const x = ps.find((q) => q.keeper && q.owner === o && playerKey(q.name, q.pos) === k); return x ? { price: x.price, value: x.value } : null; } };
+  // What happened after each trade season: later drafts and seasons.
+  const picks = new Map<string, DraftFacts>();
+  for (const q of book.picks) picks.set(`${q.year}|${playerKey(q.name, q.pos)}`, { owner: q.owner, price: q.price, keeper: q.keeper, value: q.value, worth: q.worth });
+  const future: Future = {
+    current: h.current.year,
+    pick: (y, k) => picks.get(`${y}|${k}`) ?? null,
+    dpp: (y) => book.basis.get(y)?.dollarsPerPoint ?? null,
+    season: (y) => (y < h.current.year && L.some((l) => l.year === y) ? season(y) : null),
   };
 
   type Raw = { year: number; week: number; source: HistTrade['source']; confidence: HistTrade['confidence']; date: string | null; sides: [{ owner: OwnerKey; gets: string[]; faab: number }, { owner: OwnerKey; gets: string[]; faab: number }]; dropped: [OwnerKey, string][] };
@@ -101,22 +105,29 @@ export function buildTrades(h: History, dir = 'data/history', lineups?: Lineups[
 
   raw.sort((a, b) => a.year - b.year || a.week - b.week);
   const unseen: string[] = [];
-  const trades: HistTrade[] = raw.map((r, i) => {
+  // Two passes: measure every trade, then scale each part by how big it runs across all of them.
+  const measured = raw.map((r) => {
     const { S, W } = season(r.year);
-    const g = gradeTrade(S, W, { week: r.week, sides: [{ owner: r.sides[0].owner, gets: r.sides[0].gets }, { owner: r.sides[1].owner, gets: r.sides[1].gets }] }, nextKeepers(r.year), (k) => pIdx.get(k)!);
+    const g = gradeTrade(S, W, { week: r.week, sides: [{ owner: r.sides[0].owner, gets: r.sides[0].gets }, { owner: r.sides[1].owner, gets: r.sides[1].gets }] }, future, (k) => pIdx.get(k)!);
     for (const sd of r.sides) for (const k of sd.gets) if (![...W.values()].some((wk) => wk.at.get(k)?.owner === sd.owner)) unseen.push(`${r.year} Week ${r.week}: ${players[pIdx.get(k)!]![0]} never shows on ${sd.owner}'s roster`);
+    return g;
+  });
+  const scales = partScales(measured.flatMap((g) => g.sides.flatMap((x) => (x.raw ? [x.raw] : []))));
+  const trades: HistTrade[] = raw.map((r, i) => {
+    const g = measured[i]!;
+    const [a, b] = g.sides.map((x) => finishSide(x.side, x.raw, scales)) as [GradedSide, GradedSide];
     return {
       id: `${r.year}-${String(r.week).padStart(2, '0')}-${i}`, year: r.year, week: r.week, eff: g.eff, source: r.source, confidence: r.confidence, date: r.date,
-      sides: [{ ...g.sides[0]!, faab: r.sides[0].faab }, { ...g.sides[1]!, faab: r.sides[1].faab }],
+      sides: [{ ...a, faab: r.sides[0].faab }, { ...b, faab: r.sides[1].faab }],
       dropped: r.dropped.map(([o, k]) => [o, pIdx.get(k)!] as [OwnerKey, number]),
     };
   });
   const years = [...new Set(trades.map((t) => t.year))];
   const report = years.map((y) => { const ts = trades.filter((t) => t.year === y); return `${y}: ${ts.length} trades (${ts.filter((t) => t.confidence === 'likely').length} likely), ${ts.filter((t) => t.sides[0].grade === null).length} not graded`; });
-  return { trades: { version: 1, players, trades }, report: { seasons: report, unseen } };
+  return { trades: { version: 1, players, scales, trades }, report: { seasons: report, unseen } };
 }
 
 // One trade per line keeps the file diffable.
 export function formatTrades(t: Trades): string {
-  return `{\n "version": 1,\n "players": [\n${t.players.map((p) => `  ${JSON.stringify(p)}`).join(',\n')}\n ],\n "trades": [\n${t.trades.map((x) => `  ${JSON.stringify(x)}`).join(',\n')}\n ]\n}\n`;
+  return `{\n "version": 1,\n "scales": ${JSON.stringify(t.scales)},\n "players": [\n${t.players.map((p) => `  ${JSON.stringify(p)}`).join(',\n')}\n ],\n "trades": [\n${t.trades.map((x) => `  ${JSON.stringify(x)}`).join(',\n')}\n ]\n}\n`;
 }

@@ -12,21 +12,30 @@ export interface TradePlayerLine {
   weeks: number; // weeks counted
 }
 
-export interface KeeperLine { p: number; owner: OwnerKey; price: number; value: number | null }
+export interface KeeperLine { p: number; owner: OwnerKey; price: number; value: number | null; year: number }
+
+// The five parts of a grade (src/engine/tradeHistory.ts has the weights).
+export type TradePart = 'deal' | 'wins' | 'points' | 'keep' | 'next';
 
 export interface TradeSide {
   owner: OwnerKey; // team key in history.json
   gets: TradePlayerLine[];
   faab: number; // budget dollars received minus sent (Sleeper 2025)
   grade: string | null; // null: nothing to grade (budget only)
-  initGrade: string | null; // at the trade, from projections
+  initGrade: string | null; // at the trade: the deal part alone
   score: number | null; // -1..1, 0 = even
   path: string[]; // grade after each week, index 0 = at the trade
+  parts: Record<TradePart, number> | null; // each part scaled to -1..1
+  deal: number | null; // $ at the trade, got minus gave: projected rest of season plus keeper rights
+  winsGain: number | null; // wins the trade gained (+3 a playoff spot, +1 a bye)
+  ptsGain: number | null; // points for gained for the rest of the season (best lineup with the trade minus without)
+  next: number | null; // next season's wins (+3 playoffs, +1 bye) with this side's keepers from the trade vs without
   prod: number | null; // points per week above replacement, got minus gave
   projGain: number | null; // projected points per week above replacement, got minus gave
-  keep: number; // next season's keeper value, kept by this side minus kept by the partner ($); 0 until that season is over
-  keepFinal: boolean; // false: the next season is still being played, so kept players are shown but not graded
-  kept: KeeperLine[]; // players from this trade that this side kept the next season
+  keep: number; // keeper $: kept players' value (year 2 at 60%) minus keeper rights given up; 0 until those seasons are over
+  keepFinal: boolean; // false: a keeper season is still being played, so it is shown but not graded
+  kept: KeeperLine[]; // players from this trade this side kept in the next two seasons
+  rights: KeeperLine[]; // keeper rights this side gave up: players it traded away worth more than their keeper price
   record: { w: number; l: number; t: number; seed: number; playoffs: boolean };
   alt: { w: number; l: number; t: number; seed: number; playoffs: boolean }; // with the trade undone
   finish: number | null;
@@ -47,6 +56,7 @@ export interface HistTrade {
 export interface Trades {
   version: 1;
   players: [string, string][]; // [name, position]
+  scales: Record<TradePart, number> & { total: number }; // the size that counts as a full part (deal and keep in $); total: the weighted sum that grades A
   trades: HistTrade[];
 }
 

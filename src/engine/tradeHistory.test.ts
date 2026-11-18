@@ -50,9 +50,11 @@ test('with the trade left in, the replay reproduces every official record', () =
 test('2024 Week 9: Tommy & Nick got Jacobs and A.J. Brown from Nic', () => {
   const t = find(2024, 'tommy-teves', 'Josh Jacobs');
   const [tom, nic] = t.sides[0].owner === 'tommy-teves' ? t.sides : [t.sides[1], t.sides[0]];
-  assert.equal(tom.grade, 'A+');
+  assert.equal(tom.grade, 'C+', 'a fair-plus deal, but it cost a win and the bye');
   assert.equal(nic.grade, 'F');
   assert.ok(nic.alt.playoffs && !nic.record.playoffs, 'undone, Nic makes the playoffs');
+  assert.deepEqual([tom.record.seed, tom.alt.seed, tom.winsGain], [4, 2, -2], 'undone, Tommy is the 2 seed with a bye');
+  assert.ok(tom.prod! > 15 && tom.ptsGain! < 0, 'Jacobs scored for Ryan after Week 10: only points in Tommy\'s lineup count');
   assert.equal(tom.path[0], tom.initGrade);
   assert.equal(tom.path.at(-1), tom.grade);
 });
@@ -61,8 +63,22 @@ test('2020 Week 8: the Kelce trade is found from the rosters and graded', () => 
   const t = find(2020, 'ty-carlson', 'Travis Kelce');
   assert.equal(t.confidence, 'likely');
   const ty = t.sides.find((s) => s.owner === 'ty-carlson')!, dm = t.sides.find((s) => s.owner === 'david-morris')!;
-  assert.ok(ty.score! > 0 && dm.score! < 0);
-  assert.ok(dm.kept.some((k) => name(k.p) === 'Patrick Mahomes'), 'Morris kept Mahomes in 2021');
+  assert.ok(ty.score! > 0.04 && dm.score! > 0.04, 'both sides won: each lineup scored more');
+  assert.ok(ty.ptsGain! > 0 && dm.ptsGain! > 0);
+  assert.ok(dm.kept.some((k) => name(k.p) === 'Patrick Mahomes' && k.year === 2021), 'Morris kept Mahomes in 2021');
+  assert.ok(ty.rights.some((k) => name(k.p) === 'Patrick Mahomes'), 'Ty gave up the Mahomes keeper right');
+});
+
+test('keepers: good and bad keeps count for the keeper, rights given up against the other side', () => {
+  const t = find(2023, 'tommy-teves', "De'Von Achane");
+  const tom = t.sides.find((s) => s.owner === 'tommy-teves')!, dm = t.sides.find((s) => s.owner === 'david-morris')!;
+  assert.equal(tom.keep, 33, 'Tommy kept Achane in 2024 at $12');
+  assert.equal(dm.keep, -33, 'David gave up that right');
+  const a = find(2023, 'travis-mattson', 'Brandon Aiyuk').sides.find((s) => s.owner === 'travis-mattson')!;
+  assert.equal(a.keep, -31, 'Aiyuk kept at $32 and flopped: a loss for Travis');
+  const back = find(2024, 'david-morris', "De'Von Achane").sides.find((s) => s.owner === 'david-morris')!;
+  assert.ok(back.next! > 0, 'kept in 2025, Achane changed David\'s next season');
+  assert.equal(back.keepFinal, false, 'his 2026 keep is still being played');
 });
 
 test('budget-only swaps are listed but not graded', () => {

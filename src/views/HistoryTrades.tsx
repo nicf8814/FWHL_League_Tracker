@@ -4,7 +4,7 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import { useLeague } from '../data/store.tsx';
 import type { OwnerKey } from '../data/history.ts';
-import { tradesUrl, validateTrades, type HistTrade, type TradeSide, type Trades } from '../data/trades.ts';
+import { tradesUrl, validateTrades, type HistTrade, type TradePart, type TradeSide, type Trades } from '../data/trades.ts';
 import { crewName, ownerName, type Hist, type Season } from '../engine/history.ts';
 import { ordinal } from '../engine/drafts.ts';
 import { Empty, fmt, Sheet, signed } from '../ui/components.tsx';
@@ -31,6 +31,15 @@ const lopsided = (t: HistTrade) => Math.abs(t.sides[0].score ?? 0);
 const flipped = (t: HistTrade) => t.sides.some((s) => s.record.playoffs !== s.alt.playoffs);
 const won = (s: TradeSide) => (s.score ?? 0) > 0.04; // C+ or better
 const lost = (s: TradeSide) => (s.score ?? 0) < -0.04; // C- or worse
+const WEIGHT: Record<TradePart, string> = { deal: '20%', wins: '30%', points: '15%', keep: '25%', next: '10%' };
+const money = (x: number | null) => (x === null ? '–' : x ? signed(x, 0).replace(/^([+−])/, '$1$') : '$0');
+const part = (s: TradeSide, k: TradePart) => `${WEIGHT[k]} part ${s.parts ? signed(s.parts[k], 2) : '–'}`;
+function keeperNote(s: TradeSide, name: (p: number) => string) {
+  const kept = s.kept.map((k) => `kept ${name(k.p)} ${k.year} at $${k.price}${k.value === null ? '' : ` (${money(k.value)})`}`);
+  const gave = s.rights.map((k) => `gave up ${name(k.p)} ${k.year} (${money(-(k.value ?? 0))})`);
+  const all = [...kept, ...gave].join('; ');
+  return (all || 'no keepers from this trade') + (s.keepFinal ? '' : '; a season still being played is not graded yet');
+}
 
 // The (i) card: how a trade is graded. Tap anywhere to close (native popover).
 export function TradeHelp() {
@@ -40,14 +49,16 @@ export function TradeHelp() {
       <button type="button" popoverTarget={id} className="inline-grid size-7 shrink-0 place-items-center rounded-full border border-rule-strong font-mono text-xs text-ink-2 hover:bg-sunk" aria-label="How trades are graded" title="How trades are graded">i</button>
       <div id={id} popover="auto" className="popcard" role="dialog" aria-label="How trades are graded">
         <p className="mb-2 font-display text-lg font-bold [font-stretch:85%]">How trades are graded</p>
+        <p className="mb-2 text-sm text-ink-2">Each side is graded on its own, from five parts. Wins count most.</p>
         <ol className="grid list-decimal gap-1.5 pl-5 text-sm text-ink-2">
-          <li><span className="text-ink">At the trade:</span> projected points per week above a replacement starter for the rest of the season, what you got minus what you gave.</li>
-          <li><span className="text-ink">As weeks are played</span> the grade moves to real production: points per week above replacement (the 12th QB, 31st RB, 34th WR, 7th TE that week). A week a player doesn't play counts as even, since you'd start someone else. After n weeks, n ÷ (n + 4) of the grade is production.</li>
-          <li><span className="text-ink">Keepers:</span> players from the trade kept the next season count too, at their worth minus keeper price (a quarter of the weight), once that season is over.</li>
-          <li><span className="text-ink">C is even.</span> A and B: you came out ahead. D and F: you gave up more than you got.</li>
+          <li><span className="text-ink">Fair deal (20%):</span> at the trade, projected points above a replacement starter for the rest of the season, in that year's auction dollars, plus each player's keeper right at the pace he was on. What you got minus what you gave.</li>
+          <li><span className="text-ink">Wins and playoffs (30%):</span> every week replayed with the trade undone, by that season's rules (the points-for 6th seed from 2012, top-6 weeks 12-14 from 2025). Wins gained, plus 3 for a playoff spot and 1 for a bye.</li>
+          <li><span className="text-ink">Points for (15%):</span> your best lineup each week with the trade minus without it. Only points a lineup would use count.</li>
+          <li><span className="text-ink">Keepers (25%):</span> players from the trade you kept, at worth minus keeper price, good keeps and bad; the season after at 60%. Minus the keeper rights you gave up: players you traded away who were kept and worth more than their price.</li>
+          <li><span className="text-ink">Next season (10%):</span> that season replayed with each keeper from the trade swapped for what his price would have bought at auction.</li>
         </ol>
-        <p className="mt-3 text-sm text-ink-2">The record and seed lines replay every week with the trade undone: your real score plus your best lineup without the trade minus your best lineup with it.</p>
-        <p className="mt-2 text-xs text-ink-3">The same method as the Tracker page, without trade-chart values (none exist for past seasons). "Found from rosters" trades have no ESPN record; players swapped directly between two teams that week. Tap anywhere to close.</p>
+        <p className="mt-3 text-sm text-ink-2">Each part is measured against the league's biggest trades, so a typical big swing counts in full. <span className="text-ink">C is even.</span> A and B: you came out ahead. D and F: you gave up more than you got.</p>
+        <p className="mt-2 text-xs text-ink-3">No trade-chart values exist for past seasons, so the fair-deal part uses projections. "Found from rosters" trades have no ESPN record; players swapped directly between two teams that week. Tap anywhere to close.</p>
       </div>
     </>
   );
@@ -113,7 +124,7 @@ function TradeDetail({ H, t, players }: { H: Hist; t: HistTrade; players: Trades
             {s.grade ? <Stamp grade={s.grade} /> : null}
             <div className="grid min-w-0">
               <h3 className="truncate text-lg">{crewName(H, s.owner, t.year)}</h3>
-              <span className="text-sm text-ink-2">{s.finish ? `finished ${ordinal(s.finish)}` : ''}{s.grade && s.initGrade ? ` · ${s.initGrade} at the trade, ${s.grade} at season's end` : ''}</span>
+              <span className="text-sm text-ink-2">{s.finish ? `finished ${ordinal(s.finish)}` : ''}{s.grade && s.initGrade ? ` · ${s.initGrade} at the trade, ${s.grade} with everything counted` : ''}</span>
             </div>
           </div>
           {s.gets.length > 0 ? (
@@ -128,11 +139,14 @@ function TradeDetail({ H, t, players }: { H: Hist; t: HistTrade; players: Trades
           ) : <p className="text-sm text-ink-2">No players{s.faab ? `; ${s.faab > 0 ? 'received' : 'sent'} $${Math.abs(s.faab)} of budget` : ''}.</p>}
           {s.grade && (
             <dl className="m-0 grid gap-x-8 text-sm sm:grid-cols-2">
-              <Line label="At the trade" note="projected pts/wk above replacement, got minus gave">{s.projGain === null ? '–' : signed(s.projGain, 1)}</Line>
-              <Line label="Production" note="pts/wk above replacement, got minus gave">{s.prod === null ? '–' : signed(s.prod, 1)}</Line>
+              <Line label="Fair deal" note={`at the trade, got minus gave · ${part(s, 'deal')}`}>{money(s.deal)}</Line>
+              <Line label="Wins and playoffs" note={`wins gained, +3 playoffs, +1 bye · ${part(s, 'wins')}`}>{s.winsGain === null ? '–' : signed(s.winsGain, 1)}</Line>
               <Line label="With the trade" note="real record">{rec(s.record)}</Line>
               <Line label="Undone" note="every week replayed without it">{rec(s.alt)}</Line>
-              <Line label="Keepers next season" note={s.kept.length ? `${s.kept.map((k) => `${name(k.p)} at $${k.price}`).join(', ')}${s.keepFinal ? '' : ' (season in progress, not graded yet)'}` : 'none kept from this trade'}>{!s.keepFinal ? 'so far' : s.keep ? signed(s.keep, 0).replace(/^([+−])/, '$1$') : '$0'}</Line>
+              <Line label="Points for" note={`best lineup with it minus without · ${part(s, 'points')}`}>{s.ptsGain === null ? '–' : signed(s.ptsGain, 0)}</Line>
+              <Line label="Players above replacement" note="pts/wk, got minus gave (not graded)">{s.prod === null ? '–' : signed(s.prod, 1)}</Line>
+              <Line label="Keepers" note={`${keeperNote(s, name)} · ${part(s, 'keep')}`}>{s.keepFinal ? money(s.keep) : `${money(s.keep)} so far`}</Line>
+              <Line label="Next season" note={`with the keepers vs without · ${part(s, 'next')}`}>{s.next === null ? '–' : signed(s.next, 1)}</Line>
             </dl>
           )}
           {s.path.length > 1 && (
