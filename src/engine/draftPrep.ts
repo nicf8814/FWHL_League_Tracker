@@ -6,8 +6,9 @@
 //      Nic found in 2025).
 //   2. Tier factor = the tier's share of what the league actually paid over its share of consensus
 //      price, measured on recent auctions (fitMarket). Studs get bid up, the middle collapses.
-//   3. Weighted price = consensus x tier factor. The money left after keepers is spread over the open
-//      pool in proportion to it (base inflation), so keeper bargains push everyone else up.
+//   3. Weighted price = consensus x tier factor. The money left after keepers (and Nic's planned buys, at
+//      his bids) is spread over the open pool in proportion to it (base inflation): a bargain pushes
+//      everyone else up, an overbid pulls them down (Nic, Nov 18: "these actions matter").
 //   4. Bid window = the least and most the league paid for his slot (RB1, RB2, ...) in recent drafts;
 //      cost never goes over the ceiling.
 // Worth (what he is worth to a team), the 2026FF_PreDraft_App method on our own history:
@@ -156,6 +157,7 @@ export interface PrepRow {
   rank: number; // position rank by consensus price
   tier: string; // price tier
   keeper: KeeperRow | null;
+  bought: number | null; // Nic's planned bid: counted as sold at that price
   cost: number; // expected auction price (for a keeper: what he would cost if thrown back)
   floor: number;
   ceiling: number;
@@ -168,25 +170,30 @@ export interface PrepRow {
 export interface PrepBoard {
   rows: PrepRow[];
   base: number; // base inflation on weighted price
-  moneyLeft: number; // league money after keepers
+  moneyLeft: number; // league money after keepers and planned buys
   keeperSpend: number;
+  boughtSpend: number;
   openSlots: number;
   perVorp: number; // dollars per shrunk point over replacement
   repl: Record<PrepPos, { rank: number; points: number }>;
   tierGap: Record<PrepPos, number>; // season points that start a new value tier
 }
 
-// keepers: who is kept (defaults to prep.keepers). A keeper not on the board is ignored.
-export function priceBoard(prep: DraftPrep, keepers: KeeperRow[] = prep.keepers): PrepBoard {
+// keepers: who is kept (defaults to prep.keepers). bought: Nic's planned buys by playerKey, at his bid;
+// a kept player can't be bought. Either one not on the board is ignored.
+export function priceBoard(prep: DraftPrep, keepers: KeeperRow[] = prep.keepers, bought: Record<string, number> = {}): PrepBoard {
   const { fit, teams, budget, roster } = prep;
   const kept = new Map(keepers.map((k) => [playerKey(k[0], k[1]), k]));
   const base: PrepRow[] = prep.board.map(([name, pos, team, proj, price], i) => ({
-    i, name, pos, team, proj, price, rank: 0, tier: '', keeper: kept.get(playerKey(name, pos)) ?? null,
+    i, name, pos, team, proj, price, rank: 0, tier: '', keeper: kept.get(playerKey(name, pos)) ?? null, bought: null,
     cost: 0, floor: 1, ceiling: 1, vorp: null, worth: 0, valueTier: null, edge: 0,
   }));
-  const onBoard = base.filter((r) => r.keeper);
-  const keeperSpend = onBoard.reduce((s, r) => s + r.keeper![2], 0);
-  const moneyLeft = teams * budget - keeperSpend;
+  for (const x of base) if (!x.keeper) x.bought = bought[playerKey(x.name, x.pos)] ?? null;
+  const taken = (r: PrepRow) => !!r.keeper || r.bought !== null;
+  const onBoard = base.filter(taken);
+  const keeperSpend = base.reduce((s, r) => s + (r.keeper?.[2] ?? 0), 0);
+  const boughtSpend = base.reduce((s, r) => s + (r.bought ?? 0), 0);
+  const moneyLeft = teams * budget - keeperSpend - boughtSpend;
   const openSlots = teams * roster - onBoard.length;
 
   // Cost.
@@ -201,7 +208,7 @@ export function priceBoard(prep: DraftPrep, keepers: KeeperRow[] = prep.keepers)
       weighted.set(x, x.price * t.factor);
     });
   }
-  const open = base.filter((r) => !r.keeper).sort((a, b) => weighted.get(b)! - weighted.get(a)!).slice(0, openSlots);
+  const open = base.filter((r) => !taken(r)).sort((a, b) => weighted.get(b)! - weighted.get(a)!).slice(0, openSlots);
   const pool = open.reduce((s, r) => s + weighted.get(r)!, 0);
   const inflation = pool ? moneyLeft / pool : 1;
   for (const x of base) x.cost = round(weighted.get(x)! * inflation, 1);
@@ -246,7 +253,7 @@ export function priceBoard(prep: DraftPrep, keepers: KeeperRow[] = prep.keepers)
       x.valueTier = tier;
     });
   }
-  const inPool = base.filter((r) => !r.keeper).sort((a, b) => (b.vorp ?? -Infinity) - (a.vorp ?? -Infinity)).slice(0, openSlots);
+  const inPool = base.filter((r) => !taken(r)).sort((a, b) => (b.vorp ?? -Infinity) - (a.vorp ?? -Infinity)).slice(0, openSlots);
   const totalVorp = inPool.reduce((s, r) => s + Math.max(0, r.vorp ?? 0), 0);
   const perVorp = totalVorp ? (moneyLeft - openSlots) / totalVorp : 0;
   const poolSet = new Set(inPool);
@@ -255,7 +262,7 @@ export function priceBoard(prep: DraftPrep, keepers: KeeperRow[] = prep.keepers)
     x.worth = round(v > 0 ? 1 + v * perVorp : poolSet.has(x) ? 1 : 0, 1);
     x.edge = round(x.worth - x.cost, 1);
   }
-  return { rows: base, base: round(inflation, 4), moneyLeft, keeperSpend, openSlots, perVorp: round(perVorp, 4), repl, tierGap };
+  return { rows: base, base: round(inflation, 4), moneyLeft, keeperSpend, boughtSpend, openSlots, perVorp: round(perVorp, 4), repl, tierGap };
 }
 
 // ---------------------------------------------------------------------------------------------

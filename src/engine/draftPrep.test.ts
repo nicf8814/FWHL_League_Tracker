@@ -56,6 +56,17 @@ test('a cheap keeper pushes everyone else up; an expensive one pulls them down',
   assert.ok(cheap.rows.find((r) => r.name === 'RB 1')!.keeper);
 });
 
+test('an overbid in my plan makes everyone left cheaper; a bargain makes them dearer', () => {
+  const wr = (b: ReturnType<typeof priceBoard>) => b.rows.find((r) => r.name === 'WR 2')!.cost;
+  const none = priceBoard(tiny());
+  const fair = none.rows.find((r) => r.name === 'RB 1')!.cost;
+  const over = priceBoard(tiny(), [], { 'rb1|RB': fair + 30 }), under = priceBoard(tiny(), [], { 'rb1|RB': Math.max(1, fair - 30) });
+  assert.equal(over.moneyLeft, 2400 - fair - 30);
+  assert.equal(over.openSlots, 155);
+  assert.ok(wr(over) < wr(none) && wr(under) > wr(none), `${wr(over)} < ${wr(none)} < ${wr(under)}`);
+  assert.equal(over.rows.find((r) => r.name === 'RB 1')!.bought, fair + 30);
+});
+
 test('no cost or ceiling above what the league has paid for that slot', () => {
   const prep = tiny();
   prep.fit.slots = { QB: [[30, 40]], RB: [[70, 82], [60, 75]], WR: [[60, 89]], TE: [[10, 20]] };
