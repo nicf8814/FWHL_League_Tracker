@@ -131,7 +131,7 @@ function personasFrom(drafts: Drafts, history: History, dir: string): { years: n
     const shape = Object.fromEntries(PREP_POS.map((q) => [q, Math.round((per(q).reduce((a, b) => a + b, 0) / seasons.length) * 10) / 10])) as Record<PrepPos, number>;
     const shapeMax = Object.fromEntries(PREP_POS.map((q) => [q, Math.max(...per(q))])) as Record<PrepPos, number>;
     personas.push({
-      key: o.key, name: o.name, teamId: o.teamId, shape, shapeMax,
+      key: o.key, name: PERSONA_NAMES[o.key] ?? o.name, teamId: o.teamId, shape, shapeMax,
       // Lean shrinks toward 1 by what he actually spent there: a $3 TE buy says little (LEAN_PRIOR).
       lean: Object.fromEntries(PREP_POS.map((q) => {
         const at = spend(mine.filter((p) => pos(p) === q)), raw = at / spend(mine) / leagueShare[q], w = at / (at + LEAN_PRIOR);
@@ -160,6 +160,10 @@ function nominationFrom(drafts: Drafts, years: number[]): [number, number, numbe
 }
 
 export interface DraftPrepReport { editions: string[]; keepersNotOnBoard: string[]; samples: number }
+
+// Persona display names that differ from the owner's name. Tommy's team is co-owned with Nick
+// Heisterkamp since 2024, so his persona carries both (Nic, Nov 18).
+const PERSONA_NAMES: Record<string, string> = { 'tommy-teves': 'Tommy Heist' };
 
 // replay: past drafts to rebuild as board editions with their real keepers (owner keys), for fitting the
 // mock auction (scripts/fitMock.ts). They are returned beside the file, not written into it.
