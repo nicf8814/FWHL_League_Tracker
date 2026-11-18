@@ -57,7 +57,7 @@ const stamp = (ds: Dataset) => Date.parse(ds.meta.exportedAt) || 0;
 
 export const localRepository: Repository = {
   // The deployed file is refreshed by the weekly tasks. A dataset stored in this browser (from an
-  // import) is used only while it is at least as new as the deployed one.
+  // old import) is used only while it is at least as new as the deployed one.
   async loadDataset() {
     let stored: Dataset | null = null;
     try {
@@ -125,25 +125,3 @@ export interface BackupFile {
   settings: Settings;
   savedTrades?: SavedTrade[];
 }
-
-export function parseBackup(text: string): Result {
-  let json: unknown;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    return { ok: false, errors: ['That file is not valid JSON.'] };
-  }
-  // Accept a full backup or a bare dataset (what the refresh tasks produce).
-  const isBackup = typeof json === 'object' && json !== null && (json as { kind?: unknown }).kind === 'fwhl-backup';
-  const v = validateDataset(isBackup ? (json as BackupFile).dataset : json);
-  if (!v.ok) return v;
-  const teams = new Set(v.value.teams.map((t) => t.id));
-  // A bare dataset keeps this device's settings (settings: null).
-  return {
-    ok: true,
-    dataset: v.value,
-    settings: isBackup ? coerceSettings((json as BackupFile).settings, teams) : null,
-    savedTrades: isBackup && 'savedTrades' in (json as object) ? coerceSavedTrades((json as BackupFile).savedTrades).filter((t) => teams.has(t.a) && teams.has(t.b)) : null,
-  };
-}
-type Result = { ok: true; dataset: Dataset; settings: Settings | null; savedTrades: SavedTrade[] | null } | { ok: false; errors: string[] };
