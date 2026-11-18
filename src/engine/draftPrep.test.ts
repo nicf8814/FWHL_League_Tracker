@@ -118,3 +118,18 @@ test('the 2026 board builds, validates and prices the studs on top', () => {
   const top = Math.max(...b.rows.map((r) => r.ceiling));
   assert.ok(top <= 100, `highest ceiling ${top}`);
 });
+
+test('a plan places keepers first, fills the tightest slot and enforces the money rules', async () => {
+  const { placePlan } = await import('./rosterPlan.ts');
+  const p = (name: string, pos: PrepPos, bid: number, keeper = false) => ({ key: name, name, pos, bid, keeper });
+  const s = placePlan([p('W1', 'WR', 60), p('T1', 'TE', 5), p('K', 'RB', 30, true), p('W2', 'WR', 40), p('W3', 'WR', 20)]);
+  const at = (id: string) => s.placed.find((x) => x.slot.id === id)!.pick?.name;
+  assert.equal(at('RB1'), 'K');
+  assert.deepEqual([at('WR1'), at('WR2'), at('WRTE'), at('FLEX')], ['W1', 'W2', 'W3', 'T1']);
+  assert.equal(s.spent, 155);
+  assert.equal(s.open, 8);
+  assert.equal(s.maxBid, 45 - 7);
+  const broke = placePlan([p('A', 'RB', 190), p('B', 'RB', 5), p('C', 'RB', 1), p('D', 'RB', 1), p('E', 'RB', 1), p('F', 'RB', 1)]);
+  assert.ok(broke.problems.some((x) => x.includes('limit is 5')));
+  assert.ok(broke.problems.some((x) => x.includes("can't fill")));
+});

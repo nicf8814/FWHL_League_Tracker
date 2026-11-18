@@ -12,6 +12,7 @@ import { keeperCalls, keeperSet } from '../engine/keepers.ts';
 import { teamName } from '../engine/league.ts';
 import { Empty, fmt, PosMark, Section, Seg, signed, tone } from '../ui/components.tsx';
 import { DataTable, TableBar, useTable, type Col, type FilterDef } from '../ui/table.tsx';
+import { PlanButton, PlanPanel, rowKey, usePlan } from './DraftPlan.tsx';
 
 const PASS_HASH = '55174404f557a8209cd5aacf3c54e1a4e2b7bc5b9eaa8254dd570c67d9733685'; // SHA-256 of the password (docs/draft-prep/design.md, Access)
 const UNLOCK_KEY = 'fwhl-draft-prep-unlocked';
@@ -90,7 +91,8 @@ function Editions() {
 // Next year's board, filled from this season: points per game and games played (every week with
 // points), the latest trade values, and injuries (games he can still play this season).
 function LiveBoard({ prep }: { prep: Prep }) {
-  const { idx, base } = useLeague();
+  const { idx, base, settings } = useLeague();
+  const me = settings.myTeamId !== null && idx.teams.has(settings.myTeamId) ? teamName(idx, settings.myTeamId) : null;
   const filled = useMemo(() => {
     const si = prep.standIn!;
     const played = new Map<string, { pts: number; games: number }>();
@@ -131,12 +133,13 @@ function LiveBoard({ prep }: { prep: Prep }) {
     });
     return { prep: { ...prep, board }, rows, keepers, candidates };
   }, [prep, idx, base]);
-  return <Board prep={filled.prep} defaultKeepers={filled.keepers} candidates={filled.candidates} live={filled.rows} weeks={idx.scoresThrough} />;
+  return <Board prep={filled.prep} defaultKeepers={filled.keepers} candidates={filled.candidates} live={filled.rows} weeks={idx.scoresThrough} me={me} />;
 }
 
-interface BoardProps { prep: Prep; defaultKeepers: KeeperRow[]; candidates?: KeeperRow[]; live?: Map<string, StandInRow>; weeks?: number }
+interface BoardProps { prep: Prep; defaultKeepers: KeeperRow[]; candidates?: KeeperRow[]; live?: Map<string, StandInRow>; weeks?: number; me?: string | null }
 
-function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks }: BoardProps) {
+function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks, me = null }: BoardProps) {
+  const plan = usePlan(prep.year);
   const [switches, setSwitches] = useState<Switches>(readSwitches);
   const mine = switches[prep.year] ?? {};
   const keyOf = (name: string, pos: string) => playerKey(name, pos);
@@ -164,6 +167,7 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks 
   const search = useMemo(() => ({ placeholder: 'Player name', of: (r: PrepRow) => r.name }), []);
   const cols = useMemo<Col<PrepRow>[]>(() => [
     { id: 'name', label: 'Player', left: true, fixed: true, className: 'min-w-[12rem]', value: (r) => r.name, cell: (r) => <span className="flex items-center gap-2"><PosMark pos={r.pos} /><span>{r.name}</span></span> },
+    ...(live ? [{ id: 'plan', label: 'Plan', left: true, fixed: true, value: (r: PrepRow) => (plan.has(rowKey(r)) ? 1 : 0), cell: (r: PrepRow) => <PlanButton row={r} plan={plan} mine={!!me && r.keeper?.[3] === me} /> }] as Col<PrepRow>[] : []),
     { id: 'keep', label: 'Kept', left: true, value: (r) => (r.keeper ? r.keeper[2] : null), cell: (r) => {
       const k = candidateKeys.get(keyOf(r.name, r.pos));
       if (!k) return '';
@@ -184,7 +188,7 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks 
     { id: 'proj', label: 'Proj pts', hidden: !!live, value: (r) => r.proj, cell: (r) => fmt(r.proj, 0) },
     { id: 'price', label: live ? 'Slot $' : 'Consensus $', hidden: true, value: (r) => r.price, cell: (r) => `$${r.price}` },
     { id: 'team', label: 'NFL', left: true, hidden: true, value: (r) => r.team },
-  ], [candidateKeys, live, mine]);
+  ], [candidateKeys, live, mine, plan.bids, me]);
   const t = useTable(`draft-prep-${prep.kind}`, cols, rows, { id: 'cost', dir: -1 }, { filters, search, phone: ['cost', 'worth', 'edge'] });
 
   const mkt = prep.fit.marketYears.map(([y]) => y).join(' and ');
@@ -203,6 +207,7 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks 
         <li><span className="text-ink">Edge</span>: worth − cost. Overpaying is what hurts: 2026 buys more than $10 over worth gave back about $26 each by Week 10.</li>
         <li><span className="text-ink">Kept</span>: {live ? "each team's best keeper calls from the Keepers page, locked contracts first" : `the real ${prep.year} keepers`}. Switch anyone on or off; the board reprices.{changed ? <> <button type="button" className="link" onClick={reset}>Undo my {changed} switch{changed === 1 ? '' : 'es'}</button></> : null}</li>
       </ul>
+      {live && <PlanPanel rows={board.rows} me={me} plan={plan} budget={prep.budget} />}
       <TableBar t={t} noun="players" file={`fwhl-draft-board-${prep.year}`} />
       <DataTable t={t} rowKey={(r) => String(r.i)} minWidth={live ? 'min-w-[68rem]' : 'min-w-[56rem]'} empty="No player matches these filters." />
     </Section>
