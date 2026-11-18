@@ -170,7 +170,15 @@ export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow
         return x;
       };
       if (t.bid) {
-        w = t.planned?.has(keyOf(r)) ? t.bid(r) : shaped(t.bid(r));
+        const isPlanned = t.planned?.has(keyOf(r)) ?? false;
+        w = isPlanned ? t.bid(r) : shaped(t.bid(r));
+        // Off-plan buys keep back the money his planned players still need (Nic, Nov 18: a strategy fills
+        // the rest of the team around the players he wants, it doesn't spend their money).
+        if (!isPlanned && t.planned?.size) {
+          let keep = 0;
+          for (const x of left) if (t.planned.has(keyOf(x))) keep += Math.max(0, t.bid(x) - 1);
+          w = Math.min(w, maxBid - keep);
+        }
         if (t === by) w = Math.max(1, w); // the nominator opens at $1
       } else {
         w = (r.cost / calibOf(calib, r)) * Math.exp(dials.noise * gauss()) * Math.min(MAX_PRESSURE, Math.max(1 / MAX_PRESSURE, (t.left / o / perSpot) ** (dials.pressure * phase)));
