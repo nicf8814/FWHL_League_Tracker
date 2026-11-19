@@ -7,9 +7,11 @@ import { useMemo, useState } from 'react';
 import type { DraftPrep as Prep, DraftPrepFile, Persona } from '../data/draftPrep.ts';
 import { useLeague } from '../data/store.tsx';
 import { STRATEGIES, type Strategy } from '../engine/autoFill.ts';
-import { priceBoard, type PrepRow } from '../engine/draftPrep.ts';
+import { priceBoard } from '../engine/draftPrep.ts';
 import { teamName } from '../engine/league.ts';
-import { DEFAULT_DIALS, calibrate, poolOf, rng, runAuction, strategyBid, type Auction, type SimTeam } from '../engine/mockAuction.ts';
+import { DEFAULT_DIALS, calibrate, poolOf, typicalPair, type PlainTeam } from '../engine/mockAuction.ts';
+import { mockAuction, typicalAuction } from '../engine/auctionClient.ts';
+import { useJob } from '../ui/useJob.ts';
 import { Empty, PosMark, Section, Seg } from '../ui/components.tsx';
 import { DraftGate, Help, usePersonas } from './draftCommon.tsx';
 import { rowKey, usePlan } from './DraftPlan.tsx';
@@ -38,35 +40,30 @@ function Mock({ prep, file }: { prep: Prep; file: DraftPrepFile }) {
   const label = (p: Persona) => (idx.teams.has(p.teamId) ? teamName(idx, p.teamId) : p.name);
   const board = useMemo(() => priceBoard(filled.prep, keepers), [filled.prep, keepers]);
 
-  const teams = useMemo<SimTeam[]>(() => P.list.map((p) => {
+  const teams = useMemo<PlainTeam[]>(() => P.list.map((p) => {
     const ks = keepers.filter((k) => k[3] === label(p));
-    const f: SimTeam['filled'] = {};
+    const f: PlainTeam['filled'] = {};
     for (const k of ks) f[k[1]] = (f[k[1]] ?? 0) + 1;
     const mine = label(p) === me;
     // His planned players at his planned bids in every mode; the rest bid like a plain owner (My plan +
     // market: expected cost, spending his money) or by the strategy.
-    const bid = mine ? (r: PrepRow) => plan.bids[rowKey(r)] ?? (mode === 'plan' ? 1 : strategyBid(mode, r)) : undefined;
-    return { name: label(p), budget: prep.budget - ks.reduce((s, k) => s + k[2], 0), filled: f, persona: mine ? null : p, bid, planned: mine ? new Set(Object.keys(plan.bids)) : undefined, market: mine && mode === 'plan' };
+    // Sent to a worker, so as plain data: his bids and how he bids on the rest ($1, or the strategy).
+    return { name: label(p), budget: prep.budget - ks.reduce((s, k) => s + k[2], 0), filled: f, persona: mine ? null : p, bids: mine ? plan.bids : undefined, rest: mode === 'plan' ? 'one' : mode, market: mine && mode === 'plan' };
   }), [JSON.stringify(P.list), keepers, me, mode, plan.bids, prep.budget, idx]);
 
   const pool = useMemo(() => poolOf(board.rows), [board]);
   const dials = file.mockDials?.dials ?? DEFAULT_DIALS; // fitted to real auctions (Draft > Settings)
-  const calib = useMemo(() => calibrate(teams.filter((t) => !t.bid), 8, dials.noise), [teams, dials.noise]);
-  const one = useMemo<Auction | null>(() => (seed ? runAuction(pool, teams, rowKey, rng(seed * 7919), file.nomination, calib, dials) : null), [pool, teams, seed, file.nomination, calib, dials]);
-  // Run 100: plays 100 auctions and shows the most typical one, a real single draft (nobody on two
-  // teams, every budget and roster rule kept): the run where the most players went where they usually go.
+  const calib = useMemo(() => calibrate(teams.filter((t) => !t.bids), 8, dials.noise), [teams, dials.noise]);
+  // Both run in the mock-auction worker, so the page stays live while they play.
+  const one = useJob(() => (seed ? mockAuction({ pool, teams, run: seed, nomination: file.nomination, calib, dials }) : null), [pool, teams, seed, file.nomination, calib, dials]).value;
+  // Most typical of 100: plays 100 auctions and shows the most typical one, a real single draft (nobody on
+  // two teams, every budget and roster rule kept): the run where the most players went where they usually go.
   // freq: how often each player landed with that team over the 100.
+  const many100 = useJob(() => (many && seed ? typicalAuction({ pool, teams, run: seed, n: MANY, nomination: file.nomination, calib, dials }) : null), [many, pool, teams, seed, file.nomination, calib, dials]);
   const typical = useMemo(() => {
-    if (!many || !seed) return null;
-    const rand = rng(seed * 104729);
-    const runs = Array.from({ length: MANY }, () => runAuction(pool, teams, rowKey, rand, file.nomination, calib, dials));
-    const freq = new Map<string, number>();
-    const pair = (key: string, team: string | null) => `${key}\u0000${team}`;
-    for (const a of runs) for (const x of a.log) if (x.winner) freq.set(pair(x.key, x.winner), (freq.get(pair(x.key, x.winner)) ?? 0) + 1 / MANY);
-    const score = (a: Auction) => a.log.reduce((t, x) => t + (x.winner ? freq.get(pair(x.key, x.winner))! : 0), 0);
-    const best = runs.reduce((m, a) => (score(a) > score(m) ? a : m));
-    return { auction: best, odds: (key: string, team: string | null) => freq.get(pair(key, team)) ?? 0 };
-  }, [many, pool, teams, seed, file.nomination, calib, dials]);
+    const t = many100.value;
+    return t ? { auction: t.auction, odds: (key: string, team: string | null) => t.freq.get(typicalPair(key, team)) ?? 0 } : null;
+  }, [many100.value]);
   const shown = typical?.auction ?? one;
 
   const keptBy = (team: string) => keepers.filter((k) => k[3] === team);
@@ -90,7 +87,7 @@ function Mock({ prep, file }: { prep: Prep; file: DraftPrepFile }) {
         <div className="flex flex-wrap items-center gap-3">
           <Seg label="Rest of my team" value={mode} options={[['plan', 'My plan + market'], ...STRATEGIES.map((s) => [s.id, s.label] as const)] as const} onChange={(v) => setMode(v as Mode)} />
           <button type="button" className="rowbtn h-9 rounded bg-accent px-4 font-semibold text-white" onClick={run}>{seed ? 'Run again' : 'Run mock'}</button>
-          {seed > 0 && <button type="button" className={`rowbtn h-9 rounded border border-line px-4 ${many ? 'font-semibold' : ''}`} onClick={() => setMany((m) => !m)}>{many ? 'Back to one mock' : `Most typical of ${MANY}`}</button>}
+          {seed > 0 && <button type="button" className={`rowbtn h-9 rounded border border-line px-4 ${many ? 'font-semibold' : ''}`} onClick={() => setMany((m) => !m)}>{many ? (many100.busy ? `Playing ${MANY}…` : 'Back to one mock') : `Most typical of ${MANY}`}</button>}
           {seed > 0 && <button type="button" className="rowbtn h-9 rounded border border-line px-4" onClick={() => { setSeed(0); setMany(false); }}>Clear</button>}
         </div>
         <p className="max-w-[75ch] text-sm text-ink-2">Your team bids your planned prices on your planned players in every mode; the buttons pick how it fills the rest ({mode === 'plan' ? 'bids like a plain owner: about expected cost, more when you have money to spend' : STRATEGIES.find((s) => s.id === mode)!.help.toLowerCase()}), keeping back the money your planned players still need. A planned price is your top bid: someone who wants him more takes him, so raise it on the Board to win him.</p>

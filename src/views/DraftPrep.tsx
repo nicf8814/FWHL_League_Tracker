@@ -6,7 +6,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { playerKey } from '../data/drafts.ts';
 import type { DraftPrep as Prep, DraftPrepFile, KeeperRow, Persona } from '../data/draftPrep.ts';
-import { simulate, type MockDials, type Nomination, type SimOut, type SimTeam } from '../engine/mockAuction.ts';
+import type { MockDials, Nomination, PlainTeam, SimOut } from '../engine/mockAuction.ts';
+import { boardOdds } from '../engine/auctionClient.ts';
 import { useLeague } from '../data/store.tsx';
 import { gamesBand, priceBoard, type PrepRow, type StandInRow } from '../engine/draftPrep.ts';
 import { teamName } from '../engine/league.ts';
@@ -60,15 +61,19 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
   // Mock auctions: the other teams, by persona, after their keepers. Rerun a moment after the last change
   // so typing a bid stays instant. Nic's max per player = his planned bid, else the expected cost.
   const [sim, setSim] = useState<SimOut | null>(null);
-  const others = useMemo<SimTeam[]>(() => P.list.filter((p) => ownerOf(p) !== me).map((p) => {
+  const others = useMemo<PlainTeam[]>(() => P.list.filter((p) => ownerOf(p) !== me).map((p) => {
     const ks = keepers.filter((k) => k[3] === ownerOf(p));
-    const filled: SimTeam['filled'] = {};
+    const filled: PlainTeam['filled'] = {};
     for (const k of ks) filled[k[1]] = (filled[k[1]] ?? 0) + 1;
     return { name: p.name.split(' ')[0]!, budget: prep.budget - ks.reduce((s, k) => s + k[2], 0), filled, persona: p };
   }), [JSON.stringify(P.list), keepers, me, prep.budget]);
+  // The runs happen in the mock-auction worker; an answer for inputs that have since changed is dropped.
   useEffect(() => {
-    const id = setTimeout(() => setSim(simulate(board.rows, others, (r) => plan.bids[rowKey(r)] ?? Math.round(r.cost), rowKey, Object.keys(plan.bids), P.runs, 7, nomination, dials)), 250);
-    return () => clearTimeout(id);
+    let live = true;
+    const id = setTimeout(() => {
+      boardOdds({ rows: board.rows, teams: others, myBids: plan.bids, runs: P.runs, nomination, dials }).then((s) => { if (live) setSim(s); }, (e) => console.error('Mock auctions failed', e));
+    }, 250);
+    return () => { live = false; clearTimeout(id); };
   }, [board, others, plan.bids, P.runs, nomination, dials]);
   const simOf = (r: PrepRow) => sim?.players.get(rowKey(r));
   const rows = useMemo(() => board.rows.filter((r) => r.price > 0 || (r.vorp ?? 0) > 0 || r.keeper || candidateKeys.has(keyOf(r.name, r.pos))), [board, candidateKeys]);
