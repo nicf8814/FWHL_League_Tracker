@@ -20,7 +20,7 @@ export default function Method() {
       </Section>
 
       <Section title="Trade verdicts">
-        <p>The analyzer adds up what each side sends by its own team's values. When one side sends more players, its extra, lowest players only count for what they're worth above the best healthy free agent at their position, because a roster spot isn't free.</p>
+        <p>The analyzer adds up what each side sends by its own team's values. When one side sends more players, its extra, lowest players count for the larger of half their value and what they're worth above the best healthy free agent at their position: a roster spot isn't free, but whether waivers beat them is each owner's call.</p>
         <p><b>Fair</b> is within 6% either way; <b>slight</b> is 6 to 18%; <b>clear</b> is more. <b>Fair for both</b> means the partner sees it as even by his own values (within ±{V.FAIR_RANGE}) and your lineup loses no more than {V.WEEKLY_LOSS_OK} point a week.</p>
         <p><b>Lineup impact</b> rebuilds both teams' best lineup every remaining week with and without the trade. Rosters stay the same size: a team taking more players than it sends cuts its lowest-valued players, and a team left short fills in from the best free agents.</p>
       </Section>
