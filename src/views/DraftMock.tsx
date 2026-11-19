@@ -36,6 +36,7 @@ function Mock({ prep, file }: { prep: Prep; file: DraftPrepFile }) {
   const P = usePersonas(file.personas ?? []);
   const plan = usePlan(prep.year);
   const [mode, setMode] = useState<Mode>('plan');
+  const [run, setRun] = useState(1); // which set of 100 drafts: same set, same answer; "Run 100 new drafts" moves on
   const me = settings.myTeamId !== null && idx.teams.has(settings.myTeamId) ? teamName(idx, settings.myTeamId) : null;
   const label = (p: Persona) => (idx.teams.has(p.teamId) ? teamName(idx, p.teamId) : p.name);
   const board = useMemo(() => priceBoard(filled.prep, keepers), [filled.prep, keepers]);
@@ -54,8 +55,9 @@ function Mock({ prep, file }: { prep: Prep; file: DraftPrepFile }) {
   const dials = file.mockDials?.dials ?? DEFAULT_DIALS; // fitted to real auctions (Draft > Settings)
   const calib = useMemo(() => calibrate(teams.filter((t) => !t.bids), 8, dials.noise), [teams, dials.noise]);
   // Runs by itself (in the worker) whenever the plan, keepers or fill mode change. Same inputs, same answer.
-  const job = useJob(() => draftOutlookAsync({ pool, teams, me, plan: me ? plan.bids : {}, run: 1, n: DRAFTS, nomination: file.nomination, calib, dials }), [pool, teams, me, plan.bids, file.nomination, calib, dials]);
+  const job = useJob(() => draftOutlookAsync({ pool, teams, me, plan: me ? plan.bids : {}, run, n: DRAFTS, nomination: file.nomination, calib, dials }), [pool, teams, me, plan.bids, run, file.nomination, calib, dials]);
   const out = job.value;
+  const busy = job.busy || (out !== null && out.run !== run); // the label never runs ahead of the numbers shown
 
   const myKeepers = me ? keepers.filter((k) => k[3] === me) : [];
   const budget = prep.budget - myKeepers.reduce((s, k) => s + k[2], 0);
@@ -73,8 +75,10 @@ function Mock({ prep, file }: { prep: Prep; file: DraftPrepFile }) {
       </ul></Help></span>}>
         <div className="flex flex-wrap items-center gap-3">
           <Seg label="Fill the rest of my team" value={mode} options={[['plan', 'Like the market'], ...STRATEGIES.map((s) => [s.id, s.label] as const)] as const} onChange={(v) => setMode(v as Mode)} />
-          <span className="text-sm text-ink-3" aria-live="polite">{job.busy ? `Playing ${DRAFTS} drafts…` : out ? `From ${DRAFTS} simulated drafts` : ''}</span>
+          <button type="button" className="rowbtn h-11 rounded bg-accent px-5 text-base font-semibold text-white disabled:opacity-60" disabled={busy} onClick={() => setRun((r) => r + 1)}>Re-Roll Draft</button>
+          <span className="text-sm text-ink-3" aria-live="polite">{busy ? `Playing ${DRAFTS} drafts…` : out ? `Roll ${out.run} · ${DRAFTS} drafts` : ''}</span>
         </div>
+        {run > 1 && <p className="text-sm text-ink-3">Each re-roll plays the same plan {DRAFTS} more times with fresh luck, so the numbers move a few points from roll to roll; a much bigger move means the plan is on a knife's edge.</p>}
         <p className="max-w-[75ch] text-sm text-ink-2">Your team bids your planned price on each planned player and fills the rest {fillHelp}. A planned price is your top bid: an owner who wants him more takes him.</p>
         {!me && <p className="text-sm text-ink-2">Pick your team in Data &amp; settings to see your own odds. Until then this shows the league without you.</p>}
         {me && out && <Headline out={out} hasPlan={planned.length > 0} />}
@@ -154,9 +158,9 @@ function Examples({ out, me, teams, keepers, plan }: { out: DraftOutlook; me: st
   return (
     <Section title="Watch an example draft" aside={
       <span className="flex items-center gap-2">
-        <button type="button" className="rowbtn h-8 rounded border border-line px-3 disabled:opacity-40" disabled={i === 0} onClick={() => setI(i - 1)} aria-label="Previous example">‹</button>
-        <span className="num text-sm" aria-live="polite">{i === 0 ? 'The most typical' : `Example ${i + 1} of ${k}`}</span>
-        <button type="button" className="rowbtn h-8 rounded border border-line px-3 disabled:opacity-40" disabled={i >= k - 1} onClick={() => setI(i + 1)} aria-label="Next example">›</button>
+        <button type="button" className="rowbtn h-11 whitespace-nowrap rounded border-2 border-line px-3 text-base disabled:opacity-40 sm:min-w-28 sm:px-4" disabled={i === 0} onClick={() => setI(i - 1)}>‹ Previous</button>
+        <span className="num whitespace-nowrap text-center text-sm sm:min-w-24 sm:text-base" aria-live="polite">{i === 0 ? 'Most typical' : `${i + 1} of ${k}`}</span>
+        <button type="button" className="rowbtn h-11 whitespace-nowrap rounded border-2 border-ink px-3 text-base font-semibold disabled:opacity-40 sm:min-w-28 sm:px-4" disabled={i >= k - 1} onClick={() => setI(i + 1)}>Next draft ›</button>
       </span>}>
       <p className="max-w-[75ch] text-sm text-ink-2">
         {i === 0 ? `One real draft from the ${out.n}: the one where the most players went where they usually go.` : `Another of the ${out.n} drafts, to see how it can go differently.`} The % by each price is how often that team landed him across all {out.n}.

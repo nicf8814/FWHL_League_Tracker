@@ -171,3 +171,9 @@ test('my team keeps roster spots for planned players still to come, not only mon
   }
   for (const r of cheap) assert.ok(out.targets.find((t) => t.key === key(r))!.get > 0, `${r.name}: a $1 target is sometimes mine`);
 });
+
+test('draft outlook: the same set of drafts gives the same answer; a new set gives new drafts', () => {
+  assert.deepEqual(outlook('plan', 5, 10), outlook('plan', 5, 10), 'same set, same answer');
+  const a = outlook('plan', 5, 10), b = outlook('plan', 6, 10);
+  assert.notDeepEqual(a.examples.map((e) => e.log), b.examples.map((e) => e.log), 'a new set plays different drafts');
+});

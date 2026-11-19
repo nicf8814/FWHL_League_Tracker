@@ -302,6 +302,7 @@ export interface TargetOutlook {
   toWin: number | null; // the bid that would have beaten the winner, in the median draft Nic lost him
 }
 export interface DraftOutlook {
+  run: number; // which set of drafts this is (the page's Re-Roll Draft count)
   n: number;
   examples: Auction[]; // examples[0] is the most typical draft
   freq: Map<string, number>; // playerTeam(key, team): share of drafts that team landed him
@@ -346,5 +347,5 @@ export function draftOutlook(pool: PrepRow[], teams: SimTeam[], me: string | nul
   const planOdds = planned.length ? got.filter((g) => g === planned.length).length / n : null;
   const landed = planned.length ? median(got) : null;
   const usual = me ? { bought: median(drafts.map((a) => a.rosters.get(me)?.length ?? 0))!, left: median(drafts.map((a) => a.left.get(me) ?? 0))! } : null;
-  return { n, examples, freq, planOdds, landed, targets, usual };
+  return { run, n, examples, freq, planOdds, landed, targets, usual };
 }
