@@ -6,6 +6,7 @@
 // simulate() runs the other 11 teams many times for the board's Get %, likely buyers and plan odds.
 // Seeded, so the same inputs always give the same answer.
 import { PREP_POS, type Persona, type PrepPos } from '../data/draftPrep.ts';
+import { playerKey } from '../data/drafts.ts';
 import type { Strategy } from './autoFill.ts';
 import type { PrepRow } from './draftPrep.ts';
 import { POS_MAX, SLOTS } from './rosterPlan.ts';
@@ -261,4 +262,43 @@ export function simulate(rows: PrepRow[], teams: SimTeam[], myMax: (r: PrepRow) 
     players.set(key, { runs, get: st.get / runs, price: sold ? st.price / sold : 1, buyers: [...st.buyers].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n, c]) => [n, c / runs]) });
   }
   return { players, planOdds: plan.length ? planHits / runs : null };
+}
+
+// ---------- plain-data entry points (for the auction worker) ----------
+// A worker only gets copies of plain data, never functions, so the pages describe a team's bidding
+// as data and these turn it back into the functions above. Players are keyed by name and position,
+// as on the Board.
+export const auctionKey = (r: PrepRow) => playerKey(r.name, r.pos);
+
+// A team as plain data. bids: his planned top bid per player key; rest: what he bids on everyone else
+// ('one': $1, else an auto-fill strategy). No bids: a persona team.
+export interface PlainTeam { name: string; budget: number; filled: SimTeam['filled']; persona: Persona | null; bids?: Record<string, number>; rest?: 'one' | Strategy; market?: boolean }
+
+export function liveTeam(t: PlainTeam): SimTeam {
+  const { bids, rest, ...team } = t;
+  if (!bids) return team;
+  return { ...team, bid: (r) => bids[auctionKey(r)] ?? (!rest || rest === 'one' ? 1 : strategyBid(rest, r)), planned: new Set(Object.keys(bids)) };
+}
+
+// The Board's Get %: the other teams' auctions, with Nic's max = his planned bid, else the expected cost.
+export function simulateBoard(rows: PrepRow[], teams: SimTeam[], myBids: Record<string, number>, runs: number, seed = 7, nomination?: Nomination, dials?: MockDials): SimOut {
+  return simulate(rows, teams, (r) => myBids[auctionKey(r)] ?? Math.round(r.cost), auctionKey, Object.keys(myBids), runs, seed, nomination, dials);
+}
+
+// Mock draft "Run mock": one auction from a run number (1, 2, ...).
+export function mockOne(pool: PrepRow[], teams: SimTeam[], run: number, nomination: Nomination | undefined, calib: Calib, dials: MockDials): Auction {
+  return runAuction(pool, teams, auctionKey, rng(run * 7919), nomination, calib, dials);
+}
+
+// Mock draft "Most typical of n": plays n auctions and returns the most typical one, a real single draft
+// (nobody on two teams, every budget and roster rule kept): the run where the most players went where
+// they usually go. freq: how often each player landed with each team, keyed by typicalPair().
+export const typicalPair = (key: string, team: string | null) => `${key}\u0000${team}`;
+export function mockTypical(pool: PrepRow[], teams: SimTeam[], run: number, n: number, nomination: Nomination | undefined, calib: Calib, dials: MockDials): { auction: Auction; freq: Map<string, number> } {
+  const rand = rng(run * 104729);
+  const runs = Array.from({ length: n }, () => runAuction(pool, teams, auctionKey, rand, nomination, calib, dials));
+  const freq = new Map<string, number>();
+  for (const a of runs) for (const x of a.log) if (x.winner) freq.set(typicalPair(x.key, x.winner), (freq.get(typicalPair(x.key, x.winner)) ?? 0) + 1 / n);
+  const score = (a: Auction) => a.log.reduce((t, x) => t + (x.winner ? freq.get(typicalPair(x.key, x.winner))! : 0), 0);
+  return { auction: runs.reduce((m, a) => (score(a) > score(m) ? a : m)), freq };
 }

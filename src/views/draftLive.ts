@@ -58,6 +58,9 @@ const SWITCH_KEY = 'fwhl-draft-prep-keepers'; // per viewer: keeper switches by 
 
 
 type Switches = Record<string, Record<string, boolean>>;
+// One shared empty set of switches: a fresh {} on every render made keepers (and everything priced from
+// them) look new each time, so the Board reran its mock auctions in a loop while it sat open.
+const NO_SWITCHES: Record<string, boolean> = {};
 function readSwitches(): Switches {
   try { return JSON.parse(localStorage.getItem(SWITCH_KEY) ?? '{}') as Switches; } catch { return {}; }
 }
@@ -67,7 +70,7 @@ function saveSwitches(s: Switches) {
 
 export function useKeepers(year: number, defaultKeepers: KeeperRow[], candidates: KeeperRow[] = defaultKeepers) {
   const [switches, setSwitches] = useState<Switches>(readSwitches);
-  const mine = switches[year] ?? {};
+  const mine = switches[year] ?? NO_SWITCHES;
   const keepers = useMemo(() => {
     const on = new Set(defaultKeepers.map((k) => keyOf(k[0], k[1])));
     for (const [k, v] of Object.entries(mine)) if (v) on.add(k); else on.delete(k);
