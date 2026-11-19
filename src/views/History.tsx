@@ -315,7 +315,7 @@ function Owners({ H, all, go }: { H: Hist; all: Career[]; go: Go }) {
 
 function OwnerPage({ H, c, go }: { H: Hist; c: Career; go: Go }) {
   const own = H.owners.get(c.owner)!;
-  const rivals = careers(H).filter((x) => x.owner !== c.owner).map((x) => ({ x, h: headToHead(H, c.owner, x.owner) })).filter((r) => r.h.games.length >= 4).sort((a, b) => b.h.games.length - a.h.games.length);
+  const rivals = useMemo(() => careers(H).filter((x) => x.owner !== c.owner).map((x) => ({ x, h: headToHead(H, c.owner, x.owner) })).filter((r) => r.h.games.length >= 4).sort((a, b) => b.h.games.length - a.h.games.length), [H, c.owner]);
   const best = [...c.seasons].sort((a, b) => b.w + b.t / 2 - (a.w + a.t / 2) || b.pf - a.pf)[0]!;
   const worst = [...c.seasons].filter((s) => !s.live).sort((a, b) => a.w + a.t / 2 - (b.w + b.t / 2) || a.pf - b.pf)[0];
   return (

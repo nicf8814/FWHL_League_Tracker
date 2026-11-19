@@ -5,7 +5,7 @@
 // max-bid rule and position limits. Nic's team, when it takes part, bids his plan or a strategy.
 // simulate() runs the other 11 teams many times for the board's Get %, likely buyers and plan odds.
 // Seeded, so the same inputs always give the same answer.
-import type { Persona, PrepPos } from '../data/draftPrep.ts';
+import { PREP_POS, type Persona, type PrepPos } from '../data/draftPrep.ts';
 import type { Strategy } from './autoFill.ts';
 import type { PrepRow } from './draftPrep.ts';
 import { POS_MAX, SLOTS } from './rosterPlan.ts';
@@ -103,8 +103,8 @@ export function strategyBid(s: Strategy, r: PrepRow): number {
 const open = (t: { filled: Record<PrepPos, number> }) => SLOTS.length - Object.values(t.filled).reduce((a, b) => a + b, 0);
 // Could this team take him? A spot open, under the position limit (and the usual roster shape for a
 // persona team), and, when his open spots are only enough for what his lineup still needs, one of those.
-function canTake(t: { filled: Record<PrepPos, number>; bid?: unknown; persona?: Persona | null }, r: PrepRow): { ok: boolean; need: boolean } {
-  const o = open(t);
+// o: his open spots, when the caller already has them.
+function canTake(t: { filled: Record<PrepPos, number>; bid?: unknown; persona?: Persona | null }, r: PrepRow, o = open(t)): { ok: boolean; need: boolean } {
   if (o <= 0 || (POS_MAX[r.pos] !== undefined && t.filled[r.pos] >= POS_MAX[r.pos]!)) return { ok: false, need: false };
   if (!t.bid && t.filled[r.pos] >= capOf(t as { persona: Persona | null }, r.pos)) return { ok: false, need: false };
   const needs = stillNeeds(t.filled), short = Object.values(needs).reduce((x, y) => x + (y ?? 0), 0);
@@ -123,39 +123,42 @@ export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow
   const left = new Set(byPrice);
   const total = Math.min(byPrice.length, state.reduce((s, t) => s + open(t), 0));
   const log: Sale[] = [];
-  let turn = 0;
+  let turn = 0, filledSoFar = 0; // filledSoFar: sales with a winner, the stage of the draft
   while (left.size && state.some((t) => open(t) > 0)) {
     // Nominator: the next team in turn that still has a spot.
     let by = order[turn++ % order.length]!;
     for (let i = 0; i < order.length && open(by) <= 0; i++) by = order[turn++ % order.length]!;
     // Which group: the league's rates for this stage of the draft, falling back to any group left.
-    const filledSoFar = log.filter((x) => x.winner).length; // stage of the draft: share of open spots filled
     const stage = nomination[Math.min(nomination.length - 1, Math.floor((filledSoFar * nomination.length) / Math.max(1, total)))]!;
     let g = 2, x = rand() * (stage[0] + stage[1] + stage[2] || 1);
     for (let i = 0; i < 3; i++) { if (x < stage[i]!) { g = i; break; } x -= stage[i]!; }
     // He nominates someone he could take himself (he opens the bidding at $1): by position, checked once.
     const okPos = new Set((['QB', 'RB', 'WR', 'TE'] as PrepPos[]).filter((pos) => canTake(by, { pos } as PrepRow).ok));
-    const mine = [...left].filter((r) => okPos.has(r.pos));
-    let cands = mine.filter((r) => group.get(r) === g);
+    const mine: PrepRow[] = [];
+    let cands: PrepRow[] = [];
+    for (const r of left) if (okPos.has(r.pos)) { mine.push(r); if (group.get(r) === g) cands.push(r); }
     if (!cands.length) cands = mine.length ? mine : [...left];
     // Usually the priciest at a position he doesn't need (drain the others); sometimes a wild card.
     // Early and middle: a position he doesn't need, to drain the others. Late (cheap players): one he wants.
-    const want = (r: PrepRow) => (by.filled[r.pos] < usualOf(by, r.pos) ? 1 : 0) + (by.filled[r.pos] < STARTERS[r.pos] ? 1 : 0) + (by.persona ? by.persona.lean[r.pos] - 1 : 0);
-    const need = (r: PrepRow) => (g === 2 ? -want(r) : want(r));
+    // Need depends only on position, so it is worked out once per position, not per candidate.
+    const want = (pos: PrepPos) => (by.filled[pos] < usualOf(by, pos) ? 1 : 0) + (by.filled[pos] < STARTERS[pos] ? 1 : 0) + (by.persona ? by.persona.lean[pos] - 1 : 0);
+    const needOf = {} as Record<PrepPos, number>;
+    for (const pos of PREP_POS) needOf[pos] = g === 2 ? -want(pos) : want(pos);
     let r = cands[0]!;
     if (rand() < dials.wild) r = cands[Math.floor(rand() * cands.length)]!;
-    else for (const c of cands) if (need(c) < need(r) || (need(c) === need(r) && c.cost > r.cost)) r = c;
+    else for (const c of cands) if (needOf[c.pos] < needOf[r.pos] || (needOf[c.pos] === needOf[r.pos] && c.cost > r.cost)) r = c;
     left.delete(r);
-    // Bids.
-    const spotsLeft = state.reduce((x, t) => x + Math.max(0, open(t)), 0);
+    // Bids. Open spots don't change until this sale is settled, so count them once.
+    const opens = state.map(open);
+    const spotsLeft = opens.reduce((x, o) => x + Math.max(0, o), 0);
     // Money pressure: an owner with more money per open spot than the league bids up, one with less
     // bids down (real teams spend nearly all $200). dials.pressure sets how hard.
-    const moneyLeft = state.reduce((x, t) => x + (open(t) > 0 ? t.left : 0), 0);
+    const moneyLeft = state.reduce((x, t, i) => x + (opens[i]! > 0 ? t.left : 0), 0);
     const perSpot = spotsLeft ? moneyLeft / spotsLeft : 1;
     const phase = filledSoFar / Math.max(1, total); // pressure builds as the draft goes: none at the opening bid
     let best = 0, second = 0, win = -1, run = -1;
     state.forEach((t, i) => {
-      const o = open(t), take = canTake(t, r);
+      const o = opens[i]!, take = canTake(t, r, o);
       if (!take.ok) return;
       const maxBid = t.left - (o - 1);
       if (maxBid < 1) return;
@@ -200,7 +203,7 @@ export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow
     });
     const price = win < 0 ? 0 : Math.max(1, Math.min(Math.floor(best), Math.floor(second) + 1));
     const sale: Sale = { n: log.length + 1, by: by.name, key: keyOf(r), name: r.name, pos: r.pos, winner: win < 0 ? null : state[win]!.name, price, winBid: Math.floor(best), runnerUp: run < 0 ? null : state[run]!.name, runnerBid: Math.floor(second) };
-    if (win >= 0) { const w = state[win]!; w.left -= price; w.filled[r.pos]++; }
+    if (win >= 0) { const w = state[win]!; w.left -= price; w.filled[r.pos]++; filledSoFar++; }
     log.push(sale);
   }
   const rosters = new Map(state.map((t) => [t.name, log.filter((s) => s.winner === t.name)]));
@@ -232,9 +235,11 @@ export function calibrate(teams: { persona: Persona | null }[], seed = 8, noise 
 // what everyone else would pay.
 export function simulate(rows: PrepRow[], teams: SimTeam[], myMax: (r: PrepRow) => number, keyOf: (r: PrepRow) => string, plan: string[] = [], runs = 200, seed = 7, nomination: Nomination = DEFAULT_NOMINATION, dials: MockDials = DEFAULT_DIALS): SimOut {
   const pool = poolOf(rows);
-  const stats = new Map<string, { get: number; price: number; buyers: Map<string, number> }>();
-  for (const r of rows) if (!r.keeper) stats.set(keyOf(r), { get: 0, price: 0, buyers: new Map() });
+  // mine: Nic's max for him, the same every run, so asked once.
+  const stats = new Map<string, { get: number; price: number; buyers: Map<string, number>; mine: number; planned: boolean }>();
   const byKey = new Map(rows.map((r) => [keyOf(r), r]));
+  const inPlan = new Set(plan);
+  for (const r of rows) if (!r.keeper) { const key = keyOf(r); stats.set(key, { get: 0, price: 0, buyers: new Map(), mine: myMax(byKey.get(key)!), planned: inPlan.has(key) }); }
   const rand = rng(seed), calib = calibrate(teams, 8, dials.noise);
   // Gettable: Nic gets him if his bid beats the most anyone else would pay (the winner's bid).
   let planHits = 0;
@@ -242,10 +247,10 @@ export function simulate(rows: PrepRow[], teams: SimTeam[], myMax: (r: PrepRow) 
     const sales = new Map(runAuction(pool, teams, keyOf, rand, nomination, calib, dials).log.map((x) => [x.key, x]));
     let ok = true;
     for (const [key, st] of stats) {
-      const sale = sales.get(key), mine = myMax(byKey.get(key)!);
+      const sale = sales.get(key), mine = st.mine;
       const top = sale?.winner ? sale.winBid : 0;
       if (mine > top) st.get++; else if (mine === top) st.get += 0.5; // a tie: a coin flip on who bid first
-      if (mine < top && plan.includes(key)) ok = false;
+      if (mine < top && st.planned) ok = false;
       if (sale?.winner) { st.price += sale.price; st.buyers.set(sale.winner, (st.buyers.get(sale.winner) ?? 0) + 1); }
     }
     if (ok) planHits++;

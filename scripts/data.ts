@@ -1,7 +1,7 @@
 // League data command line. Every change to public/seed/fwhl-2026.json goes through here.
 //   node scripts/data.ts <command> [args] [--dry-run] [--force] [--file <dataset.json>]
 // Commands and input formats: docs/data-updates.md. Exit code 1 = nothing was written.
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, renameSync, writeFileSync } from 'node:fs';
 import type { Dataset } from '../src/data/schema.ts';
 import { validateDataset } from '../src/data/validate.ts';
 import { buildIndex, freshness } from '../src/engine/league.ts';
@@ -37,6 +37,13 @@ function fail(msg: string): never {
   console.error(`ERROR: ${msg}\nNothing was written.`);
   process.exit(1);
 }
+// Write to a temp file beside the target, then rename over it, so a crash mid-write never leaves a
+// truncated seed file behind.
+function writeFile(p: string, text: string) {
+  const tmp = `${p}.tmp`;
+  writeFileSync(tmp, text);
+  renameSync(tmp, p);
+}
 const readJson = (p: string | undefined): unknown => {
   if (!p) fail('missing input file.');
   try { return JSON.parse(readFileSync(p, 'utf8')); } catch (e) { fail(`could not read ${p}: ${e instanceof Error ? e.message : e}`); }
@@ -51,7 +58,8 @@ function load(): Dataset {
 function summary(ds: Dataset) {
   const idx = buildIndex(ds);
   const rostered = ds.rosters.length;
-  const withId = ds.rosters.filter((r) => ds.players.find((p) => p.id === r.playerId)?.espnId != null).length;
+  const espnId = new Map(ds.players.map((p) => [p.id, p.espnId]));
+  const withId = ds.rosters.filter((r) => espnId.get(r.playerId) != null).length;
   return {
     currentWeek: idx.currentWeek,
     scoresThrough: idx.scoresThrough,
@@ -63,9 +71,11 @@ function summary(ds: Dataset) {
 
 function finish(ds: Dataset, rep: Report) {
   ds.meta.exportedAt = new Date().toISOString();
-  const v = validateDataset(JSON.parse(JSON.stringify(ds)));
+  // Validate exactly what will be written, so nothing the file format leaves out can slip through.
+  const text = formatDataset(ds);
+  const v = validateDataset(JSON.parse(text));
   if (!v.ok) fail(`the update would leave the dataset invalid:\n- ${v.errors.join('\n- ')}`);
-  if (!dry) writeFileSync(file, formatDataset(ds));
+  if (!dry) writeFile(file, text);
   console.log(JSON.stringify({ written: !dry, file, ...rep, after: summary(ds) }, null, 2));
 }
 
@@ -140,14 +150,14 @@ try {
       const h = buildHistory();
       const v = validateHistory(JSON.parse(formatHistory(h)));
       if (!v.ok) fail(`the history would be invalid:\n- ${v.errors.join('\n- ')}`);
-      if (!dry) writeFileSync(HISTORY, formatHistory(h));
+      if (!dry) writeFile(HISTORY, formatHistory(h));
       console.log(JSON.stringify({ written: !dry, file: HISTORY, seasons: `${h.seasons[0]?.year}-${h.seasons.at(-1)?.year}`, owners: h.owners.length, games: h.seasons.reduce((n, s) => n + s.games.length, 0), notes: h.seasons.flatMap((s) => s.notes.map((n) => `${s.year} ${n}`)) }, null, 2));
       break;
     }
     case 'lineups': {
       const built = buildLineups(buildHistory());
       for (const l of built) { const v = validateLineups(JSON.parse(formatLineups(l)), l.year); if (!v.ok) fail(`${l.year} lineups would be invalid:\n- ${v.errors.join('\n- ')}`); }
-      if (!dry) { mkdirSync(LINEUPS, { recursive: true }); for (const l of built) writeFileSync(`${LINEUPS}/${l.year}.json`, formatLineups(l)); }
+      if (!dry) { mkdirSync(LINEUPS, { recursive: true }); for (const l of built) writeFile(`${LINEUPS}/${l.year}.json`, formatLineups(l)); }
       console.log(JSON.stringify({ written: !dry, dir: LINEUPS, seasons: built.map((l) => `${l.year} ${l.source} ${l.detail}: ${Object.keys(l.weeks).length} weeks, ${l.players.length} players`) }, null, 2));
       break;
     }
@@ -155,7 +165,7 @@ try {
       const { drafts, report } = buildDrafts(buildHistory());
       const v = validateDrafts(JSON.parse(formatDrafts(drafts)));
       if (!v.ok) fail(`the drafts would be invalid:\n- ${v.errors.join('\n- ')}`);
-      if (!dry) writeFileSync(DRAFTS, formatDrafts(drafts));
+      if (!dry) writeFile(DRAFTS, formatDrafts(drafts));
       console.log(JSON.stringify({ written: !dry, file: DRAFTS, picks: drafts.picks.length, players: drafts.players.length, unmatched: report.unmatched, seasons: report.seasons }, null, 2));
       break;
     }
@@ -163,7 +173,7 @@ try {
       const { trades, report } = buildTrades(buildHistory());
       const v = validateTrades(JSON.parse(formatTrades(trades)));
       if (!v.ok) fail(`the trades would be invalid:\n- ${v.errors.join('\n- ')}`);
-      if (!dry) writeFileSync(TRADES, formatTrades(trades));
+      if (!dry) writeFile(TRADES, formatTrades(trades));
       console.log(JSON.stringify({ written: !dry, file: TRADES, trades: trades.trades.length, seasons: report.seasons, neverOnNewTeam: report.unseen }, null, 2));
       break;
     }
@@ -171,7 +181,7 @@ try {
       const { careers, report } = buildCareers(buildHistory());
       const v = validateCareers(JSON.parse(formatCareers(careers)));
       if (!v.ok) fail(`the careers file would be invalid:\n- ${v.errors.join('\n- ')}`);
-      if (!dry) writeFileSync(CAREERS, formatCareers(careers));
+      if (!dry) writeFile(CAREERS, formatCareers(careers));
       console.log(JSON.stringify({ written: !dry, file: CAREERS, players: careers.players.length, rows: careers.rows.length, through: careers.through, seasons: report }, null, 2));
       break;
     }
@@ -179,7 +189,7 @@ try {
       const { file: prep, report } = buildDraftPrep();
       const v = validateDraftPrep(JSON.parse(formatDraftPrep(prep)));
       if (!v.ok) fail(`the draft prep file would be invalid:\n- ${v.errors.join('\n- ')}`);
-      if (!dry) writeFileSync(DRAFT_PREP, formatDraftPrep(prep));
+      if (!dry) writeFile(DRAFT_PREP, formatDraftPrep(prep));
       console.log(JSON.stringify({ written: !dry, file: DRAFT_PREP, ...report }, null, 2));
       break;
     }
@@ -189,7 +199,7 @@ try {
       prep.mockDials = fit;
       const v = validateDraftPrep(JSON.parse(formatDraftPrep(prep)));
       if (!v.ok) fail(`the draft prep file would be invalid:\n- ${v.errors.join('\n- ')}`);
-      if (!dry) writeFileSync(DRAFT_PREP, formatDraftPrep(prep));
+      if (!dry) writeFile(DRAFT_PREP, formatDraftPrep(prep));
       console.log(JSON.stringify({ written: !dry, file: DRAFT_PREP, ...fit }, null, 2));
       break;
     }

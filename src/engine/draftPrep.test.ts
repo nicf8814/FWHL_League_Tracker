@@ -284,3 +284,34 @@ test('mock rosters look like real ones: no team hoards QBs or TEs', async () => 
     }
   }
 });
+
+test('ranks: edge cases match the plain count-the-bigger-ones definition', () => {
+  assert.deepEqual(ranks([]), []);
+  assert.deepEqual(ranks([5]), [1]);
+  assert.deepEqual(ranks([7, 7, 7]), [1, 1, 1]);
+  assert.deepEqual(ranks([1, 3, 2, 3, -4, 0]), [4, 1, 3, 1, 6, 5]);
+  assert.deepEqual(ranks([0, -0]), [1, 1]);
+  const naive = (vs: number[]) => vs.map((v) => 1 + vs.filter((w) => w > v).length);
+  let s = 11;
+  const rand = () => ((s = (s * 48271) % 2147483647) / 2147483647);
+  for (let k = 0; k < 50; k++) {
+    const vs = Array.from({ length: 1 + Math.floor(rand() * 60) }, () => Math.floor(rand() * 20) - 5);
+    assert.deepEqual(ranks(vs), naive(vs), vs.join(','));
+  }
+});
+
+test('mock auctions: my max is asked once per player, and a plan I cannot afford never comes off', async () => {
+  const { simulate } = await import('./mockAuction.ts');
+  const board = priceBoard(tiny()).rows;
+  const keyOf = (r: { name: string; pos: string }) => `${r.name}|${r.pos}`;
+  const persona = (key: string) => ({ key, name: key, teamId: 0, lean: { QB: 1, RB: 1, WR: 1, TE: 1 }, overpay: 1, stars: 1, fav: [], drafts: 5 });
+  const teams = Array.from({ length: 11 }, (_, i) => ({ name: `T${i}`, budget: 200, filled: {}, persona: persona(`T${i}`) }));
+  let calls = 0;
+  const out = simulate(board, teams, (r) => { calls++; return r.name === 'RB 1' ? 0 : Math.round(r.cost); }, keyOf, ['RB 1|RB'], 25);
+  assert.equal(calls, board.filter((r) => !r.keeper).length, 'once per player, not once per player per run');
+  assert.equal(out.players.get('RB 1|RB')!.get, 0, 'a $0 max never gets the top RB');
+  assert.equal(out.planOdds, 0);
+  const twice = simulate(board, teams, (r) => Math.round(r.cost), keyOf, ['RB 1|RB', 'RB 1|RB'], 25);
+  const once = simulate(board, teams, (r) => Math.round(r.cost), keyOf, ['RB 1|RB'], 25);
+  assert.equal(twice.planOdds, once.planOdds, 'a player listed twice in the plan counts once');
+});
