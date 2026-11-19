@@ -7,7 +7,7 @@ import type { DraftPrep, PrepPos } from '../data/draftPrep.ts';
 import { playerKey } from '../data/drafts.ts';
 import { runAuctionJob, type AuctionRequest } from './auctionJobs.ts';
 import { priceBoard, type PrepRow } from './draftPrep.ts';
-import { DEFAULT_DIALS, OUTLOOK_EXAMPLES, calibrate, playerTeam, poolOf, rng, runAuction, simulate, strategyBid, type Auction, type DraftOutlook, type PlainTeam, type SimTeam } from './mockAuction.ts';
+import { DEFAULT_DIALS, OUTLOOK_EXAMPLES, calibrate, playerTeam, poolOf, quantile, rng, runAuction, simulate, strategyBid, type Auction, type DraftOutlook, type PlainTeam, type SimTeam } from './mockAuction.ts';
 import { newestOnly, workerClient } from './workerClient.ts';
 
 const tiers = () => ({ upTo: 999, label: 'All', factor: 1, n: 10 });
@@ -77,22 +77,21 @@ test('draft outlook: the drafts match the old on-page auctions, and the first ex
   }
 });
 
-test('draft outlook: chances, rivals, prices to win and plan odds match a recount of the same drafts', () => {
+test('draft outlook: odds to win, plan odds and targets landed match a recount of the same drafts', () => {
   const n = 30, drafts = sameDrafts('plan', 2, n), out = outlook('plan', 2, n);
   const sale = (a: Auction, k: string) => a.log.find((s) => s.key === k);
   const med = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b), m = s.length >> 1; return s.length ? (s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2) : null; };
   assert.deepEqual(out.targets.map((t) => t.key).sort(), Object.keys(myBids).sort());
   for (const t of out.targets) {
     assert.equal(t.bid, myBids[t.key]);
-    assert.equal(t.get, drafts.filter((a) => sale(a, t.key)?.winner === 'Me').length / n, `${t.name} chance`);
-    const lostTo = drafts.map((a) => sale(a, t.key)).filter((s) => s?.winner && s.winner !== 'Me');
-    assert.equal(t.toWin, med(lostTo.map((s) => s!.winBid + 1)), `${t.name} price to win`);
-    if (t.rival) {
-      const by = (team: string) => lostTo.filter((s) => s!.winner === team);
-      assert.ok(lostTo.every((s) => by(s!.winner!).length <= by(t.rival!).length), `${t.name}: ${t.rival} takes him most often`);
-      assert.equal(t.rivalShare, by(t.rival).length / n);
-      assert.equal(t.rivalPrice, med(by(t.rival).map((s) => s!.price)));
-    } else assert.equal(lostTo.length, 0);
+    assert.equal(t.get, drafts.filter((a) => sale(a, t.key)?.winner === 'Me').length / n, `${t.name} odds to win`);
+    assert.deepEqual(Object.keys(t).sort(), ['bid', 'get', 'key', 'name', 'pos', 'toWin'], 'odds and price to win only: no rival names');
+    // What it took to win him: the winner's top bid + $1, in each draft he was lost to someone; it varies.
+    const took = drafts.map((a) => sale(a, t.key)).filter((s) => s?.winner && s.winner !== 'Me').map((s) => s!.winBid + 1);
+    if (!took.length) { assert.equal(t.toWin, null); continue; }
+    assert.deepEqual(t.toWin, { mid: med(took), lo: quantile(took, 0.25), hi: quantile(took, 0.75) }, `${t.name} price to win`);
+    assert.ok(t.toWin!.lo <= t.toWin!.mid && t.toWin!.mid <= t.toWin!.hi, `${t.name}: low ≤ usual ≤ high`);
+    assert.ok(took.includes(t.toWin!.lo) && took.includes(t.toWin!.hi), `${t.name}: the range ends are amounts really bid`);
   }
   for (let i = 1; i < out.targets.length; i++) assert.ok(out.targets[i - 1]!.get <= out.targets[i]!.get, 'least likely first');
   assert.equal(out.planOdds, drafts.filter((a) => Object.keys(myBids).every((k) => sale(a, k)?.winner === 'Me')).length / n);
@@ -176,4 +175,12 @@ test('draft outlook: the same set of drafts gives the same answer; a new set giv
   assert.deepEqual(outlook('plan', 5, 10), outlook('plan', 5, 10), 'same set, same answer');
   const a = outlook('plan', 5, 10), b = outlook('plan', 6, 10);
   assert.notDeepEqual(a.examples.map((e) => e.log), b.examples.map((e) => e.log), 'a new set plays different drafts');
+});
+
+test('quantile picks a real value from the list', () => {
+  assert.equal(quantile([5], 0.25), 5);
+  assert.equal(quantile([4, 1, 3, 2], 0), 1);
+  assert.equal(quantile([4, 1, 3, 2], 1), 4);
+  assert.equal(quantile([10, 20, 30, 40, 50], 0.25), 20);
+  assert.equal(quantile([10, 20, 30, 40, 50], 0.75), 40);
 });

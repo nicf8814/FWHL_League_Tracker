@@ -3,7 +3,7 @@
 // usually the priciest one at a position the nominator doesn't need, sometimes a wild card), and every
 // team bids its persona (position lean, overpay, stars, favorite NFL teams) under its own money, keepers,
 // max-bid rule and position limits. Nic's team, when it takes part, bids his plan or a strategy.
-// simulate() runs the other 11 teams many times for the board's Get %, likely buyers and plan odds.
+// simulate() runs the other 11 teams many times for the board's Chance at your price and plan odds.
 // Seeded, so the same inputs always give the same answer.
 import { PREP_POS, type Persona, type PrepPos } from '../data/draftPrep.ts';
 import { playerKey } from '../data/drafts.ts';
@@ -288,18 +288,18 @@ export function simulateBoard(rows: PrepRow[], teams: SimTeam[], myBids: Record<
 }
 
 // ---------- the Mock draft page: your draft outlook ----------
-// Plays n auctions with Nic's team in them and sums them up in his terms: how often his whole plan comes
-// together, each planned player's chance and who usually beats him to it, what his team usually looks
-// like, and a few of the drafts themselves to watch.
+// Plays n auctions with Nic's team in them and sums them up in his terms: how many of his targets he
+// usually lands and how often all of them, his odds of winning each one at his bid, what his team usually
+// looks like, and a few of the drafts themselves to watch.
 export const playerTeam = (key: string, team: string | null) => `${key}\u0000${team}`;
 export const OUTLOOK_EXAMPLES = 12; // the typical draft plus 11 more to browse (all 100 would cost ~17 ms to hand back)
 
 export interface TargetOutlook {
   key: string; name: string; pos: PrepPos; bid: number;
-  get: number; // share of drafts he ends up on Nic's team
-  rival: string | null; rivalShare: number; // the team that takes him most often when Nic doesn't, and how often
-  rivalPrice: number | null; // what that team usually pays (median)
-  toWin: number | null; // the bid that would have beaten the winner, in the median draft Nic lost him
+  get: number; // share of drafts Nic wins him at his bid
+  // What it took to win him (the winner's top bid + $1) in the drafts Nic lost him: it varies draft to
+  // draft, so the median and the middle half (25th-75th percentile). null: he never lost him to anyone.
+  toWin: { mid: number; lo: number; hi: number } | null;
 }
 export interface DraftOutlook {
   run: number; // which set of drafts this is (the page's Re-Roll Draft count)
@@ -313,6 +313,8 @@ export interface DraftOutlook {
 }
 
 const median = (xs: number[]) => { if (!xs.length) return null; const s = [...xs].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2; };
+// The q-th quantile of a non-empty list, by the nearest value at or below it (an amount someone really bid).
+export const quantile = (xs: number[], q: number) => { const s = [...xs].sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.max(0, Math.floor(q * (s.length - 1))))]!; };
 
 // The most typical draft is a real single draft (nobody on two teams, every budget and roster rule kept):
 // the one where the most players went where they usually go, scored by summing freq over its sales.
@@ -331,17 +333,9 @@ export function draftOutlook(pool: PrepRow[], teams: SimTeam[], me: string | nul
   const sales = drafts.map((a) => new Map(a.log.map((x) => [x.key, x])));
   const targets: TargetOutlook[] = planned.map((key) => {
     const r = inPool.get(key)!;
-    let mine = 0;
-    const others = new Map<string, number[]>(), beat: number[] = [];
-    for (const s of sales) {
-      const x = s.get(key);
-      if (x?.winner === me) { mine++; continue; }
-      if (!x?.winner) continue;
-      (others.get(x.winner) ?? others.set(x.winner, []).get(x.winner)!).push(x.price);
-      beat.push(x.winBid + 1);
-    }
-    const [rival, paid] = [...others].sort((a, b) => b[1].length - a[1].length)[0] ?? [null, []];
-    return { key, name: r.name, pos: r.pos, bid: plan[key]!, get: mine / n, rival, rivalShare: paid.length / n, rivalPrice: median(paid), toWin: median(beat) };
+    const took = sales.map((s) => s.get(key)).filter((x) => x?.winner && x.winner !== me).map((x) => x!.winBid + 1);
+    const toWin = took.length ? { mid: median(took)!, lo: quantile(took, 0.25), hi: quantile(took, 0.75) } : null;
+    return { key, name: r.name, pos: r.pos, bid: plan[key]!, get: sales.filter((s) => s.get(key)?.winner === me).length / n, toWin };
   }).sort((a, b) => a.get - b.get || b.bid - a.bid);
   const got = sales.map((s) => planned.filter((k) => s.get(k)?.winner === me).length);
   const planOdds = planned.length ? got.filter((g) => g === planned.length).length / n : null;

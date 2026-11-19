@@ -84,7 +84,7 @@ function Mock({ prep, file }: { prep: Prep; file: DraftPrepFile }) {
         {me && out && <Headline out={out} hasPlan={planned.length > 0} />}
       </Section>
 
-      {me && out && out.targets.length > 0 && <Targets targets={out.targets} n={out.n} />}
+      {me && out && out.targets.length > 0 && <Targets targets={out.targets} />}
 
       {me && !out && (
         <Section title="Your team going in" aside={<span className="num text-ink-3">${budget} after keepers · ${plannedSpend} planned · ${budget - plannedSpend} for the rest</span>}>
@@ -118,26 +118,18 @@ function Headline({ out, hasPlan }: { out: DraftOutlook; hasPlan: boolean }) {
   );
 }
 
-// Each planned player: his chance, who usually beats Nic to him, and what it would have taken.
-function Targets({ targets, n }: { targets: TargetOutlook[]; n: number }) {
+// Each planned player: his chance of winning the bid at Nic's price (Nic, Nov 19: just the odds).
+function Targets({ targets }: { targets: TargetOutlook[] }) {
   return (
     <Section title="Your targets" aside={<span className="text-ink-3">least likely first</span>}>
-      <p className="max-w-[75ch] text-sm text-ink-2">To get a player more often, raise your bid on the Board toward what it took to win him.</p>
-      <ul className="grid gap-2 text-sm">
+      <p className="max-w-[75ch] text-sm text-ink-2">Your odds of winning each bid at your price. When you lost him, what it took to win him varies from draft to draft: the usual amount, then the middle half of the range. Raise a bid on the Board to win him more often.</p>
+      <ul className="grid text-sm">
         {targets.map((t) => (
-          <li key={t.key} className="grid gap-0.5 border-t border-line pt-2 first:border-0 first:pt-0">
-            <div className="flex items-center gap-2">
-              <PosMark pos={t.pos} /><b className="flex-1 truncate">{t.name}</b>
-              <span className="num text-xs text-ink-3">your bid ${t.bid}</span>
-              <span className={`num font-semibold ${chanceTone(t.get)}`}>you get him {pct(t.get)}</span>
-            </div>
-            {t.get < 0.95 && t.rival && (
-              <p className="text-ink-2">
-                Usually goes to <b>{t.rival}</b> ({Math.round(t.rivalShare * n)} of {n} drafts){t.rivalPrice !== null ? ` for about $${Math.round(t.rivalPrice)}` : ''}.
-                {t.toWin !== null && t.toWin > t.bid && <> It took about <b>${Math.round(t.toWin)}</b> to win him.</>}
-              </p>
-            )}
-            {t.get < 0.95 && !t.rival && <p className="text-ink-2">Sometimes nobody takes him.</p>}
+          <li key={t.key} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 border-t border-line py-1.5 first:border-0">
+            <PosMark pos={t.pos} /><b className="min-w-0 flex-1 truncate">{t.name}</b>
+            <span className="num text-ink-2">at ${t.bid}</span>
+            <span className={`num w-24 text-right font-semibold ${chanceTone(t.get)}`}>{pct(t.get)} to win</span>
+            {t.toWin && t.toWin.mid > t.bid && <span className="w-full pl-8 text-ink-2 sm:w-auto sm:pl-0">· it took about <b>${Math.round(t.toWin.mid)}</b> to win him{t.toWin.hi > t.toWin.lo ? ` ($${t.toWin.lo}–$${t.toWin.hi})` : ''}</span>}
           </li>
         ))}
       </ul>
@@ -165,7 +157,12 @@ function Examples({ out, me, teams, keepers, plan }: { out: DraftOutlook; me: st
       <p className="max-w-[75ch] text-sm text-ink-2">
         {i === 0 ? `One real draft from the ${out.n}: the one where the most players went where they usually go.` : `Another of the ${out.n} drafts, to see how it can go differently.`} The % by each price is how often that team landed him across all {out.n}.
       </p>
-      {me && <p className="text-sm">In this one: <b>{a.rosters.get(me)?.length ?? 0} bought, ${a.left.get(me) ?? 0} left</b>{lost.length ? <>; lost {lost.map((s, j) => <span key={s!.key}>{j ? ', ' : ''}{s!.name}{s!.winner ? ` to ${s!.winner} ($${s!.price})` : ' (not nominated)'}</span>)}</> : ''}.</p>}
+      {me && <p className="text-sm">In this one: <b>{a.rosters.get(me)?.length ?? 0} bought, ${a.left.get(me) ?? 0} left</b>.</p>}
+      {me && lost.length > 0 && (
+        <ul className="grid gap-0.5 text-sm text-ink-2" aria-label="Targets you lost in this draft">
+          {lost.map((s) => <li key={s!.key}>Lost {s!.name}{s!.winner ? <>: <b>{s!.winner}</b> won the bid at ${s!.price}; it took <b>${s!.winBid + 1}</b> to win him here (your bid ${plan[s!.key]})</> : ': nobody bought him'}</li>)}
+        </ul>
+      )}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {order.map((t) => (
           <div key={t.name} className={`rounded border p-2.5 text-sm ${t.name === me ? 'border-accent' : 'border-line'}`}>
