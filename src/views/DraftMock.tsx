@@ -58,6 +58,8 @@ function Mock({ prep, file }: { prep: Prep; file: DraftPrepFile }) {
   const job = useJob(() => draftOutlookAsync({ pool, teams, me, plan: me ? plan.bids : {}, run, n: DRAFTS, nomination: file.nomination, calib, dials }), [pool, teams, me, plan.bids, run, file.nomination, calib, dials]);
   const out = job.value;
   const busy = job.busy || (out !== null && out.run !== run); // the label never runs ahead of the numbers shown
+  const [ex, setEx] = useState(0); // which example draft is shown (Your targets says what happened in it)
+  useEffect(() => setEx(0), [out]); // a new set of drafts starts from the most typical again
 
   const myKeepers = me ? keepers.filter((k) => k[3] === me) : [];
   const budget = prep.budget - myKeepers.reduce((s, k) => s + k[2], 0);
@@ -84,7 +86,7 @@ function Mock({ prep, file }: { prep: Prep; file: DraftPrepFile }) {
         {me && out && <Headline out={out} hasPlan={planned.length > 0} />}
       </Section>
 
-      {me && out && out.targets.length > 0 && <Targets targets={out.targets} />}
+      {me && out && out.targets.length > 0 && <Targets targets={out.targets} me={me} example={out.examples[Math.min(ex, out.examples.length - 1)]!} i={ex} k={out.examples.length} setI={setEx} />}
 
       {me && !out && (
         <Section title="Your team going in" aside={<span className="num text-ink-3">${budget} after keepers · ${plannedSpend} planned · ${budget - plannedSpend} for the rest</span>}>
@@ -95,7 +97,7 @@ function Mock({ prep, file }: { prep: Prep; file: DraftPrepFile }) {
         </Section>
       )}
 
-      {out && <Examples out={out} me={me} teams={teams} keepers={keepers} plan={plan.bids} />}
+      {out && <Examples out={out} me={me} teams={teams} keepers={keepers} i={ex} setI={setEx} />}
     </div>
   );
 }
@@ -118,34 +120,52 @@ function Headline({ out, hasPlan }: { out: DraftOutlook; hasPlan: boolean }) {
   );
 }
 
-// Each planned player: his chance of winning the bid at Nic's price (Nic, Nov 19: just the odds).
-function Targets({ targets }: { targets: TargetOutlook[] }) {
+const exampleName = (i: number) => (i === 0 ? 'the most typical draft' : `example draft ${i + 1}`);
+
+// Each planned player: his odds of winning the bid at Nic's price (Nic, Nov 19: just the odds), what it
+// usually took to win him, and under his name what happened to him in the example draft shown below
+// (Nic, Nov 19: one place for it, not a second list).
+function Targets({ targets, me, example, i, k, setI }: { targets: TargetOutlook[]; me: string; example: Auction; i: number; k: number; setI: (i: number) => void }) {
+  const sale = useMemo(() => new Map(example.log.map((s) => [s.key, s])), [example]);
+  // Step through the drafts from here too, so the "Here:" lines change where he is reading them.
   return (
-    <Section title="Your targets" aside={<span className="text-ink-3">least likely first</span>}>
-      <p className="max-w-[75ch] text-sm text-ink-2">Your odds of winning each bid at your price. When you lost him, what it took to win him varies from draft to draft: the usual amount, then the middle half of the range. Raise a bid on the Board to win him more often.</p>
+    <Section title="Your targets" aside={
+      <span className="flex items-center gap-2 whitespace-nowrap">
+        <span className="text-ink-3">Here: {exampleName(i)}</span>
+        <button type="button" className="rowbtn h-9 rounded border-2 border-ink px-3 font-semibold text-ink" onClick={() => setI((i + 1) % k)}>{i >= k - 1 ? 'Back to most typical' : 'Next draft ›'}</button>
+      </span>}>
+      <p className="max-w-[75ch] text-sm text-ink-2">Your odds of winning each bid at your price, and what it usually took to win him (the middle half of the range in brackets: it varies from draft to draft). Under each name: what happened to him in {exampleName(i)}, shown below. Raise a bid on the Board to win him more often.</p>
       <ul className="grid text-sm">
-        {targets.map((t) => (
-          <li key={t.key} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 border-t border-line py-1.5 first:border-0">
-            <PosMark pos={t.pos} /><b className="min-w-0 flex-1 truncate">{t.name}</b>
-            <span className="num text-ink-2">at ${t.bid}</span>
-            <span className={`num w-24 text-right font-semibold ${chanceTone(t.get)}`}>{pct(t.get)} to win</span>
-            {t.toWin && t.toWin.mid > t.bid && <span className="w-full pl-8 text-ink-2 sm:w-auto sm:pl-0">· it took about <b>${Math.round(t.toWin.mid)}</b> to win him{t.toWin.hi > t.toWin.lo ? ` ($${t.toWin.lo}–$${t.toWin.hi})` : ''}</span>}
-          </li>
-        ))}
+        {targets.map((t) => {
+          const s = sale.get(t.key);
+          return (
+            <li key={t.key} className="grid gap-0.5 border-t border-line py-1.5 first:border-0">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <PosMark pos={t.pos} /><b className="min-w-0 flex-1 truncate">{t.name}</b>
+                <span className="num text-ink-2">at ${t.bid}</span>
+                <span className={`num w-24 text-right font-semibold ${chanceTone(t.get)}`}>{pct(t.get)} to win</span>
+                {t.toWin && t.toWin.mid > t.bid && <span className="w-full pl-8 text-ink-2 sm:w-auto sm:pl-0">· usually took <b>${Math.round(t.toWin.mid)}</b>{t.toWin.hi > t.toWin.lo ? ` ($${t.toWin.lo}–$${t.toWin.hi})` : ''}</span>}
+              </div>
+              <p className="pl-8 text-ink-2">
+                {!s || !s.winner ? 'Here: nobody bought him.'
+                  : s.winner === me ? <span className="text-gain">Here: you won him at ${s.price}.</span>
+                  : <>Here: <b>{s.winner}</b> won the bid at ${s.price}; it took <b>${s.winBid + 1}</b> to win him.</>}
+              </p>
+            </li>
+          );
+        })}
       </ul>
     </Section>
   );
 }
 
 // A few of the simulated drafts to watch, the most typical first: every roster, then the nomination log.
-function Examples({ out, me, teams, keepers, plan }: { out: DraftOutlook; me: string | null; teams: PlainTeam[]; keepers: Prep['keepers']; plan: Record<string, number> }) {
-  const [i, setI] = useState(0);
-  useEffect(() => setI(0), [out]); // a new set of drafts starts from the most typical again
+// i (which draft is shown) lives in the page, so Your targets above can say what happened in it.
+function Examples({ out, me, teams, keepers, i, setI }: { out: DraftOutlook; me: string | null; teams: PlainTeam[]; keepers: Prep['keepers']; i: number; setI: (i: number) => void }) {
   const a: Auction = out.examples[Math.min(i, out.examples.length - 1)]!;
   const k = out.examples.length;
   const order = [...teams].sort((x, y) => Number(y.name === me) - Number(x.name === me) || x.name.localeCompare(y.name));
   const keptBy = (team: string) => keepers.filter((x) => x[3] === team);
-  const lost = me ? Object.keys(plan).map((key) => a.log.find((s) => s.key === key)).filter((s) => s && s.winner !== me) : [];
   const share = (key: string, team: string | null) => out.freq.get(playerTeam(key, team)) ?? 0;
   return (
     <Section title="Watch an example draft" aside={
@@ -157,12 +177,7 @@ function Examples({ out, me, teams, keepers, plan }: { out: DraftOutlook; me: st
       <p className="max-w-[75ch] text-sm text-ink-2">
         {i === 0 ? `One real draft from the ${out.n}: the one where the most players went where they usually go.` : `Another of the ${out.n} drafts, to see how it can go differently.`} The % by each price is how often that team landed him across all {out.n}.
       </p>
-      {me && <p className="text-sm">In this one: <b>{a.rosters.get(me)?.length ?? 0} bought, ${a.left.get(me) ?? 0} left</b>.</p>}
-      {me && lost.length > 0 && (
-        <ul className="grid gap-0.5 text-sm text-ink-2" aria-label="Targets you lost in this draft">
-          {lost.map((s) => <li key={s!.key}>Lost {s!.name}{s!.winner ? <>: <b>{s!.winner}</b> won the bid at ${s!.price}; it took <b>${s!.winBid + 1}</b> to win him here (your bid ${plan[s!.key]})</> : ': nobody bought him'}</li>)}
-        </ul>
-      )}
+      {me && <p className="text-sm">In this one: <b>{a.rosters.get(me)?.length ?? 0} bought, ${a.left.get(me) ?? 0} left</b>. What happened to each of your targets is under his name in Your targets.</p>}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {order.map((t) => (
           <div key={t.name} className={`rounded border p-2.5 text-sm ${t.name === me ? 'border-accent' : 'border-line'}`}>
