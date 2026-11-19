@@ -112,13 +112,11 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
     { id: 'cost', label: 'Cost', value: (r) => r.cost, cell: (r) => <b className="font-semibold">${fmt(r.cost, 0)}</b> },
     { id: 'band', label: 'Window', hidden: !!live, value: (r) => r.ceiling, cell: (r) => <span className="whitespace-nowrap text-ink-2">{r.floor}–{r.ceiling}</span> },
     { id: 'worth', label: 'Worth', value: (r) => r.worth, cell: (r) => `$${fmt(r.worth, 0)}` },
-    { id: 'get', label: 'Get %', value: (r) => (r.keeper ? null : simOf(r)?.get ?? null), cell: (r) => {
+    { id: 'get', label: 'Chance at your price', value: (r) => (r.keeper ? null : simOf(r)?.get ?? null), cell: (r) => {
       const x = simOf(r);
       if (r.keeper || !x) return '–';
-      const buyers = x.buyers.map(([n, c]) => `${n} ${Math.round(c * 100)}%`).join(', ');
-      return <span title={`At $${plan.bids[rowKey(r)] ?? Math.round(r.cost)}. Usually sells for about $${Math.round(x.price)}${buyers ? `; likely buyers: ${buyers}` : ''}`} className={x.get >= 0.6 ? 'text-gain' : x.get < 0.3 ? 'text-loss' : ''}>{Math.round(x.get * 100)}%</span>;
+      return <span title={`Your odds of winning ${r.name} at $${plan.bids[rowKey(r)] ?? Math.round(r.cost)}: how often nobody else would pay more, one player at a time before your budget (the Mock draft plays your whole plan). Usually sells for about $${Math.round(x.price)}.`} className={x.get >= 0.6 ? 'text-gain' : x.get < 0.3 ? 'text-loss' : ''}>{Math.round(x.get * 100)}%</span>;
     } },
-    { id: 'buyer', label: 'Likely buyer', left: true, hidden: true, className: 'text-ink-2', value: (r) => simOf(r)?.buyers[0]?.[0] ?? null, cell: (r) => { const b = simOf(r)?.buyers[0]; return b && !r.keeper ? `${b[0]} ${Math.round(b[1] * 100)}%` : '–'; } },
     { id: 'edge', label: 'Edge', value: (r) => (r.keeper ? null : r.edge), cell: (r) => (r.keeper ? '–' : <span className={tone(r.edge, 2)}>{signed(r.edge, 0)}</span>) },
     { id: 'tier', label: 'Price tier', left: true, hidden: !!live, className: 'text-ink-2', value: (r) => `${r.pos}${r.rank} ${r.tier}`, cell: (r) => `${r.tier} (${r.pos}${r.rank})` },
     { id: 'vtier', label: 'Value tier', hidden: !!live, value: (r) => r.valueTier, cell: (r) => (r.valueTier == null ? '–' : `${r.pos} ${r.valueTier}`) },
