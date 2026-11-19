@@ -49,6 +49,11 @@ function LiveBoard({ prep, personas, nomination, dials }: { prep: Prep; personas
 // ownerOf: a persona's owner as the keeper rows name him (team name on the live board, owner key in a test run).
 interface BoardProps { prep: Prep; defaultKeepers: KeeperRow[]; candidates?: KeeperRow[]; live?: Map<string, StandInRow>; weeks?: number; me?: string | null; personas: Persona[]; nomination?: Nomination; dials?: MockDials; ownerOf: (p: Persona) => string }
 
+const EVERYONE_KEY = 'fwhl-draft-board-everyone';
+function readEveryone(): boolean {
+  try { return localStorage.getItem(EVERYONE_KEY) === '1'; } catch { return false; }
+}
+
 function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks, me = null, personas, nomination, dials, ownerOf }: BoardProps) {
   const P = usePersonas(personas);
   const plan = usePlan(prep.year);
@@ -76,7 +81,12 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
     return () => { live = false; clearTimeout(id); };
   }, [board, others, plan.bids, P.runs, nomination, dials]);
   const simOf = (r: PrepRow) => sim?.players.get(rowKey(r));
-  const rows = useMemo(() => board.rows.filter((r) => r.price > 0 || (r.vorp ?? 0) > 0 || r.keeper || candidateKeys.has(keyOf(r.name, r.pos))), [board, candidateKeys]);
+  // Priced = the draftable pool: a price, points over the last starter, or a keeper call. Everyone adds the
+  // $0 players below that, for late sleepers (Nic, Nov 19). Remembered per viewer.
+  const [everyone, setEveryone] = useState(readEveryone);
+  const showEveryone = (v: boolean) => { setEveryone(v); try { localStorage.setItem(EVERYONE_KEY, v ? '1' : '0'); } catch { /* this visit only */ } };
+  const priced = useMemo(() => board.rows.filter((r) => r.price > 0 || (r.vorp ?? 0) > 0 || r.keeper || candidateKeys.has(keyOf(r.name, r.pos))), [board, candidateKeys]);
+  const rows = everyone ? board.rows : priced;
   const liveOf = (r: PrepRow) => live?.get(keyOf(r.name, r.pos));
   const planned = useMemo(() => planPicks(board.rows, me, plan.bids).picks, [board, me, plan.bids]);
   const nextMax = maxBidFor(planned, null, prep.budget);
@@ -132,6 +142,7 @@ function Board({ prep, defaultKeepers, candidates = defaultKeepers, live, weeks,
     <Section title={live ? `${prep.year} draft board, live` : `${prep.year} draft board, test run`} aside={`${keepers.length} keepers, $${board.keeperSpend} kept`}>
       <p className="headline-sm">${board.moneyLeft.toLocaleString()} left for {board.openSlots} open spots</p>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
+        <Seg label="Players shown" value={everyone ? 'all' : 'priced'} options={[['priced', `Priced (${priced.length})`], ['all', `Everyone (${board.rows.length})`]]} onChange={(v) => showEveryone(v === 'all')} />
         {board.boughtSpend > 0 && <span>Counts your plan's ${board.boughtSpend} in bids as sold.</span>}
         {changed ? <button type="button" className="link" onClick={reset}>Undo my {changed} keeper switch{changed === 1 ? '' : 'es'}</button> : null}
         <span className="flex items-center gap-2 text-ink-3">How this board works <Help label="How this board works"><ul className="grid gap-1.5 text-sm text-ink-2">
