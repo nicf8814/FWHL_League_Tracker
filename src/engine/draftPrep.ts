@@ -37,8 +37,11 @@ export const FLEX_YEARS = [2023, 2024, 2025]; // lineup since 2023: QB, 2 RB, 2 
 const MIN_REF = 3; // consensus price below this is noise at the $1-2 minimum: left out of the fit
 
 // Rank within a list, ties sharing the better rank (two $63 RBs are both RB1).
+// Sorted once: a value's rank is 1 + how many are bigger, its first place in the descending list.
 export function ranks(values: number[]): number[] {
-  return values.map((v) => 1 + values.filter((w) => w > v).length);
+  const desc = [...values].sort((a, b) => b - a), first = new Map<number, number>();
+  desc.forEach((v, i) => { if (!first.has(v)) first.set(v, i + 1); });
+  return values.map((v) => first.get(v)!);
 }
 export const tierIndex = (pos: PrepPos, rank: number) => {
   const i = TIER_CUTS[pos].findIndex(([upTo]) => rank <= upTo);

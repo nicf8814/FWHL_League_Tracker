@@ -1,6 +1,9 @@
 // Checks for the weekly data updates. Run with `npm test`.
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
 import type { Dataset } from '../src/data/schema.ts';
 import { validateDataset } from '../src/data/validate.ts';
@@ -136,4 +139,53 @@ test('dropping FantasyPros clears its ranks, usage and sources, and leaves a val
   assert.equal(ds.meta.sources.some((s) => s.id === 'fantasypros' || s.id === 'fpstats'), false);
   assert.deepEqual(rep.changes, [`Removed ${n} FantasyPros ranks and ${u} usage rows`]);
   assert.ok(validateDataset(JSON.parse(formatDataset(ds))).ok);
+});
+
+test('the file format keeps every top-level key, including the optional usage list', () => {
+  const ds = fresh();
+  ds.usage = [];
+  assert.deepEqual(Object.keys(JSON.parse(formatDataset(ds))).sort(), Object.keys(ds).sort());
+});
+
+// The command line, run on a scratch copy of the fixture (the fixture itself is never touched).
+function cli(...args: string[]) {
+  const dir = mkdtempSync(join(tmpdir(), 'fwhl-cli-'));
+  const file = join(dir, 'ds.json');
+  writeFileSync(file, fixture);
+  const run = spawnSync(process.execPath, ['scripts/data.ts', ...args, '--file', file], { cwd: new URL('..', import.meta.url), encoding: 'utf8' });
+  const out = { status: run.status, stderr: run.stderr, text: readFileSync(file, 'utf8'), leftover: existsSync(`${file}.tmp`) };
+  rmSync(dir, { recursive: true, force: true });
+  return out;
+}
+
+test('cli: a rejected update writes nothing', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'fwhl-in-'));
+  const bad = join(dir, 'results-week99.json');
+  writeFileSync(bad, JSON.stringify({ week: 0, games: [] }));
+  const r = cli('results', bad);
+  rmSync(dir, { recursive: true, force: true });
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /Nothing was written/);
+  assert.equal(r.text, fixture);
+  assert.equal(r.leftover, false);
+});
+
+test('cli: an unreadable input file is reported, not thrown', () => {
+  const r = cli('results', '/no/such/file.json');
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /could not read \/no\/such\/file\.json/);
+  assert.equal(r.text, fixture);
+});
+
+test('cli: --dry-run leaves the file alone; a real run writes the formatted, valid file and no temp file', () => {
+  const dry = cli('drop-fantasypros', '--dry-run');
+  assert.equal(dry.status, 0, dry.stderr);
+  assert.equal(dry.text, fixture);
+  const real = cli('drop-fantasypros');
+  assert.equal(real.status, 0, real.stderr);
+  assert.equal(real.leftover, false);
+  const ds = JSON.parse(real.text) as Dataset;
+  assert.ok(validateDataset(ds).ok);
+  assert.equal(real.text, formatDataset(ds), 'written in the one-record-per-line format');
+  assert.equal(ds.rankings.length, 0);
 });

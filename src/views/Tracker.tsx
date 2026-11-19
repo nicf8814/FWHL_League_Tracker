@@ -38,12 +38,13 @@ export default function Tracker() {
   const trades = useMemo(() => idx.ds.transactions.filter((t) => t.type === 'trade').sort((a, b) => b.date.localeCompare(a.date) || b.effectiveWeek - a.effectiveWeek), [idx]);
   const vetoes = useMemo(() => idx.ds.transactions.filter((t) => t.type === 'veto').sort((a, b) => b.date.localeCompare(a.date)), [idx]);
   const mine = settings.myTeamId;
-  const involves = (t: Transaction) => mine !== null && t.legs.some((l) => l.fromTeamId === mine || l.toTeamId === mine);
-  const shown = tab === 'mine' ? trades.filter(involves) : trades;
-  const evals = useEvaluations(tab === 'whatif' ? [...vetoes, ...trades] : shown);
+  // Memoized so the evaluations below are only redone when the list really changes, not every render.
+  const shown = useMemo(() => (tab === 'mine' ? trades.filter((t) => mine !== null && t.legs.some((l) => l.fromTeamId === mine || l.toTeamId === mine)) : trades), [tab, trades, mine]);
+  const graded = useMemo(() => (tab === 'whatif' ? [...vetoes, ...trades] : shown), [tab, vetoes, trades, shown]);
+  const evals = useEvaluations(graded);
   const sel = open ? evals.get(open) : undefined;
 
-  const myGrades = mine === null ? [] : trades.filter((t) => t.legs.some((l) => l.toTeamId === mine)).map((t) => evaluate(V, scenarioOf(t)).res.get(mine)!.grade);
+  const myGrades = useMemo(() => (mine === null ? [] : trades.filter((t) => t.legs.some((l) => l.toTeamId === mine)).map((t) => evaluate(V, scenarioOf(t)).res.get(mine)!.grade)), [V, trades, mine]);
   return (
     <div className="grid grid-cols-1 gap-6">
       <section aria-label="Headline" className="grid gap-1">
