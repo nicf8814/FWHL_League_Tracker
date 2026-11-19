@@ -41,15 +41,19 @@ export function verdict(give: number, get: number): Verdict {
   return { kind: 'lose', label: pct < -18 ? 'Clear loss' : 'Slight loss', diff, pct };
 }
 
-// Side totals. When one side sends more players, its extra (lowest) players count only above the
-// best healthy free agent at their position.
+// Share of his value an extra player always keeps in a 2-for-1 (or 3-for-1 ...). Whether waivers beat
+// him is the owner's call, so the analyzer never zeroes him out.
+export const EXTRA_KEEP = 0.5;
+
+// Side totals. When one side sends more players, its extra (lowest) players count for the larger of
+// EXTRA_KEEP of their value and their value above the best healthy free agent at their position.
 export function totals(V: Values, give: PlayerId[], get: PlayerId[], fn: (p: PlayerId) => number) {
   const side = (arr: PlayerId[], other: PlayerId[]) => {
     const vals = arr.map((p) => [p, fn(p) || 0] as const);
     const extra = arr.length - other.length;
     if (extra <= 0) return vals.reduce((s, [, v]) => s + v, 0);
     const pos = (p: PlayerId) => V.base.idx.players.get(p)!.pos;
-    return [...vals].sort((x, y) => x[1] - y[1]).reduce((s, [p, v], i) => s + (i < extra ? Math.max(0, v - V.faReplacement[pos(p)]) : v), 0);
+    return [...vals].sort((x, y) => x[1] - y[1]).reduce((s, [p, v], i) => s + (i < extra ? Math.max(EXTRA_KEEP * v, v - V.faReplacement[pos(p)]) : v), 0);
   };
   return { give: side(give, get), get: side(get, give) };
 }

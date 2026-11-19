@@ -10,7 +10,7 @@ import { buildBase, buildValues, lineup } from './model.ts';
 import { rank6, seed, simulate, tally, type SimInput } from './sim.ts';
 import { keeperCalls, keeperSet } from './keepers.ts';
 import { luck } from './luck.ts';
-import { bySource, evaluate, tradeFromQuery, tradeToQuery, validateTrade } from './trade.ts';
+import { bySource, evaluate, EXTRA_KEEP, totals, tradeFromQuery, tradeToQuery, validateTrade } from './trade.ts';
 
 const raw = JSON.parse(readFileSync(new URL('../../test/fixtures/fwhl-2026-11-10.json', import.meta.url), 'utf8'));
 const checked = validateDataset(raw);
@@ -193,6 +193,19 @@ test('each source reads a trade on its own; a split is a toss-up', () => {
   assert.deepEqual(r.reads.map((x) => x.source), ['Peaked', 'Menton', 'Scoring']);
   assert.ok(r.reads.every((x) => x.verdict.kind === 'lose'), 'everyone says Nic loses this one');
   assert.equal(r.tossUp, false);
+});
+
+test('an extra player in a 2-for-1 keeps part of his value', () => {
+  const ps = ds.players.filter((p) => idx.owner.get(p.id) !== undefined && p.pos === 'WR').map((p) => p.id);
+  const below = ps.find((p) => V.blend(p).ev > 1 && V.blend(p).ev < V.faReplacement.WR)!;
+  const top = ps.reduce((a, b) => (V.blend(b).ev > V.blend(a).ev ? b : a));
+  const other = ps.find((p) => p !== top && p !== below)!;
+  const val = (p: string) => V.blend(p).ev;
+  const T = totals(V, [top, below], [other], val);
+  assert.ok(Math.abs(T.give - (val(top) + EXTRA_KEEP * val(below))) < 1e-9, 'below the free-agent bar he keeps half');
+  const T2 = totals(V, [top, other], [below], val);
+  const lo = val(top) < val(other) ? top : other, hi = lo === top ? other : top;
+  assert.ok(Math.abs(T2.give - (val(hi) + Math.max(EXTRA_KEEP * val(lo), val(lo) - V.faReplacement.WR))) < 1e-9, 'above it, the larger share');
 });
 
 test('team needs name the weakest lineup spot', () => {
