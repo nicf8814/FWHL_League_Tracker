@@ -33,7 +33,7 @@ function Settings({ personas, years, fit }: { personas: Persona[]; years: number
             <li>The other 11 teams buy the open pool, after their keepers, this many times over. Teams nominate in turn the way this league does (top players early, then the middle, then cheap ones; usually a position the nominator doesn't need, sometimes a wild card), and the nominator opens at $1.</li>
             <li>Each owner bids the player's expected cost, adjusted by his persona below, plus some randomness. Nobody bids past his max bid (money left − $1 per other open spot), his position limits, or the most that player's slot has sold for. Once his starters at a position are covered he bids less there, much less past his own usual roster (his 2022-26 average, under Usual roster), and never past the most he has had at a position, so each roster comes out shaped like his real ones.</li>
             <li>The price is the second-highest bid plus $1, scaled so a player sells for about his expected cost on average. In the 2026 test run the mock prices missed real prices by about $6 on average, close to the board's own cost.</li>
-            <li><span className="text-ink">Get %</span> on the board: how often nobody else would pay more than your bid (your planned bid, else his expected cost). A tie counts as half. <span className="text-ink">Plan odds</span>: how often every player you planned stays within your bid in the same auction.</li>
+            <li><span className="text-ink">Chance at your price</span> on the Board: how often nobody else would pay more than your bid (your planned bid, else his expected cost), one player at a time. A tie counts as half. <span className="text-ink">Every bid holds</span>: how often that is true of all your planned players in the same auction. The Mock draft page plays your whole plan with your real budget, so its chances can be lower.</li>
           </ul></Help></span>
         </div>
       </Section>
@@ -50,7 +50,7 @@ function Settings({ personas, years, fit }: { personas: Persona[]; years: number
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-ink-3">Dials: bid randomness {fit.dials.noise}, interest past starters {fit.dials.deep}, past a usual roster {fit.dials.extra}, money pressure {fit.dials.pressure}, wild-card nominations {Math.round(fit.dials.wild * 100)}%. Real prices land inside the mock's range less often than they should: real auctions are more surprising than the mock, so read Get % as a guide, not a promise.</p>
+          <p className="text-xs text-ink-3">Dials: bid randomness {fit.dials.noise}, interest past starters {fit.dials.deep}, past a usual roster {fit.dials.extra}, money pressure {fit.dials.pressure}, wild-card nominations {Math.round(fit.dials.wild * 100)}%. Real prices land inside the mock's range less often than they should: real auctions are more surprising than the mock, so read the chances as a guide, not a promise.</p>
         </Section>
       )}
       <Section title="Owner personas" aside={<span className="flex items-center gap-3">{years.length ? `From the ${years[0]}-${years.at(-1)} drafts` : ''}<button type="button" className="link" onClick={() => P.reset()}>Reset all</button></span>}>

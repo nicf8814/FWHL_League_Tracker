@@ -114,7 +114,7 @@ export function PlanPanel({ rows, me, plan, budget, onFill, sim }: { rows: PrepR
     <div className="grid gap-2 rounded border border-line bg-panel p-2.5 text-xs">
       <div className="flex flex-wrap items-baseline justify-between gap-x-2">
         <h3 className="text-sm font-semibold">My plan{me ? ` (${me})` : ''}</h3>
-        <p className="num">${s.spent}/{budget} · ${s.left} left · {s.open} open · <b>max ${Math.max(0, s.maxBid)}</b>{sim?.planOdds != null && <> · <span title="Share of mock auctions where every player you bid on stays within your bid">plan odds <b>{Math.round(sim.planOdds * 100)}%</b></span></>}</p>
+        <p className="num">${s.spent}/{budget} · ${s.left} left · {s.open} open · <b>max ${Math.max(0, s.maxBid)}</b>{sim?.planOdds != null && <> · <span title="How often nobody outbids you on any planned player, one player at a time. The Mock draft page plays the whole plan with your budget.">every bid holds <b>{Math.round(sim.planOdds * 100)}%</b></span></>}</p>
       </div>
       <div className="flex flex-wrap items-center gap-1" title="Fills the empty spots at expected cost. Your keepers and the players you added stay; a new fill replaces only the auto picks.">
         <span className="text-ink-3">Auto-fill</span>

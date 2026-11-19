@@ -191,11 +191,13 @@ export function runAuction(pool: PrepRow[], teams: SimTeam[], keyOf: (r: PrepRow
         if (!w) return;
         w = Math.min(r.ceiling, w); // nobody past the most that slot has sold for
       }
-      // Off-plan buys keep back the money his planned players still need (Nic, Nov 18: the rest of the
-      // team is filled around the players he wants, without spending their money).
+      // Off-plan buys keep back the money and the roster spots his planned players still need (Nic, Nov 18:
+      // the rest of the team is filled around the players he wants, without spending their money). Without
+      // the spots, market buys filled his roster before his late $1 targets came up (Nov 19).
       if (t.bid && !isPlanned && t.planned?.size) {
-        let keep = 0;
-        for (const x of left) if (t.planned.has(keyOf(x))) keep += Math.max(0, t.bid(x) - 1);
+        let keep = 0, wanted = 0;
+        for (const x of left) if (t.planned.has(keyOf(x))) { keep += Math.max(0, t.bid(x) - 1); wanted++; }
+        if (o <= wanted) return; // every open spot is spoken for by a planned player still to come
         w = Math.min(w, Math.max(t === by ? 1 : 0, maxBid - keep));
       }
       w = Math.min(maxBid, w);
@@ -285,20 +287,64 @@ export function simulateBoard(rows: PrepRow[], teams: SimTeam[], myBids: Record<
   return simulate(rows, teams, (r) => myBids[auctionKey(r)] ?? Math.round(r.cost), auctionKey, Object.keys(myBids), runs, seed, nomination, dials);
 }
 
-// Mock draft "Run mock": one auction from a run number (1, 2, ...).
-export function mockOne(pool: PrepRow[], teams: SimTeam[], run: number, nomination: Nomination | undefined, calib: Calib, dials: MockDials): Auction {
-  return runAuction(pool, teams, auctionKey, rng(run * 7919), nomination, calib, dials);
+// ---------- the Mock draft page: your draft outlook ----------
+// Plays n auctions with Nic's team in them and sums them up in his terms: how often his whole plan comes
+// together, each planned player's chance and who usually beats him to it, what his team usually looks
+// like, and a few of the drafts themselves to watch.
+export const playerTeam = (key: string, team: string | null) => `${key}\u0000${team}`;
+export const OUTLOOK_EXAMPLES = 12; // the typical draft plus 11 more to browse (all 100 would cost ~17 ms to hand back)
+
+export interface TargetOutlook {
+  key: string; name: string; pos: PrepPos; bid: number;
+  get: number; // share of drafts he ends up on Nic's team
+  rival: string | null; rivalShare: number; // the team that takes him most often when Nic doesn't, and how often
+  rivalPrice: number | null; // what that team usually pays (median)
+  toWin: number | null; // the bid that would have beaten the winner, in the median draft Nic lost him
+}
+export interface DraftOutlook {
+  n: number;
+  examples: Auction[]; // examples[0] is the most typical draft
+  freq: Map<string, number>; // playerTeam(key, team): share of drafts that team landed him
+  planOdds: number | null; // share of drafts Nic gets every planned player (null: no plan)
+  landed: number | null; // how many of his planned players he usually gets (median; null: no plan)
+  targets: TargetOutlook[]; // his planned players, least likely first
+  usual: { bought: number; left: number } | null; // Nic's median players bought and money left
 }
 
-// Mock draft "Most typical of n": plays n auctions and returns the most typical one, a real single draft
-// (nobody on two teams, every budget and roster rule kept): the run where the most players went where
-// they usually go. freq: how often each player landed with each team, keyed by typicalPair().
-export const typicalPair = (key: string, team: string | null) => `${key}\u0000${team}`;
-export function mockTypical(pool: PrepRow[], teams: SimTeam[], run: number, n: number, nomination: Nomination | undefined, calib: Calib, dials: MockDials): { auction: Auction; freq: Map<string, number> } {
+const median = (xs: number[]) => { if (!xs.length) return null; const s = [...xs].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2; };
+
+// The most typical draft is a real single draft (nobody on two teams, every budget and roster rule kept):
+// the one where the most players went where they usually go, scored by summing freq over its sales.
+export function draftOutlook(pool: PrepRow[], teams: SimTeam[], me: string | null, plan: Record<string, number>, run: number, n: number, nomination: Nomination | undefined, calib: Calib, dials: MockDials): DraftOutlook {
   const rand = rng(run * 104729);
-  const runs = Array.from({ length: n }, () => runAuction(pool, teams, auctionKey, rand, nomination, calib, dials));
+  const drafts = Array.from({ length: n }, () => runAuction(pool, teams, auctionKey, rand, nomination, calib, dials));
   const freq = new Map<string, number>();
-  for (const a of runs) for (const x of a.log) if (x.winner) freq.set(typicalPair(x.key, x.winner), (freq.get(typicalPair(x.key, x.winner)) ?? 0) + 1 / n);
-  const score = (a: Auction) => a.log.reduce((t, x) => t + (x.winner ? freq.get(typicalPair(x.key, x.winner))! : 0), 0);
-  return { auction: runs.reduce((m, a) => (score(a) > score(m) ? a : m)), freq };
+  for (const a of drafts) for (const x of a.log) if (x.winner) freq.set(playerTeam(x.key, x.winner), (freq.get(playerTeam(x.key, x.winner)) ?? 0) + 1 / n);
+  const score = (a: Auction) => a.log.reduce((t, x) => t + (x.winner ? freq.get(playerTeam(x.key, x.winner))! : 0), 0);
+  let best = 0;
+  drafts.forEach((a, i) => { if (score(a) > score(drafts[best]!)) best = i; });
+  const examples = [drafts[best]!, ...drafts.filter((_, i) => i !== best).slice(0, OUTLOOK_EXAMPLES - 1)];
+
+  const inPool = new Map(pool.map((r) => [auctionKey(r), r]));
+  const planned = me ? Object.keys(plan).filter((k) => inPool.has(k)) : [];
+  const sales = drafts.map((a) => new Map(a.log.map((x) => [x.key, x])));
+  const targets: TargetOutlook[] = planned.map((key) => {
+    const r = inPool.get(key)!;
+    let mine = 0;
+    const others = new Map<string, number[]>(), beat: number[] = [];
+    for (const s of sales) {
+      const x = s.get(key);
+      if (x?.winner === me) { mine++; continue; }
+      if (!x?.winner) continue;
+      (others.get(x.winner) ?? others.set(x.winner, []).get(x.winner)!).push(x.price);
+      beat.push(x.winBid + 1);
+    }
+    const [rival, paid] = [...others].sort((a, b) => b[1].length - a[1].length)[0] ?? [null, []];
+    return { key, name: r.name, pos: r.pos, bid: plan[key]!, get: mine / n, rival, rivalShare: paid.length / n, rivalPrice: median(paid), toWin: median(beat) };
+  }).sort((a, b) => a.get - b.get || b.bid - a.bid);
+  const got = sales.map((s) => planned.filter((k) => s.get(k)?.winner === me).length);
+  const planOdds = planned.length ? got.filter((g) => g === planned.length).length / n : null;
+  const landed = planned.length ? median(got) : null;
+  const usual = me ? { bought: median(drafts.map((a) => a.rosters.get(me)?.length ?? 0))!, left: median(drafts.map((a) => a.left.get(me) ?? 0))! } : null;
+  return { n, examples, freq, planOdds, landed, targets, usual };
 }
