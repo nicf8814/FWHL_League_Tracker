@@ -13,6 +13,10 @@
 //   oursRos                 ours on a rest-of-season stand-in: the mean of his positive projections over
 //                           Weeks W-3..W (no matchup swing, and a player out in Week W keeps his healthy rate,
 //                           as the live app does with ESPN's rest-of-season projection before its injury discount)
+//   preseason               the preseason full-season projection per game (data/draft-prep/2026/board.csv)
+//   espnSeason              ESPN's weekly projections averaged over Weeks 1..W; a week he was projected 0 while
+//                           injured (not a bye) counts as his season average instead (Nic, Nov 22)
+//   oursPre, oursSeason     ours (ramp toward the season average, 0.6 PAR + 0.4 WAR) on those two rates
 //
 // Limits: ESPN's stored projection is its single-week number for Week W, so a player out that week reads 0
 // even if he returns soon (the charts don't have that problem). The "played Week W" rows drop those players.
@@ -52,8 +56,14 @@ function spearman(a: number[], b: number[]): number {
 }
 const z = (xs: number[]) => { const m = xs.reduce((a, b) => a + b, 0) / xs.length; const sd = Math.sqrt(xs.reduce((a, b) => a + (b - m) ** 2, 0) / xs.length) || 1; return xs.map((x) => (x - m) / sd); };
 
+// Preseason projections (17 games), matched by name and position.
+const nameKey = (n: string) => n.toLowerCase().replace(/[^a-z]/g, '').replace(/(jr|sr|iii|ii)$/, '');
+const board = new Map(readFileSync(new URL('../data/draft-prep/2026/board.csv', import.meta.url), 'utf8').trim().split('\n').slice(1)
+  .map((l) => l.split(',')).map((c) => [nameKey(c[0]!) + c[2], Number(c[3]) / 17] as const));
+const preOf = new Map(ds.players.map((p) => [p.id, board.get(nameKey(p.name) + p.pos) ?? null]));
+
 const chartAt = (src: string, w: number) => new Map(ds.valuations.filter((v) => v.source === src && v.week === w).map((v) => [v.playerId, v.value]));
-const PRED = ['peaked', 'menton', 'charts', 'espn', 'seasonAvg', 'ours', 'oursRos', 'ours+charts'] as const;
+const PRED = ['peaked', 'menton', 'charts', 'espn', 'seasonAvg', 'ours', 'oursRos', 'preseason', 'espnSeason', 'oursPre', 'oursSeason', 'ours+charts'] as const;
 type Pred = (typeof PRED)[number];
 type Result = { week: number; n: number; horizon: number; all: Record<Pred, number>; playedW: Record<Pred, number>; byPos: Record<Pred, number>; byPosPlayed: Record<Pred, number> };
 const results: Result[] = [];
@@ -63,7 +73,7 @@ for (const W of [...new Set(ds.valuations.map((v) => v.week))].sort((a, b) => a 
   const pk = chartAt('peaked', W), mn = chartAt('menton', W);
   const wk = rows.get(W)!;
   // What was known before Week W: earlier scores, ESPN's Week W projection, Week W rosters.
-  const info = new Map<PlayerId, { pos: Pos; proj: number; avg: number | null; games: number; ramped: number; healthy: number; team: TeamId | null }>();
+  const info = new Map<PlayerId, { pos: Pos; proj: number; avg: number | null; games: number; ramped: number; healthy: number; pre: number; season: number; team: TeamId | null }>();
   for (const r of wk.values()) {
     const p = pos.get(r.playerId);
     if (!p) continue;
@@ -78,7 +88,17 @@ for (const W of [...new Set(ds.valuations.map((v) => v.week))].sort((a, b) => a 
     let hp = recent.length ? recent.reduce((x, y) => x + y, 0) / recent.length : 0;
     for (let w = W - 4; hp <= 0 && w >= 1; w--) hp = rows.get(w)?.get(r.playerId)?.projection ?? 0;
     const rs = Number(process.env.RAMP ?? 1), rw = avg !== null && proj > 0 ? rs * rampWeight(prev.length) : 0, hw = avg !== null && hp > 0 ? rs * rampWeight(prev.length) : 0;
-    info.set(r.playerId, { pos: p, proj, avg, games: prev.length, ramped: (1 - rw) * proj + rw * (avg ?? 0), healthy: (1 - hw) * hp + hw * (avg ?? 0), team: r.slot !== 'fa' ? r.teamId ?? null : null });
+    // Season-long ESPN rate: mean weekly projection over Weeks 1..W, injured 0s filled with his season average.
+    const sp: number[] = [];
+    for (let w = 1; w <= W; w++) {
+      const x = rows.get(w)?.get(r.playerId);
+      if (!x || x.opponent === 'BYE') continue;
+      if ((x.projection ?? 0) > 0) sp.push(x.projection!);
+      else if (avg !== null) sp.push(avg);
+    }
+    const season = sp.length ? sp.reduce((a, b) => a + b, 0) / sp.length : hp;
+    const pre = preOf.get(r.playerId) ?? hp;
+    info.set(r.playerId, { pos: p, proj, avg, games: prev.length, ramped: (1 - rw) * proj + rw * (avg ?? 0), healthy: (1 - hw) * hp + hw * (avg ?? 0), pre, season, team: r.slot !== 'fa' ? r.teamId ?? null : null });
   }
   const list = [...info].map(([pid, x]) => ({ pid, ...x }));
   const replE = replOf(list.map((x) => ({ pos: x.pos, v: x.proj }))), replR = replOf(list.map((x) => ({ pos: x.pos, v: x.ramped })));
@@ -99,13 +119,24 @@ for (const W of [...new Set(ds.valuations.map((v) => v.week))].sort((a, b) => a 
   const warH = projectedWar(slots, lineups, list.map((x) => ({ pid: x.pid, pos: x.pos, v: x.healthy })), S.sim.weeklySd);
   const zParH = z(list.map((x) => x.healthy - replH[x.pos])), zWarH = z(list.map((x) => warH.get(x.pid) ?? 0));
   const oursH = new Map(list.map((x, i) => [x.pid, 0.6 * zParH[i]! + 0.4 * zWarH[i]!]));
+  // Ours on any per-week rate: ramp toward the season average, then 0.6 z(PAR) + 0.4 z(WAR).
+  const rs = Number(process.env.RAMP ?? 1);
+  const oursOn = (rate: (x: (typeof list)[number]) => number) => {
+    const v = list.map((x) => { const b = rate(x); const w = x.avg !== null && b > 0 ? rs * rampWeight(x.games) : 0; return (1 - w) * b + w * (x.avg ?? 0); });
+    const rp = replOf(list.map((x, i) => ({ pos: x.pos, v: v[i]! })));
+    const wr = projectedWar(slots, lineups, list.map((x, i) => ({ pid: x.pid, pos: x.pos, v: v[i]! })), S.sim.weeklySd);
+    const zp = z(list.map((x, i) => v[i]! - rp[x.pos])), zw = z(list.map((x) => wr.get(x.pid) ?? 0));
+    return new Map(list.map((x, i) => [x.pid, 0.6 * zp[i]! + 0.4 * zw[i]!]));
+  };
+  const oursPre = oursOn((x) => x.pre), oursSeason = oursOn((x) => x.season);
+  const replP = replOf(list.map((x) => ({ pos: x.pos, v: x.pre }))), replS = replOf(list.map((x) => ({ pos: x.pos, v: x.season })));
   // Outcome: points above replacement over Weeks W+1..last, missed weeks 0.
   const future = (p: PlayerId) => { let s = 0; for (let w = W + 1; w <= last; w++) { const r = rows.get(w)?.get(p); if (played(r)) s += r!.points! - weekRepl.get(w)![pos.get(p)!]; } return s; };
   const ids = list.filter((x) => pk.has(x.pid) && mn.has(x.pid)).map((x) => x.pid);
   if (ids.length < 30) continue;
   const val = (p: PlayerId): Record<Exclude<Pred, 'ours+charts'>, number> => {
     const x = info.get(p)!;
-    return { peaked: pk.get(p)!, menton: mn.get(p)!, charts: (pk.get(p)! + mn.get(p)!) / 2, espn: x.proj - replE[x.pos], seasonAvg: x.avg === null ? -99 : x.avg - replA[x.pos], ours: ours.get(p)!, oursRos: oursH.get(p)! };
+    return { peaked: pk.get(p)!, menton: mn.get(p)!, charts: (pk.get(p)! + mn.get(p)!) / 2, espn: x.proj - replE[x.pos], seasonAvg: x.avg === null ? -99 : x.avg - replA[x.pos], ours: ours.get(p)!, oursRos: oursH.get(p)!, preseason: x.pre - replP[x.pos], espnSeason: x.season - replS[x.pos], oursPre: oursPre.get(p)!, oursSeason: oursSeason.get(p)! };
   };
   const corrFor = (sub: PlayerId[]): Record<Pred, number> => {
     const y = sub.map(future), v = sub.map(val);
@@ -134,10 +165,10 @@ for (const W of [...new Set(ds.valuations.map((v) => v.week))].sort((a, b) => a 
 if (process.argv.includes('--json')) { console.log(JSON.stringify({ last, results }, null, 1)); process.exit(0); }
 const f = (x: number) => x.toFixed(2).padStart(6);
 const table = (title: string, key: 'all' | 'playedW' | 'byPos' | 'byPosPlayed') => {
-  console.log(`\n${title}\nweek  n  wks ${PRED.map((k) => k.padStart(12)).join('')}`);
-  for (const r of results) console.log(`${String(r.week).padStart(4)} ${String(r.n).padStart(3)} ${String(r.horizon).padStart(3)}  ${PRED.map((k) => f(r[key][k]).padStart(12)).join('')}`);
+  console.log(`\n${title}\nweek  n  wks ${PRED.map((k) => k.padStart(11)).join('')}`);
+  for (const r of results) console.log(`${String(r.week).padStart(4)} ${String(r.n).padStart(3)} ${String(r.horizon).padStart(3)}  ${PRED.map((k) => f(r[key][k]).padStart(11)).join('')}`);
   const wsum = results.reduce((s, r) => s + r.horizon, 0);
-  console.log(`avg (weighted by weeks ahead) ${PRED.map((k) => f(results.reduce((s, r) => s + r[key][k] * r.horizon, 0) / (wsum || 1)).padStart(12)).join('')}`);
+  console.log(`avg (weighted by weeks ahead) ${PRED.map((k) => f(results.reduce((s, r) => s + r[key][k] * r.horizon, 0) / (wsum || 1)).padStart(11)).join('')}`);
 };
 console.log(`Rank correlation with points above replacement from Week W+1 to Week ${last} (missed weeks 0). Players both charts rate.`);
 table('All positions together', 'all');

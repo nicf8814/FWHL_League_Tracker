@@ -26,6 +26,10 @@ Saved settings from before this change (version 1) start at the new default once
 | Season average so far | 0.42 | 0.44 | 0.32 | 0.32 |
 | Ours | 0.45 | 0.54 | 0.38 | 0.43 |
 | Ours on a rest-of-season stand-in | 0.52 | 0.54 | 0.42 | 0.43 |
+| Preseason projection per game | 0.50 | 0.51 | 0.44 | 0.44 |
+| ESPN season-long rate (injured 0s → season avg) | 0.51 | 0.54 | 0.45 | 0.45 |
+| **Ours on the preseason projection** | **0.54** | 0.55 | 0.47 | 0.47 |
+| Ours on the ESPN season-long rate | 0.52 | 0.55 | 0.43 | 0.43 |
 | Ours + charts (ranks 50/50) | 0.53 | **0.56** | 0.49 | 0.49 |
 
 What it says:
@@ -36,12 +40,13 @@ What it says:
 - **WAR adds nothing to the ranking** (ours tracks ESPN closely): it is a function of the same projection. Its value is the scale (dollars that reflect real lineups), not prediction.
 - **The production ramp slightly hurts**: with it off, ours goes 0.38 → 0.40 within position and 0.43 → 0.45 within position for players who played. Small, inside the noise, but it never helps. Worth revisiting.
 - **Adding the charts to ours** reaches the charts' level overall and is the best on healthy players (0.56), so a 50/50 blend loses little against either.
+- **Season-long projections (Nic, Nov 22) close most of the gap.** Built on the preseason projection (`data/draft-prep/2026/board.csv`, per game) and ramped toward the season average, ours ties the charts overall (0.54) and trails within position by 0.03 to 0.05 instead of 0.10 (charts ahead in 8 of 8 weeks, but inside the noise each week). Here the ramp helps: without it 0.50, at full strength 0.54, stronger adds nothing. ESPN's weekly projections averaged over the season, with injured 0s filled by the season average, do less well (0.52, 0.43 within position), and mixing them into the preseason rate makes it worse. A projection made once, before the season, then corrected by what players actually score, beats chasing ESPN's week-to-week numbers.
 
 Limits: one season, 8 overlapping windows, 1 to 8 weeks ahead; with ~125 players a correlation has a standard error near 0.07, so week-to-week differences are noise and only the consistent pattern counts. ESPN's stored projection is the single-week number, not the rest-of-season rate the app uses; two rest-of-season snapshots exist (Week 10 and 11 projection commits), too few to test.
 
 An earlier quick check (Nov 21) that had the season average beating the charts used points per game in games played as the outcome. That ignores missed games, which is most of what the charts get right; this backtest supersedes it.
 
-**Verdict: not yet.** Keep loading both charts. Revisit when 4+ weekly rest-of-season snapshots exist (Week 14), by testing ESPN rest-of-season plus our ramp against the charts; drop the ramp or shrink it if it still doesn't help. If ours matches the charts within position, set `marketShare` to 0 and stop the chart task.
+**Verdict: close, not yet.** On the preseason projection plus the ramp, ours matches the charts overall and is about 0.04 behind within a position. Next: run the live value on the preseason projection (the site already ships it in `public/seed/draft-prep.json`) and retest at Week 14, alongside ESPN's rest-of-season snapshots. If ours matches the charts within position then, set `marketShare` to 0 and stop the chart task.
 
 ## What the change does to the app
 
