@@ -67,6 +67,7 @@ const PRED = ['peaked', 'menton', 'charts', 'espn', 'seasonAvg', 'ours', 'oursRo
 type Pred = (typeof PRED)[number];
 type Result = { week: number; n: number; horizon: number; all: Record<Pred, number>; playedW: Record<Pred, number>; byPos: Record<Pred, number>; byPosPlayed: Record<Pred, number> };
 const results: Result[] = [];
+const h2h: { week: number; agreeAll: number; agreePos: number; pairs: number; disagree: number; oursRight: number; chartsRight: number }[] = [];
 
 for (const W of [...new Set(ds.valuations.map((v) => v.week))].sort((a, b) => a - b)) {
   if (W + 1 > last || !rows.has(W)) continue;
@@ -160,9 +161,30 @@ for (const W of [...new Set(ds.valuations.map((v) => v.week))].sort((a, b) => a 
   };
   const playedIds = ids.filter((p) => played(wk.get(p)));
   results.push({ week: W, n: ids.length, horizon: last - W, all: corrFor(ids), playedW: corrFor(playedIds), byPos: posAvg(ids), byPosPlayed: posAvg(playedIds) });
+  // Head to head with the charts: how closely ours (on the preseason projection) tracks them, and for every
+  // two players at the same position that ours and the charts order differently, which one got it right.
+  const ch = (p: PlayerId) => (pk.get(p)! + mn.get(p)!) / 2;
+  const agreeAll = spearman(ids.map((p) => oursPre.get(p)!), ids.map(ch));
+  let agreePos = 0, nPos = 0, oursRight = 0, chartsRight = 0, disagree = 0, pairs = 0;
+  for (const ps of ['QB', 'RB', 'WR', 'TE'] as Pos[]) {
+    const sub = ids.filter((x) => pos.get(x) === ps);
+    if (sub.length < 8) continue;
+    agreePos += spearman(sub.map((p) => oursPre.get(p)!), sub.map(ch)) * sub.length; nPos += sub.length;
+    const fut = new Map(sub.map((p) => [p, future(p)]));
+    for (let i = 0; i < sub.length; i++) for (let j = i + 1; j < sub.length; j++) {
+      const a = sub[i]!, b = sub[j]!;
+      const so = Math.sign(oursPre.get(a)! - oursPre.get(b)!), sc = Math.sign(ch(a) - ch(b)), sf = Math.sign(fut.get(a)! - fut.get(b)!);
+      if (!so || !sc || !sf) continue;
+      pairs++;
+      if (so === sc) continue;
+      disagree++;
+      if (so === sf) oursRight++; else chartsRight++;
+    }
+  }
+  h2h.push({ week: W, agreeAll, agreePos: agreePos / (nPos || 1), pairs, disagree, oursRight, chartsRight });
 }
 
-if (process.argv.includes('--json')) { console.log(JSON.stringify({ last, results }, null, 1)); process.exit(0); }
+if (process.argv.includes('--json')) { console.log(JSON.stringify({ last, results, h2h }, null, 1)); process.exit(0); }
 const f = (x: number) => x.toFixed(2).padStart(6);
 const table = (title: string, key: 'all' | 'playedW' | 'byPos' | 'byPosPlayed') => {
   console.log(`\n${title}\nweek  n  wks ${PRED.map((k) => k.padStart(11)).join('')}`);
@@ -175,3 +197,8 @@ table('All positions together', 'all');
 table('Only players who played Week W (no injury effect)', 'playedW');
 table('Within each position (weighted average)', 'byPos');
 table('Within each position, only players who played Week W', 'byPosPlayed');
+console.log('\nOurs on the preseason projection vs the charts: agreement, and who was right when they disagree');
+console.log('week  agree(all) agree(in pos)  same-pos pairs  disagree  ours right  charts right');
+for (const h of h2h) console.log(`${String(h.week).padStart(4)}  ${f(h.agreeAll).padStart(10)} ${f(h.agreePos).padStart(13)}  ${String(h.pairs).padStart(14)}  ${String(h.disagree).padStart(8)}  ${String(h.oursRight).padStart(10)}  ${String(h.chartsRight).padStart(12)}   ours ${(100 * h.oursRight / (h.disagree || 1)).toFixed(0)}%`);
+const tot = h2h.reduce((t, h) => ({ d: t.d + h.disagree, o: t.o + h.oursRight }), { d: 0, o: 0 });
+console.log(`all weeks: ours right in ${tot.o} of ${tot.d} disagreements (${(100 * tot.o / (tot.d || 1)).toFixed(1)}%)`);

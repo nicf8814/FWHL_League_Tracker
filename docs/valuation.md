@@ -46,6 +46,8 @@ Limits: one season, 8 overlapping windows, 1 to 8 weeks ahead; with ~125 players
 
 An earlier quick check (Nov 21) that had the season average beating the charts used points per game in games played as the outcome. That ignores missed games, which is most of what the charts get right; this backtest supersedes it.
 
+**Head to head with the charts** (ours on the preseason projection, same backtest): ours and the charts agree closely (rank correlation 0.88 to 0.92 every week, overall and within position) and order about 11% of same-position pairs differently. When they disagree, the charts were right 59% of the time (1,170 of 1,976 pairs, Weeks 2 to 9) and ours 41%, and the charts won the disagreements in all 8 weeks (ours 36% to 47%). Pairs overlap from week to week, so this is less evidence than the count suggests, but it points the same way as the correlations.
+
 **Verdict: close, not yet.** On the preseason projection plus the ramp, ours matches the charts overall and is about 0.04 behind within a position. Next: run the live value on the preseason projection (the site already ships it in `public/seed/draft-prep.json`) and retest at Week 14, alongside ESPN's rest-of-season snapshots. If ours matches the charts within position then, set `marketShare` to 0 and stop the chart task.
 
 ## What the change does to the app
