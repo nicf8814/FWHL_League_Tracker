@@ -211,9 +211,11 @@ export interface SavedTrade {
 
 // Per-device settings. "My team" lives here, never in the data (DATA-2).
 export interface Settings {
-  version: 1;
+  version: 2; // 2 (Nov 22): own auction-dollar value; saved market shares reset to the new default once
   myTeamId: TeamId | null;
-  marketShare: number; // % of value from what managers will accept (charts) vs what scores (model)
+  marketShare: number; // % of value from the trade charts; 0 = our own auction-dollar value only
+  // shortcut: 50% charts by default because the Nov 22 backtest (docs/valuation.md) still has the charts ahead;
+  // move to 0 once our value matches them on ESPN rest-of-season snapshots (npm run backtest).
   chartWeights: { peaked: number; menton: number };
   injuryStrength: number; // 0-1
   useNews: boolean;
@@ -224,9 +226,9 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  version: 1,
+  version: 2,
   myTeamId: null,
-  marketShare: 60,
+  marketShare: 50,
   chartWeights: { peaked: 70, menton: 30 },
   injuryStrength: 0.6,
   useNews: true,

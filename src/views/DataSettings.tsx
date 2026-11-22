@@ -126,8 +126,8 @@ function ThemePicker() {
 // FEAT-13: presets, a reset for this section, and a mark on anything changed from the default.
 const PRESETS: [string, string, Partial<Settings>][] = [
   ['default', 'Default', {}],
-  ['market', 'What managers pay', { marketShare: 85 }],
-  ['scoring', 'What scores', { marketShare: 25 }],
+  ['ours', 'Ours only', { marketShare: 0 }],
+  ['market', 'Mostly charts', { marketShare: 85 }],
 ];
 const ENGINE_KEYS = ['marketShare', 'chartWeights', 'injuryStrength', 'useNews', 'productionRamp', 'rampMedian', 'handcuff'] as const;
 const engineOf = (s: Settings) => JSON.stringify(ENGINE_KEYS.map((k) => s[k]));
@@ -138,18 +138,18 @@ function EngineSettings({ settings: s, onChange }: { settings: Settings; onChang
   const preset = PRESETS.find(([, , p]) => engineOf({ ...s, ...defaults, ...p }) === engineOf(s))?.[0] ?? 'custom';
   return (
     <Section title="Value engine" aside={<button type="button" className="btn btn-quiet" disabled={preset === 'default'} onClick={() => onChange(defaults)}>Reset this section</button>}>
-      <p className="max-w-[70ch] text-sm text-ink-2">Trade value blends what league mates will accept (the charts) with what actually scores (ESPN projections in your scoring, blended with season production). Changes apply as you drag; the playoff simulation doesn't rerun for these. A gold mark means a setting differs from the default.</p>
+      <p className="max-w-[70ch] text-sm text-ink-2">Trade value is our own price in auction dollars: what each player scores above replacement and the wins he adds, from ESPN projections in your scoring blended with season production. The Peaked and Menton charts can be blended back in for comparison. Changes apply as you drag; the playoff simulation doesn't rerun for these. A gold mark means a setting differs from the default.</p>
       <div className="grid grid-cols-1 gap-1">
         <span className="text-sm text-ink-3">Preset{preset === 'custom' ? ' (custom)' : ''}</span>
         <Seg label="Preset" value={preset} options={PRESETS.map(([id, label]) => [id, label] as const)} onChange={(id) => onChange({ ...defaults, ...PRESETS.find((p) => p[0] === id)![2] })} />
       </div>
       <div className="grid gap-x-10 gap-y-5 md:grid-cols-2">
-        <Range label="Market vs scoring" value={s.marketShare} def={D.marketShare} min={0} max={100} step={5} display={`${s.marketShare} / ${100 - s.marketShare}`} onChange={(v) => onChange({ marketShare: v })} />
+        <Range label="Charts vs our value" value={s.marketShare} def={D.marketShare} min={0} max={100} step={5} display={`${s.marketShare} / ${100 - s.marketShare}`} onChange={(v) => onChange({ marketShare: v })} />
         <Range label="Injury discount strength" value={Math.round(s.injuryStrength * 100)} def={D.injuryStrength * 100} min={0} max={100} step={5} display={`${Math.round(s.injuryStrength * 100)}%`} onChange={(v) => onChange({ injuryStrength: v / 100 })} />
         <Range label="Peaked weight" value={cw.peaked} def={dw.peaked} min={0} max={100} step={5} display={String(cw.peaked)} onChange={(v) => onChange({ chartWeights: { ...cw, peaked: v } })} />
         <Range label="Menton weight" value={cw.menton} def={dw.menton} min={0} max={100} step={5} display={String(cw.menton)} onChange={(v) => onChange({ chartWeights: { ...cw, menton: v } })} />
       </div>
-      {cw.peaked + cw.menton === 0 && <p role="alert" className="text-sm text-loss">All chart weights are 0, so the market side is empty and values come from scoring only.</p>}
+      {s.marketShare > 0 && cw.peaked + cw.menton === 0 && <p role="alert" className="text-sm text-loss">All chart weights are 0, so the market side is empty and values come from scoring only.</p>}
       <div className="grid gap-2">
         <Check label="Production ramp: blend each player's season average into his projection as games are played" checked={s.productionRamp} changed={s.productionRamp !== D.productionRamp} onChange={(v) => onChange({ productionRamp: v })} />
         <Check label="Ramp toward each player's median game instead of his average (needs 3+ games), so one big game or dud doesn't move him" checked={s.rampMedian} changed={s.rampMedian !== D.rampMedian} onChange={(v) => onChange({ rampMedian: v })} />

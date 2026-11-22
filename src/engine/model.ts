@@ -1,6 +1,7 @@
 import { POSITIONS, type PlayerId, type Pos, type Settings, type TeamId } from '../data/schema.ts';
 import { weekOfDate, type Index } from './league.ts';
 import type { SimResult } from './sim.ts';
+import { projectedWar, type Starter } from './war.ts';
 
 // Ported from the Sandbox engine (League DNA on, production ramp, stretch-run weighting, real
 // free-agent replacement, stud premium). Split in two so the expensive season sim depends only on
@@ -16,6 +17,8 @@ const DEPTH_W = 0.1; // bench depth credit
 const HANDCUFFS: [string, string][] = [['Christian McCaffrey', 'Kaelon Black'], ['Kenneth Walker', 'Emmett Johnson']];
 const FAIR_RANGE = 5; // partner's on-paper edge that still reads as fair
 const WEEKLY_LOSS_OK = 1; // pts/wk you can lose and still call it fair
+const PAR_W = 0.6, WAR_W = 0.4; // Arrow Analytics weights; revisit with the backtest (docs/valuation.md)
+const AUCTION_BUDGET = 200, AUCTION_PLAYERS = 13; // Art. V: each team buys 13 players with $200
 
 export interface Base {
   idx: Index;
@@ -138,6 +141,13 @@ export interface Blend {
   sources: number; // how many charts rate him
 }
 
+export interface Worth {
+  par: number; // points above replacement per week (ramped projection)
+  war: number; // projected matchup wins above replacement per week
+  score: number; // 0.6 z(PAR) + 0.4 z(WAR)
+  dollars: number; // auction dollars, healthy (before the injury discount)
+}
+
 export interface Values {
   base: Base;
   settings: Settings;
@@ -149,6 +159,8 @@ export interface Values {
   bv: (p: PlayerId) => number;
   chart: (p: PlayerId, source: 'peaked' | 'menton') => number | null;
   aboveReplacement: (p: PlayerId) => number | null;
+  worth: (p: PlayerId) => Worth | null;
+  dollarFit: { k: number; pool: number }; // spread exponent and how many players share the auction money
   replacement: Record<Pos, number>;
   replacementHealthy: Record<Pos, number>; // same ranks, Out/IR players left out
   faReplacement: Record<Pos, number>;
@@ -218,7 +230,11 @@ export function buildValues(base: Base, settings: Settings, sim: SimResult | nul
     if (w) market.set(p, { raw: s / w, n });
   }
 
-  // --- model side: points above replacement, mapped to value units by a fit on healthy players
+  // --- model side: our own value in auction dollars (Nov 22; it no longer borrows the charts' scale).
+  // Per week: points above replacement (PAR) and projected matchup wins above replacement (WAR, war.ts),
+  // both from the ramped projection, healthy. Score = 0.6 z(PAR) + 0.4 z(WAR), z across every position.
+  // Dollars: the league's auction re-run today. The top teams x 13 players by score share teams x $200;
+  // each gets $1 plus a share of the rest by his score above the first player left out (see below).
   const all = ids.filter((p) => idx.stats.get(p)?.projPerWeek != null).map((p) => ({ p, pos: posOf(p), v: base.proj.get(p) ?? 0 })).sort((a, b) => b.v - a.v);
   const levelAt = (pos: Pos, healthyOnly: boolean) => {
     const arr = all.filter((x) => x.pos === pos && (!healthyOnly || !base.isOut(x.p)));
@@ -226,13 +242,40 @@ export function buildValues(base: Base, settings: Settings, sim: SimResult | nul
   };
   const replacement = Object.fromEntries(POSITIONS.map((pos) => [pos, levelAt(pos, false)])) as Record<Pos, number>;
   const replPlay = Object.fromEntries(POSITIONS.map((pos) => [pos, levelAt(pos, true)])) as Record<Pos, number>;
-  const vorp = (x: { pos: Pos; v: number }) => x.v - replacement[x.pos];
-  const pts = all.filter((x) => x.pos !== 'QB' && vorp(x) > 0 && !base.isOut(x.p) && market.has(x.p)).map((x) => [vorp(x), market.get(x.p)!.raw] as const);
-  const mx = pts.reduce((a, b) => a + b[0], 0) / (pts.length || 1), my = pts.reduce((a, b) => a + b[1], 0) / (pts.length || 1);
-  const den = pts.reduce((a, [x]) => a + (x - mx) ** 2, 0);
-  const slope = pts.length >= 2 && den > 0 ? pts.reduce((a, [x, y]) => a + (x - mx) * (y - my), 0) / den : 0;
-  const icpt = my - slope * mx;
-  const model0 = new Map<PlayerId, number>(slope ? all.map((x) => [x.p, Math.max(0, icpt + slope * vorp(x))]) : []);
+  const slots = season.lineup as Pos[][];
+  const teamLineups = new Map<TeamId, Starter[]>(idx.teamIds.map((t) => [t, lineup(base, (idx.roster.get(t) ?? []).filter((p) => !base.isOut(p)), () => 1).slots.filter((s) => s.pid).map((s) => ({ pos: posOf(s.pid!), v: s.v, pid: s.pid! }))]));
+  const warW = projectedWar(slots, teamLineups, all.map((x) => ({ pid: x.p, pos: x.pos, v: x.v })), season.sim.weeklySd);
+  const scored = all.filter((x) => x.v > 0 || idx.owner.has(x.p));
+  const zOf = (xs: number[]) => {
+    const m = xs.reduce((a, b) => a + b, 0) / (xs.length || 1);
+    const sd = Math.sqrt(xs.reduce((a, b) => a + (b - m) ** 2, 0) / (xs.length || 1)) || 1;
+    return (x: number) => (x - m) / sd;
+  };
+  const zPar = zOf(scored.map((x) => x.v - replacement[x.pos])), zWar = zOf(scored.map((x) => warW.get(x.p) ?? 0));
+  const score = new Map(scored.map((x) => [x.p, PAR_W * zPar(x.v - replacement[x.pos]) + WAR_W * zWar(warW.get(x.p) ?? 0)]));
+  const ranked = [...score.values()].sort((a, b) => b - a);
+  const nPool = Math.min(ranked.length - 1, idx.teamIds.length * AUCTION_PLAYERS);
+  const cut = ranked[nPool] ?? 0;
+  // Spread is convex like the league's real auctions: $1 + A x^k, k fitted (1-3) so the sorted dollars
+  // track the league's price by overall rank (season.keeper.priceByRank), A so the pool spends it all.
+  const xs = ranked.slice(0, nPool).map((x) => Math.max(0, x - cut));
+  const target = season.keeper.priceByRank;
+  const fitK = (k: number) => { const t = xs.reduce((s, x) => s + x ** k, 0); return t > 0 ? (idx.teamIds.length * AUCTION_BUDGET - nPool) / t : 0; };
+  let bestK = 1, bestErr = Infinity;
+  for (let k = 1; k <= 3.001; k += 0.05) {
+    const A = fitK(k);
+    const err = xs.reduce((s, x, i) => (i < target.length ? s + (1 + A * x ** k - target[i]!) ** 2 : s), 0);
+    if (err < bestErr) { bestErr = err; bestK = k; }
+  }
+  const spreadK = bestK, spreadA = fitK(bestK);
+  const dollars = (sc: number) => (sc > cut ? 1 + spreadA * (sc - cut) ** spreadK : 0);
+  const model0 = new Map<PlayerId, number>([...score].map(([p, sc]) => [p, dollars(sc)]));
+  const worth = (p: PlayerId): Worth | null => {
+    const sc = score.get(p);
+    if (sc === undefined) return null;
+    const pos = posOf(p);
+    return { par: (base.proj.get(p) ?? 0) - replacement[pos], war: warW.get(p) ?? 0, score: sc, dollars: dollars(sc) };
+  };
 
   // --- availability (scoring side only; the charts already price injuries)
   const effWeek = (p: PlayerId, w: number) => {
@@ -278,7 +321,8 @@ export function buildValues(base: Base, settings: Settings, sim: SimResult | nul
     });
   }
   const share = settings.marketShare / 100;
-  const engineOf = (mk: number | null, md: number | null) => (md === null ? mk : mk === null ? md : share * mk + (1 - share) * md);
+  // At 0% market the charts drop out entirely: a player only the charts rate is worth nothing here.
+  const engineOf = (mk: number | null, md: number | null) => (share <= 0 ? md : md === null ? mk : mk === null ? md : share * mk + (1 - share) * md);
   const mkAdj = (p: PlayerId) => {
     const m = market.get(p);
     return m ? m.raw * mult(p) * (1 + (nudge.get(p) ?? 0)) : null;
@@ -411,7 +455,7 @@ export function buildValues(base: Base, settings: Settings, sim: SimResult | nul
   };
 
   return {
-    base, settings, sim, oddsReady: !!sim, teamOdds, keepWeight, blend, bv, chart, aboveReplacement, replacement, replacementHealthy: replPlay, faReplacement, faFill,
+    base, settings, sim, oddsReady: !!sim, teamOdds, keepWeight, blend, bv, chart, aboveReplacement, worth, dollarFit: { k: spreadK, pool: nPool }, replacement, replacementHealthy: replPlay, faReplacement, faFill,
     keeperValue, keepConv, studPremium, injuryCorrection, availFor, weekGain, rosterAfter, autoDrops, handcuffOf, FAIR_RANGE, WEEKLY_LOSS_OK,
   };
 }

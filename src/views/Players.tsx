@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { Player } from '../data/schema.ts';
 import { useLeague } from '../data/store.tsx';
 import { chartAvgAt, chartHistory, teamName } from '../engine/league.ts';
+import { seasonWar } from '../engine/war.ts';
 import { fmt, PlayerName, PosMark, Seg, signed } from '../ui/components.tsx';
 import { DataTable, TableBar, useTable, type Col, type FilterDef } from '../ui/table.tsx';
 import { usePlayerSheet } from './PlayerSheet.tsx';
@@ -10,6 +11,7 @@ const PAGE = 100;
 // Ready-made column sets (Nov 11, item D). The column chooser still makes a custom one.
 const PLAYER_VIEWS = {
   simple: ['name', 'pos', 'owner', 'season', 'proj', 'value'],
+  value: ['name', 'pos', 'owner', 'value', 'repl', 'war', 'swar', 'proj'],
   charts: ['name', 'pos', 'owner', 'value', 'market', 'model', 'peaked', 'menton', 'fpros', 'move'],
   keepers: ['name', 'pos', 'owner', 'value', 'season', 'keep'],
 };
@@ -24,6 +26,7 @@ export default function Players() {
   const hist = useMemo(() => chartHistory(idx.ds), [idx]);
   const chartWeeks = useMemo(() => [...new Set([...hist.peaked.keys(), ...hist.menton.keys()])].sort((a, b) => a - b), [hist]);
   const latest = chartWeeks[chartWeeks.length - 1] ?? 0;
+  const sWar = useMemo(() => seasonWar(idx), [idx]);
   const [since, setSince] = useState<number>(() => chartWeeks[chartWeeks.length - 2] ?? latest);
 
   const rows = useMemo(
@@ -50,9 +53,11 @@ export default function Players() {
       { id: 'owner', label: 'Owner', left: true, value: (p) => (owner(p) === undefined ? 'FA' : teamName(idx, owner(p))), cell: (p) => <span className="text-ink-2">{owner(p) === undefined ? 'FA' : teamName(idx, owner(p))}</span> },
       { id: 'season', label: 'Total pts', value: (p) => idx.stats.get(p.id)?.seasonPoints, cell: (p) => { const v = idx.stats.get(p.id)?.seasonPoints; return v == null ? '–' : <span className="inline-grid min-w-20 justify-items-end gap-1">{fmt(v)}<span className="meter w-full" aria-hidden="true"><span className="bg-primary" style={{ width: `${Math.max(2, (v / maxPts) * 100)}%` }} /></span></span>; } },
       { id: 'nfl', label: 'NFL', left: true, hidden: true, value: (p) => p.nflTeam },
-      { id: 'value', label: 'Value', value: (p) => V.blend(p.id).v, cell: (p) => <b className="font-semibold">{fmt(V.blend(p.id).v)}</b> },
-      { id: 'market', label: 'Market', value: (p) => V.blend(p.id).market },
-      { id: 'model', label: 'Model', value: (p) => V.blend(p.id).model },
+      { id: 'value', label: 'Value $', value: (p) => V.blend(p.id).v, cell: (p) => <b className="font-semibold">{fmt(V.blend(p.id).v)}</b> },
+      { id: 'market', label: 'Charts', value: (p) => V.blend(p.id).market },
+      { id: 'model', label: 'Ours $', value: (p) => V.blend(p.id).model },
+      { id: 'war', label: 'WAR/wk', value: (p) => V.worth(p.id)?.war, cell: (p) => { const w = V.worth(p.id)?.war; return w == null ? '–' : w.toFixed(3); } },
+      { id: 'swar', label: 'Season WAR', value: (p) => sWar.get(p.id)?.war, cell: (p) => { const w = sWar.get(p.id); return w ? w.war.toFixed(2) : '–'; } },
       { id: 'proj', label: 'Pts/wk', value: (p) => base.proj.get(p.id) },
       { id: 'repl', label: 'Above repl.', value: (p) => V.aboveReplacement(p.id), cell: (p) => signed(V.aboveReplacement(p.id)) },
       { id: 'peaked', label: 'Peaked', className: 'text-ink-2', value: (p) => V.chart(p.id, 'peaked') },
@@ -64,14 +69,14 @@ export default function Players() {
       { id: 'ros', label: 'ROS proj', hidden: true, value: (p) => idx.stats.get(p.id)?.projRestOfSeason },
       { id: 'rank', label: 'ESPN rank', left: true, hidden: true, value: (p) => idx.stats.get(p.id)?.posRank },
     ];
-  }, [idx, V, base, open, hist, since, latest]);
+  }, [idx, V, base, open, hist, since, latest, sWar]);
   const t = useTable('players', cols, rows, { id: 'value', dir: -1 }, { filters, search, shown: PLAYER_VIEWS.simple, phone: PHONE_SIMPLE });
   const views = t.phone ? { ...PLAYER_VIEWS, simple: PHONE_SIMPLE } : PLAYER_VIEWS;
   const view = (Object.keys(views) as (keyof typeof views)[]).find((v) => sameCols(views[v], cols.filter((c) => !t.hidden.includes(c.id)).map((c) => c.id))) ?? 'custom';
 
   return (
     <div className="grid grid-cols-1 gap-4">
-      <Seg label="Columns" value={view} options={[['simple', 'Simple'], ['charts', 'Charts'], ['keepers', 'Keepers'], ...(view === 'custom' ? [['custom', 'Custom'] as const] : [])] as const} onChange={(v) => v !== 'custom' && t.setHidden(cols.filter((c) => !views[v].includes(c.id)).map((c) => c.id))} />
+      <Seg label="Columns" value={view} options={[['simple', 'Simple'], ['value', 'Value'], ['charts', 'Charts'], ['keepers', 'Keepers'], ...(view === 'custom' ? [['custom', 'Custom'] as const] : [])] as const} onChange={(v) => v !== 'custom' && t.setHidden(cols.filter((c) => !views[v].includes(c.id)).map((c) => c.id))} />
       <TableBar t={t} noun="players" file={`fwhl-players-wk${idx.currentWeek}`}>
         {view === 'charts' && (
           <label className="grid min-w-0 gap-1 text-xs font-semibold uppercase tracking-wider text-ink-3">

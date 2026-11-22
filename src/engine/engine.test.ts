@@ -105,24 +105,25 @@ test('trades are two teams sending only their own players (LOGIC-4)', () => {
 test('regression: the Allen + McCaffrey for Dak trade keeps its numbers', () => {
   // First pinned to the Sandbox (Nov 10), which believed it was Week 9 (the LOGIC-2 bug): send 137.8, get 16.2,
   // Nic −24.1 pts/wk, Vince +26.1, Vince sees +121.7. Re-pinned when FantasyPros ranks left the market side
-  // (Peaked 70 / Menton 30); the scoring side and the weeks are unchanged.
+  // (Peaked 70 / Menton 30); the scoring side and the weeks are unchanged. Re-pinned Nov 22 when value became
+  // our own auction dollars blended 50/50 with the charts: the value side moved, the weeks didn't.
   const ix9 = { ...idx, currentWeek: 9 };
   const b9 = buildBase(ix9, true);
   const v9 = buildValues(b9, DEFAULT_SETTINGS, simulate({ ...simInput, strength: b9.strength }));
   const trade = { a: team('Nic'), b: team('Vince'), aGives: [pid('Josh Allen'), pid('Christian McCaffrey')], bGives: [pid('Dak Prescott')] };
   const ev = evaluate(v9, trade)!;
   const same = (got: number, want: number, what: string) => assert.equal(got.toFixed(1), want.toFixed(1), what);
-  same(ev.value.aSends, 139.0, 'Nic sends');
-  same(ev.value.bSends, 16.0, 'Vince sends');
+  same(ev.value.aSends, 119.1, 'Nic sends');
+  same(ev.value.bSends, 9.4, 'Vince sends');
   same(ev.gainA, -24.1, 'Nic pts/wk');
   // Vince takes 2 for 1, and since LOGIC-5 he cuts his lowest-valued player to stay at roster size.
   same(ev.gainB, 26.1, 'Vince pts/wk');
   assert.equal(v9.autoDrops(trade.b, trade.bGives, trade.aGives).length, 1, 'Vince cuts one player');
   assert.deepEqual(v9.autoDrops(trade.a, trade.aGives, trade.bGives), [], 'Nic cuts nobody');
-  same(ev.partnerEdge, 122.9, 'Vince on paper');
+  same(ev.partnerEdge, 109.7, 'Vince on paper');
   assert.equal(ev.verdict.kind, 'lose');
   // At the real current week the value side is unchanged; only the weeks left change.
-  same(evaluate(V, trade)!.value.aSends, 139.0, 'Week 10 value');
+  same(evaluate(V, trade)!.value.aSends, 119.1, 'Week 10 value');
 });
 
 test('finder returns fair offers that help the asking team', () => {
@@ -141,7 +142,8 @@ test('validation rejects broken data and coerces settings', () => {
   const r = validateDataset(bad);
   assert.ok(!r.ok && r.errors.some((e) => e.includes('unknown player')));
   assert.equal(validateDataset({ schemaVersion: 2 }).ok, false);
-  const s = coerceSettings({ myTeamId: 99, marketShare: 500, chartWeights: { peaked: -3 } }, new Set(idx.teamIds));
+  const s = coerceSettings({ version: 2, myTeamId: 99, marketShare: 500, chartWeights: { peaked: -3 } }, new Set(idx.teamIds));
+  assert.equal(coerceSettings({ version: 1, marketShare: 60 }, null).marketShare, DEFAULT_SETTINGS.marketShare, 'saves from before our own value start at the new default');
   assert.equal(s.myTeamId, null);
   assert.equal(s.marketShare, 100);
   assert.equal(s.chartWeights.peaked, 0);

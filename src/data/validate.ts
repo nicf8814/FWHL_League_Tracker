@@ -121,9 +121,10 @@ export function coerceSettings(input: unknown, teamIds: ReadonlySet<number> | nu
   const D = DEFAULT_SETTINGS;
   const my = Number.isInteger(s.myTeamId) && (!teamIds || teamIds.has(s.myTeamId as number)) ? (s.myTeamId as number) : null;
   return {
-    version: 1,
+    version: 2,
     myTeamId: my,
-    marketShare: clamp(s.marketShare, 0, 100, D.marketShare),
+    // Settings saved before our own value (version 1) were on the old 0-100 blend: start them at today's default once.
+    marketShare: s.version === 2 ? clamp(s.marketShare, 0, 100, D.marketShare) : D.marketShare,
     chartWeights: {
       peaked: clamp(cw.peaked, 0, 100, D.chartWeights.peaked),
       menton: clamp(cw.menton, 0, 100, D.chartWeights.menton),
