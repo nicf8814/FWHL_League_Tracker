@@ -1,4 +1,4 @@
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { lazyPage } from './staleBuild.ts';
 import { useDeadline, useLeague } from '../data/store.tsx';
 import { freshness } from '../engine/league.ts';
@@ -30,14 +30,14 @@ const DraftMock = lazyPage(() => import('../views/DraftMock.tsx'));
 
 // Four sections, each a few pages shown as tabs. Phones get the sections in the bottom bar;
 // desktops list them in the rail. Nov 12, item 4: the live season sits in My Team (with a dropdown
-// to look at any team) and everything finished lives in History.
+// to look at any team) and everything finished lives in History. Nov 25: Draft moved into My Team
+// (after Keepers) so the phone's bottom bar fits its four sections on one row.
 type Page = { route: Route; label: string };
 type Section = { id: string; label: string; icon: string; pages: Page[] };
 const SECTIONS: Section[] = [
-  { id: 'team', label: 'My Team', icon: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z', pages: [{ route: 'home', label: 'Home' }, { route: 'teams', label: 'Roster' }, { route: 'standings', label: 'Standings' }, { route: 'players', label: 'Players' }, { route: 'waivers', label: 'Waivers' }, { route: 'keepers', label: 'Keepers' }] },
+  { id: 'team', label: 'My Team', icon: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z', pages: [{ route: 'home', label: 'Home' }, { route: 'teams', label: 'Roster' }, { route: 'standings', label: 'Standings' }, { route: 'players', label: 'Players' }, { route: 'waivers', label: 'Waivers' }, { route: 'keepers', label: 'Keepers' }, { route: 'draft', label: 'Draft' }, { route: 'draftmock', label: 'Mock draft' }, { route: 'draftset', label: 'Draft settings' }] },
   { id: 'trades', label: 'Trades', icon: 'M7 7h13l-3-3M17 17H4l3 3', pages: [{ route: 'finder', label: 'Finder' }, { route: 'analyzer', label: 'Analyzer' }, { route: 'tracker', label: 'Tracker' }, { route: 'market', label: 'Buy & sell' }] },
   { id: 'history', label: 'History', icon: 'M12 8v5l3 2M3 12a9 9 0 1 0 2.6-6.4M3 4v4h4', pages: [{ route: 'history', label: 'History' }] },
-  { id: 'draft', label: 'Draft', icon: 'M4 6h16M4 12h10M4 18h7M17 14l3 3-3 3', pages: [{ route: 'draft', label: 'Board' }, { route: 'draftmock', label: 'Mock draft' }, { route: 'draftset', label: 'Settings' }] },
   { id: 'settings', label: 'Settings', icon: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1', pages: [{ route: 'data', label: 'Data & settings' }, { route: 'export', label: 'Export' }, { route: 'method', label: 'How it works' }] },
 ];
 // The pages that show one team, so the header's team dropdown belongs on them.
@@ -111,7 +111,7 @@ export function App() {
         </div>
       </div>
       <nav aria-label="Sections" className="fixed inset-x-0 bottom-0 z-30 border-t border-rule-strong bg-paper pb-[env(safe-area-inset-bottom)] lg:hidden">
-        <ul className="grid grid-cols-4">
+        <ul className="grid" style={{ gridTemplateColumns: `repeat(${sections.length}, minmax(0, 1fr))` }}>
           {sections.map((x) => (
             <li key={x.id}>
               <a href={href(x.pages[0]!.route)} aria-current={x.id === sec.id ? 'page' : undefined} className={`rowbtn relative flex h-15 flex-col items-center justify-center gap-1 text-[13px] ${x.id === sec.id ? 'font-semibold text-ink' : 'text-ink-3'}`}>
@@ -160,8 +160,11 @@ function DetailSwitch() {
 }
 
 function Tab({ page, active }: { page: Page; active: boolean }) {
+  // My Team has more tabs than a phone shows, so bring the open one (Draft, Mock draft) into view.
+  const ref = useRef<HTMLAnchorElement>(null);
+  useEffect(() => { if (active) ref.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }, [active]);
   return (
-    <a href={href(page.route)} aria-current={active ? 'page' : undefined} className={`rowbtn relative flex h-11 items-center whitespace-nowrap px-3 text-[15px] ${active ? 'font-semibold text-ink' : 'text-ink-3'}`}>
+    <a ref={ref} href={href(page.route)} aria-current={active ? 'page' : undefined} className={`rowbtn relative flex h-11 items-center whitespace-nowrap px-3 text-[15px] ${active ? 'font-semibold text-ink' : 'text-ink-3'}`}>
       {page.label}
       {active && <span className="absolute inset-x-3 bottom-0 h-[3px] bg-accent" aria-hidden="true" />}
     </a>
